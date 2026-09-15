@@ -99,7 +99,7 @@ header h1{
   font-weight:700;color:var(--gold);white-space:nowrap;
 }
 header h1 span{color:var(--ivory);font-weight:600}
-/* 回工具箱:跟 ScrollScore / SightScore / LoudMaster 用同一套安靜文字連結,
+/* 回首頁:文字與斷點都跟 ScrollScore / SightScore / LoudMaster 對齊,用同一套安靜文字連結,
    不套 .btn 那圈邊框,免得跟右邊的功能按鈕搶注意力 */
 .home-link{
   display:inline-flex;align-items:center;gap:4px;
@@ -108,7 +108,7 @@ header h1 span{color:var(--ivory);font-weight:600}
 }
 .home-link:hover,.home-link:focus-visible{color:var(--gold-bright)}
 /* 中英文字數不同,固定保留較寬那個語言的寬度,切換語言時後面的標題不會位移 */
-.home-link .btn-label{display:inline-block;min-width:3.4em;text-align:center}
+.home-link .btn-label{display:inline-block;min-width:35px;text-align:center}
 /* 600px 是 ScrollScore 與 LoudMaster 收掉這行字的同一個斷點,不要自己另訂——
    手機上六個工具的左上角要嘛都只有箭頭、要嘛都有字,不能只有這一頁不一樣 */
 @media (max-width:600px){.home-link .btn-label{display:none}}
@@ -379,8 +379,8 @@ try {
 
 <header>
   <div class="header-left">
-    <a href="https://stevenmusic.github.io/" class="home-link" data-i18n-attr="aria-label:homeLinkLabel,title:homeLinkLabel" aria-label="回工具箱" title="回工具箱">
-      <span aria-hidden="true">←</span><span class="btn-label" data-i18n="homeLinkLabel">工具箱</span>
+    <a href="https://stevenmusic.github.io/" class="home-link" data-i18n-attr="aria-label:homeLinkLabel,title:homeLinkLabel" aria-label="首頁" title="首頁">
+      <span aria-hidden="true">←</span><span class="btn-label" data-i18n="homeLinkLabel">首頁</span>
     </a>
     <h1>Pitch<span>Master</span></h1>
   </div>
@@ -534,7 +534,7 @@ const I18N = {
     pageTitle: "PitchMaster — 變速不變調的練習播放器",
     metaDesc: "把音檔放慢或加快而不變調，也能整首移調 ±12 半音，適合扒歌、跟練與換調試唱。免安裝，檔案不會離開你的電腦。",
     ogLocale: "zh_TW",
-    homeLinkLabel: "工具箱",
+    homeLinkLabel: "首頁",
     themeToggleTitle: "切換淺色 / 深色",
     themeToggleLabel: "切換淺色或深色主題",
     langToggleToEn: "Switch to English",
@@ -573,7 +573,7 @@ const I18N = {
     pageTitle: "PitchMaster — Practice player with tempo and pitch control",
     metaDesc: "Slow a track down or speed it up without changing its pitch, and transpose the whole thing by up to 12 semitones. No install, and your file never leaves your computer.",
     ogLocale: "en_US",
-    homeLinkLabel: "Toolbox",
+    homeLinkLabel: "Home",
     themeToggleTitle: "Light / dark",
     themeToggleLabel: "Switch between light and dark theme",
     langToggleToEn: "Switch to English",

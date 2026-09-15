@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<!-- 手機瀏覽器的網址列會吃這個顏色。切換淺色主題時 applyTheme() 會一起改,
+     不然頁面變白了、上面那條還是黑的,看起來像沒對齊 -->
+<meta name="theme-color" content="#0C0A07">
+<title data-i18n="pageTitle">PitchMaster — 變速不變調的練習播放器</title>
+<meta name="description" content="把音檔放慢或加快而不變調,也能整首移調 ±12 半音,適合扒歌、跟練與換調試唱。免安裝,檔案不會離開你的電腦。" data-i18n-attr="content:metaDesc">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230C0A07'/%3E%3Cg stroke='%23EFD48A' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M7 12h18'/%3E%3Cpath d='M7 21h18'/%3E%3C/g%3E%3Ccircle cx='12' cy='12' r='3.4' fill='%23EFD48A'/%3E%3Ccircle cx='21' cy='21' r='3.4' fill='%23EFD48A'/%3E%3C/svg%3E">
+<meta property="og:type" content="website">
+<meta property="og:title" content="PitchMaster — 變速不變調的練習播放器" data-i18n-attr="content:pageTitle">
+<meta property="og:description" content="把音檔放慢或加快而不變調,也能整首移調 ±12 半音,適合扒歌、跟練與換調試唱。免安裝,檔案不會離開你的電腦。" data-i18n-attr="content:metaDesc">
+<meta property="og:url" content="https://stevenmusic.github.io/PitchMaster/">
+<meta property="og:site_name" content="Steven Music">
+<meta property="og:locale" content="zh_TW" data-i18n-attr="content:ogLocale">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* 配色/字級/圓角/陰影的變數名與數值跟 ScrollScore、LoudMaster 完全相同,
+   六個工具掛在同一個 origin 底下,並排開著看得出是同一套東西 */
+:root{
+  --bg:#0C0A07;
+  --panel:#161209;
+  --panel-2:#201A0F;
+  --gold:#C9A24B;
+  --gold-bright:#EFD48A;
+  --ivory:#F4ECDA;
+  --muted:#8A7D5F;
+  --muted-bright:#B6A576;
+  --line:#2A2415;
+  --shadow-sm:0 4px 14px rgba(0,0,0,.35);
+  --shadow-md:0 10px 26px rgba(0,0,0,.5);
+  --radius-sm:8px;
+  --radius-md:14px;
+  --radius-lg:18px;
+  --radius-pill:999px;
+  --fs-2xs:11px;
+  --fs-xs:12px;
+  --fs-sm:13px;
+  --fs-md:14px;
+  --fs-lg:16px;
+  --fs-xl:19px;
+  --fs-2xl:26px;
+  --surface-inset:rgba(22,18,9,.55);
+  --surface-inset-hi:rgba(22,18,9,.75);
+  --card-tint:rgba(255,255,255,.035);
+  --danger:#D9724C;
+  --danger-bg:rgba(217,114,76,.1);
+  color-scheme:dark;
+}
+
+/* ══ 淺色主題 ══════════════════════════════════════════════════
+   同一組語意變數換一套值,版面與元件完全不用改寫。數值與其他工具一致。 */
+body.light{
+  --bg:#FBF7EE;
+  --panel:#F4EEE0;
+  --panel-2:#EDE6D4;
+  --gold:#856418;
+  --gold-bright:#6B5115;
+  --ivory:#241E12;
+  --muted:#6F6450;
+  --muted-bright:#544B3B;
+  --line:#D8CDB2;
+  --shadow-sm:0 4px 14px rgba(90,72,30,.10);
+  --shadow-md:0 10px 26px rgba(90,72,30,.14);
+  --surface-inset:rgba(255,255,255,.7);
+  --surface-inset-hi:rgba(255,255,255,.95);
+  --card-tint:rgba(133,100,24,.05);
+  --danger:#B5502D;
+  --danger-bg:rgba(181,80,45,.08);
+  color-scheme:light;
+}
+
+/* touch-action:manipulation 只關掉「雙擊放大」這個手勢,雙指縮放完全不受影響——
+   跟直接鎖 viewport 的 user-scalable=no 不一樣,那個連縮放需求的使用者也會一起擋掉。
+   滑桿自己的 touch-action 由瀏覽器處理,拖曳行為不受影響 */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--ivory);
+  font-family:"Noto Sans TC",sans-serif;
+  display:flex;flex-direction:column;min-height:100vh;
+}
+
+/* ── 頂欄 ───────────────────────── */
+header{
+  display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;justify-content:space-between;
+  padding:10px 14px;border-bottom:1px solid var(--line);
+  background:var(--panel);
+}
+.header-left,.header-right{display:flex;align-items:center;flex-wrap:nowrap;gap:8px 10px}
+header h1{
+  font-family:"Noto Serif TC",serif;
+  font-size:clamp(14px, 4vw, var(--fs-lg));
+  letter-spacing:clamp(.02em, .5vw, .1em);
+  font-weight:700;color:var(--gold);white-space:nowrap;
+}
+header h1 span{color:var(--ivory);font-weight:600}
+/* 回工具箱:跟 ScrollScore / SightScore / LoudMaster 用同一套安靜文字連結,
+   不套 .btn 那圈邊框,免得跟右邊的功能按鈕搶注意力 */
+.home-link{
+  display:inline-flex;align-items:center;gap:4px;
+  color:var(--muted);font-size:var(--fs-md);text-decoration:none;
+  padding:8px 4px;border-radius:var(--radius-sm);transition:color .15s;white-space:nowrap;
+}
+.home-link:hover,.home-link:focus-visible{color:var(--gold-bright)}
+/* 中英文字數不同,固定保留較寬那個語言的寬度,切換語言時後面的標題不會位移 */
+.home-link .btn-label{display:inline-block;min-width:3.4em;text-align:center}
+@media (max-width:420px){.home-link .btn-label{display:none}}
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;line-height:1;
+  border:1px solid var(--gold);background:transparent;color:var(--gold);
+  font-family:inherit;font-size:var(--fs-md);font-weight:500;
+  padding:8px 16px;height:38px;border-radius:var(--radius-pill);cursor:pointer;
+  transition:background .2s,color .2s,border-color .2s;white-space:nowrap;text-decoration:none;
+}
+.btn svg{flex:none}
+.btn:hover,.btn:focus-visible{background:var(--gold);color:var(--bg);outline:none}
+.btn:active{background:var(--gold);color:var(--bg)}
+.btn:disabled{opacity:.35;cursor:not-allowed;background:transparent;color:var(--gold)}
+.btn.primary{background:var(--gold);color:var(--bg);font-weight:700}
+.btn.primary:hover,.btn.primary:focus-visible{background:var(--gold-bright)}
+.btn.ghost{border-color:var(--line);color:var(--muted-bright)}
+.btn.ghost:hover,.btn.ghost:focus-visible{background:var(--surface-inset-hi);color:var(--ivory);border-color:var(--line)}
+/* aspect-ratio 讓寬度自動跟著當下 .btn 的高度走,永遠是正圓形,不用每個斷點再對一次寬度 */
+.btn.icon{aspect-ratio:1;padding:0}
+#langToggle{aspect-ratio:1;padding:0;font-weight:700;letter-spacing:.02em}
+/* 淺色模式開啟時,圖示按鈕維持跟 .btn.primary 一樣的「啟用中」視覺語言(跟其他工具一致) */
+#themeToggle[aria-pressed="true"]{background:var(--gold);color:var(--bg)}
+
+/* ── 主舞台 ─────────────────────── */
+main{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:24px 20px;position:relative;
+}
+.stage{width:100%;max-width:560px}
+/* 一次只顯示一個狀態區塊 */
+.panel{display:none}
+[data-state="empty"] .panel-empty,
+[data-state="loading"] .panel-loading,
+[data-state="ready"] .panel-ready,
+[data-state="error"] .panel-error{display:block}
+
+/* ── 空狀態:載入卡 ───────────────── */
+.empty-card{
+  display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;
+  max-width:360px;margin:0 auto;padding:30px 32px;
+  background:var(--surface-inset);border:1px solid var(--line);
+  border-radius:var(--radius-lg);cursor:pointer;
+  transition:background-color .15s,border-color .15s;
+}
+.empty-card:hover,.empty-card:focus-visible,.empty-card.drag{
+  background:var(--surface-inset-hi);border-color:var(--gold);outline:none;
+}
+.empty-card .mark{
+  display:flex;align-items:center;justify-content:center;
+  width:64px;height:64px;border-radius:50%;
+  background:rgba(201,162,75,.12);color:var(--gold);margin-bottom:4px;
+}
+body.light .empty-card .mark{background:var(--card-tint)}
+.empty-card .empty-title{font-size:var(--fs-lg);line-height:1.5;color:var(--ivory);font-weight:600}
+.empty-card .empty-sub{font-size:var(--fs-sm);line-height:1.7;color:var(--muted);text-wrap:pretty}
+.privacy-note{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  margin-top:16px;font-size:var(--fs-xs);color:var(--muted);text-align:center;line-height:1.7;
+}
+.privacy-note svg{flex:none}
+
+/* ── 解碼中 ───────────────────────── */
+.loading-box{text-align:center;padding:30px 20px}
+.loading-box .spinner{
+  width:34px;height:34px;margin:0 auto 16px;border-radius:50%;
+  border:2px solid var(--line);border-top-color:var(--gold);
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-box p{font-size:var(--fs-sm);color:var(--muted);line-height:1.7}
+
+/* ── 播放器卡片 ───────────────────── */
+.card{
+  background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-lg);
+  padding:20px;box-shadow:var(--shadow-sm);
+}
+.file-row{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.file-row .mark{
+  flex:none;display:flex;align-items:center;justify-content:center;
+  width:40px;height:40px;border-radius:50%;
+  background:var(--card-tint);color:var(--gold);
+}
+.file-row .txt{min-width:0}
+.file-row .name{font-weight:600;color:var(--ivory);word-break:break-all;font-size:var(--fs-md);line-height:1.5}
+.file-row .meta{font-size:var(--fs-xs);color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
+
+/* 走帶列:大播放鈕 + 進度條 + 時間 */
+.transport{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+.play-btn{
+  flex:none;display:flex;align-items:center;justify-content:center;
+  width:56px;height:56px;border-radius:50%;
+  border:1px solid var(--gold);background:var(--gold);color:var(--bg);
+  cursor:pointer;transition:background .2s,transform .1s;
+}
+.play-btn:hover,.play-btn:focus-visible{background:var(--gold-bright);outline:none}
+.play-btn:active{transform:scale(.96)}
+.play-btn svg{width:22px;height:22px}
+/* 播放中換成暫停圖示:兩個圖示都在 DOM 裡,靠 hidden 屬性切換,不用重畫 path。
+   這條 CSS 不能省:瀏覽器內建的 [hidden]{display:none} 綁在 HTML 命名空間上,
+   對 <svg> 不生效,少了這行兩個圖示會同時出現在按鈕裡 */
+svg[hidden]{display:none}
+.seek-area{flex:1;min-width:0}
+.time-row{
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:var(--fs-xs);color:var(--muted);font-variant-numeric:tabular-nums;margin-top:6px;
+}
+.time-row .now{color:var(--gold-bright);font-size:var(--fs-sm)}
+
+/* ── 滑桿 ─────────────────────────
+   軌道 3px、金色圓鈕,跟 ScrollScore 的速度滑桿同一套。
+   進度條另外用 background 疊一層走過的部分,不另外放 DOM */
+input[type=range]{
+  -webkit-appearance:none;appearance:none;
+  width:100%;height:3px;border-radius:2px;
+  background:var(--line);outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:20px;height:20px;border-radius:50%;
+  background:var(--gold);border:2px solid var(--bg);cursor:pointer;
+}
+input[type=range]::-moz-range-thumb{
+  width:16px;height:16px;border-radius:50%;
+  background:var(--gold);border:2px solid var(--bg);cursor:pointer;
+}
+input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px rgba(201,162,75,.35)}
+input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px rgba(201,162,75,.35)}
+input[type=range]:disabled{opacity:.4;cursor:not-allowed}
+/* 進度條:--pct 由 JS 更新,金色那段就是已播放的部分 */
+#seek{
+  background:linear-gradient(var(--gold),var(--gold)) 0 0 / var(--pct,0%) 100% no-repeat, var(--line);
+  height:4px;
+}
+/* 速度滑桿在 100% 的位置畫一道刻度,眼睛先看得到「這裡有一格」,手才知道要吸附到哪 */
+#speed{
+  background:linear-gradient(var(--muted),var(--muted)) 50% 0 / 2px 100% no-repeat, var(--line);
+}
+/* 移調滑桿的刻度在 0 半音(正中間),同一招 */
+#pitch{
+  background:linear-gradient(var(--muted),var(--muted)) 50% 0 / 2px 100% no-repeat, var(--line);
+}
+
+/* ── 控制項區塊 ───────────────────── */
+.control{
+  margin-top:18px;padding:14px 16px;
+  background:var(--surface-inset);border:1px solid var(--line);border-radius:var(--radius-md);
+}
+.control-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:12px}
+.control-head .label{
+  font-size:var(--fs-xs);color:var(--muted);letter-spacing:.08em;text-transform:uppercase;
+}
+.control-head .value{
+  font-family:"Noto Serif TC",serif;
+  font-size:var(--fs-xl);color:var(--gold-bright);font-variant-numeric:tabular-nums;
+  letter-spacing:.02em;white-space:nowrap;
+}
+.control-head .value .unit{font-family:"Noto Sans TC",sans-serif;font-size:var(--fs-xs);color:var(--muted);margin-left:4px}
+.slider-row{display:flex;align-items:center;gap:10px}
+/* −/＋ 半音鈕:比頂欄按鈕小一號,擺在滑桿兩側做精細微調,滑桿負責大範圍拉動 */
+.step-btn{
+  flex:none;width:32px;height:32px;border-radius:50%;padding:0;
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--line);background:transparent;color:var(--muted-bright);
+  font-family:inherit;font-size:var(--fs-lg);line-height:1;cursor:pointer;
+  transition:background .2s,color .2s,border-color .2s;
+}
+.step-btn:hover:not(:disabled),.step-btn:focus-visible:not(:disabled){
+  background:var(--gold);border-color:var(--gold);color:var(--bg);outline:none;
+}
+.step-btn:disabled{opacity:.3;cursor:not-allowed}
+.scale{
+  display:flex;justify-content:space-between;
+  margin-top:7px;font-size:var(--fs-2xs);color:var(--muted);font-variant-numeric:tabular-nums;
+}
+/* −/＋ 鈕佔掉滑桿兩端的寬度,刻度要跟著縮排才會對到滑桿的頭尾 */
+.scale.inset{padding:0 42px}
+
+/* 快捷鍵列 */
+.quick{display:flex;gap:8px;margin-top:12px}
+.quick .btn{
+  flex:1;height:34px;padding:0 10px;font-size:var(--fs-sm);
+  border-color:var(--line);color:var(--muted-bright);
+}
+.quick .btn:hover,.quick .btn:focus-visible{background:var(--gold);border-color:var(--gold);color:var(--bg)}
+/* 目前速度剛好等於這顆快捷鍵的值時,把它標成啟用中,不然三顆按鈕看起來都一樣、
+   不知道現在是哪一個 */
+.quick .btn[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--bg);font-weight:700}
+
+.card-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:18px}
+.link-btn{
+  background:none;border:none;color:var(--gold);font-family:inherit;
+  font-size:var(--fs-xs);text-decoration:underline;text-underline-offset:3px;
+  cursor:pointer;padding:4px;
+}
+.link-btn:hover,.link-btn:focus-visible{color:var(--gold-bright);outline:none}
+.hint-kbd{font-size:var(--fs-2xs);color:var(--muted);line-height:1.6}
+.hint-kbd kbd{
+  font-family:inherit;font-size:var(--fs-2xs);color:var(--muted-bright);
+  border:1px solid var(--line);border-radius:4px;padding:1px 5px;background:var(--card-tint);
+}
+@media (max-width:480px){.hint-kbd{display:none}}
+
+/* ── 錯誤 ───────────────────────── */
+.error-card{
+  border:1px solid var(--danger);background:var(--danger-bg);
+  border-radius:var(--radius-lg);padding:22px 24px;text-align:center;
+}
+.error-card .t{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  color:var(--danger);font-weight:700;font-size:var(--fs-md);margin-bottom:8px;
+}
+.error-card p{font-size:var(--fs-sm);color:var(--muted-bright);line-height:1.8;margin-bottom:16px;text-wrap:pretty}
+.error-card .btn{margin:0 auto}
+
+/* 整頁拖放:拖到視窗任何地方都算,不用精準瞄準那張卡 */
+#dropVeil{
+  position:fixed;inset:0;z-index:40;display:none;
+  align-items:center;justify-content:center;
+  background:rgba(12,10,7,.82);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+}
+body.light #dropVeil{background:rgba(251,247,238,.86)}
+#dropVeil.on{display:flex}
+#dropVeil .box{
+  border:2px dashed var(--gold);border-radius:var(--radius-lg);
+  padding:34px 44px;color:var(--gold-bright);font-size:var(--fs-lg);text-align:center;
+}
+
+footer{
+  border-top:1px solid var(--line);padding:14px 20px calc(14px + env(safe-area-inset-bottom));
+  text-align:center;font-size:var(--fs-2xs);color:var(--muted);line-height:1.8;
+}
+footer a{color:var(--muted-bright);text-decoration:none;border-bottom:1px solid var(--line)}
+footer a:hover{color:var(--gold-bright)}
+
+@media (min-width:560px){
+  main{padding:32px 20px}
+  .card{padding:24px 28px}
+  .empty-card{max-width:440px;padding:38px 40px}
+}
+@media (max-width:400px){
+  .card{padding:16px}
+  .transport{gap:10px}
+  .play-btn{width:48px;height:48px}
+  .play-btn svg{width:19px;height:19px}
+  .scale.inset{padding:0 38px}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms !important;animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;
+  }
+}
+</style>
+</head>
+<body>
+<script>
+/* 主題要在第一次繪製前就決定,不然淺色使用者會先看到一格黑畫面再閃成白的。
+   key 跟其他工具共用(sm_theme),在任一個工具切過,其他工具打開就是同一個。 */
+try {
+  if (localStorage.getItem("sm_theme") === "light") {
+    document.body.classList.add("light");
+    document.querySelector('meta[name="theme-color"]').setAttribute("content", "#FBF7EE");
+  }
+} catch (e) {}
+</script>
+
+<header>
+  <div class="header-left">
+    <a href="https://stevenmusic.github.io/" class="home-link" data-i18n-attr="aria-label:homeLinkLabel,title:homeLinkLabel" aria-label="回工具箱" title="回工具箱">
+      <span aria-hidden="true">←</span><span class="btn-label" data-i18n="homeLinkLabel">工具箱</span>
+    </a>
+    <h1>Pitch<span>Master</span></h1>
+  </div>
+  <div class="header-right">
+    <button class="btn icon" id="themeToggle" aria-pressed="false" data-i18n-attr="aria-label:themeToggleLabel,title:themeToggleTitle" aria-label="切換淺色或深色主題" title="切換淺色 / 深色">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"/>
+        <path d="M12 3a9 9 0 000 18z" fill="currentColor" stroke="none"/>
+      </svg>
+    </button>
+    <button class="btn" id="langToggle" aria-pressed="false" aria-label="Switch to English" title="Switch to English">EN</button>
+  </div>
+</header>
+
+<main data-state="empty" id="app">
+  <div class="stage">
+
+    <!-- 空狀態:載入檔案 -->
+    <div class="panel panel-empty">
+      <div class="empty-card" id="emptyCard" role="button" tabindex="0" data-i18n-attr="aria-label:emptyAria" aria-label="載入音檔">
+        <div class="mark" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13m0-13 5 5m-5-5-5 5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+        </div>
+        <p class="empty-title" data-i18n="emptyTitle">點這裡選音檔，或直接把檔案拖進來</p>
+        <p class="empty-sub" data-i18n="emptySub">支援 MP3 / WAV / M4A / AAC / FLAC 等常見格式，長度上限 10 分鐘</p>
+      </div>
+      <p class="privacy-note">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 4 6v6c0 5 3.4 8.4 8 9 4.6-.6 8-4 8-9V6z"/></svg>
+        <span data-i18n="emptyPrivacy">全程在瀏覽器裡處理，檔案不會上傳到伺服器</span>
+      </p>
+      <input type="file" id="fileInput" accept="audio/*,.mp3,.wav,.m4a,.aac,.flac,.ogg,.opus" hidden>
+    </div>
+
+    <!-- 解碼中 -->
+    <div class="panel panel-loading">
+      <div class="loading-box">
+        <div class="spinner" aria-hidden="true"></div>
+        <p id="loadingText" aria-live="polite" data-i18n="loadingText">讀取音檔中…</p>
+      </div>
+    </div>
+
+    <!-- 播放器 -->
+    <div class="panel panel-ready">
+      <div class="card">
+        <div class="file-row">
+          <div class="mark" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3" fill="currentColor" stroke="none"/><circle cx="18" cy="16" r="3" fill="currentColor" stroke="none"/></svg>
+          </div>
+          <div class="txt">
+            <div class="name" id="fileName">—</div>
+            <div class="meta" id="fileMeta">—</div>
+          </div>
+        </div>
+
+        <div class="transport">
+          <button class="play-btn" id="playBtn" data-i18n-attr="aria-label:playLabel,title:playLabel" aria-label="播放" title="播放">
+            <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+            <svg id="iconPause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" hidden><path d="M7 5h4v14H7zm6 0h4v14h-4z"/></svg>
+          </button>
+          <div class="seek-area">
+            <input type="range" id="seek" min="0" max="100" step="0.01" value="0"
+                   data-i18n-attr="aria-label:seekLabel" aria-label="播放進度">
+            <div class="time-row">
+              <span class="now" id="timeNow">0:00</span>
+              <span id="timeTotal">0:00</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 速度 -->
+        <div class="control">
+          <div class="control-head">
+            <span class="label" data-i18n="speedLabel">速度</span>
+            <span class="value" id="speedValue">100<span class="unit">%</span></span>
+          </div>
+          <div class="slider-row">
+            <input type="range" id="speed" min="50" max="150" step="5" value="100"
+                   data-i18n-attr="aria-label:speedLabel" aria-label="速度">
+          </div>
+          <div class="scale"><span>50%</span><span>100%</span><span>150%</span></div>
+          <div class="quick">
+            <button class="btn" id="q075" type="button" aria-pressed="false">×0.75</button>
+            <button class="btn" id="q100" type="button" aria-pressed="true">×1</button>
+            <button class="btn" id="qReset" type="button" data-i18n="quickReset">重設</button>
+          </div>
+        </div>
+
+        <!-- 移調 -->
+        <div class="control">
+          <div class="control-head">
+            <span class="label" data-i18n="pitchLabel">移調</span>
+            <span class="value" id="pitchValue">0<span class="unit" data-i18n="semitoneUnit">半音</span></span>
+          </div>
+          <div class="slider-row">
+            <button class="step-btn" id="pitchDown" type="button" data-i18n-attr="aria-label:pitchDownLabel" aria-label="降低半音">−</button>
+            <input type="range" id="pitch" min="-12" max="12" step="1" value="0"
+                   data-i18n-attr="aria-label:pitchLabel" aria-label="移調">
+            <button class="step-btn" id="pitchUp" type="button" data-i18n-attr="aria-label:pitchUpLabel" aria-label="升高半音">＋</button>
+          </div>
+          <div class="scale inset"><span>−12</span><span>0</span><span>+12</span></div>
+        </div>
+
+        <div class="card-foot">
+          <button class="link-btn" id="changeFile" type="button" data-i18n="changeFile">換一個檔案</button>
+          <span class="hint-kbd" data-i18n-html="kbdHint"><kbd>空白鍵</kbd> 播放／暫停</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 錯誤 -->
+    <div class="panel panel-error">
+      <div class="error-card">
+        <p class="t">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/></svg>
+          <span id="errorTitle" data-i18n="errorTitle">沒辦法載入這個檔案</span>
+        </p>
+        <p id="errorText" aria-live="polite">—</p>
+        <button class="btn" id="errorRetry" type="button" data-i18n="errorRetry">換一個檔案</button>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <span data-i18n-html="footerText">音訊變速使用 <a href="https://github.com/cutterbl/SoundTouchJS" target="_blank" rel="noopener">SoundTouchJS</a> ・ musicsteven.com 開發</span>
+</footer>
+
+<div id="dropVeil" aria-hidden="true"><div class="box" data-i18n="dropHere">放開就開始載入</div></div>
+
+<script>
+"use strict";
+
+/* ══════════════════════════════════════════════════════════════
+   PitchMaster — 變速不變調 / 移調播放器
+   單檔 HTML,無 build。變速引擎是 @soundtouchjs/audio-worklet(版本釘死),
+   從 CDN 載入 AudioWorkletProcessor。
+   訊號鏈:File → decodeAudioData → BufferSource → SoundTouchNode → GainNode → destination
+   ══════════════════════════════════════════════════════════════ */
+
+const $ = id => document.getElementById(id);
+
+/* ── 語言 ─────────────────────────────────────────────────────
+   跟 ScrollScore / SightScore / HarmonyMap / LoudMaster / LessonNotes 共用
+   同一把 localStorage key,在任一工具切過語言,其他工具打開就是同一個。 */
+const LANG_KEY = "sm_lang";
+const THEME_KEY = "sm_theme";
+
+const I18N = {
+  zh: {
+    pageTitle: "PitchMaster — 變速不變調的練習播放器",
+    metaDesc: "把音檔放慢或加快而不變調，也能整首移調 ±12 半音，適合扒歌、跟練與換調試唱。免安裝，檔案不會離開你的電腦。",
+    ogLocale: "zh_TW",
+    homeLinkLabel: "工具箱",
+    themeToggleTitle: "切換淺色 / 深色",
+    themeToggleLabel: "切換淺色或深色主題",
+    langToggleToEn: "Switch to English",
+    langToggleToZh: "切換為中文",
+    emptyAria: "載入音檔",
+    emptyTitle: "點這裡選音檔，或直接把檔案拖進來",
+    emptySub: "支援 MP3 / WAV / M4A / AAC / FLAC 等常見格式，長度上限 10 分鐘",
+    emptyPrivacy: "全程在瀏覽器裡處理，檔案不會上傳到伺服器",
+    dropHere: "放開就開始載入",
+    loadingText: "讀取音檔中…",
+    loadingDecode: "解碼中…（檔案越長越久，請稍等）",
+    loadingEngine: "載入變速引擎中…",
+    playLabel: "播放",
+    pauseLabel: "暫停",
+    seekLabel: "播放進度",
+    speedLabel: "速度",
+    pitchLabel: "移調",
+    semitoneUnit: "半音",
+    pitchDownLabel: "降低半音",
+    pitchUpLabel: "升高半音",
+    quickReset: "重設",
+    changeFile: "換一個檔案",
+    kbdHint: "<kbd>空白鍵</kbd> 播放／暫停",
+    fileMeta: "{dur} ・ {size}",
+    errorTitle: "沒辦法載入這個檔案",
+    errorRetry: "換一個檔案",
+    errTooLong: "這個檔案長 {dur}，超過 10 分鐘的上限。音檔解碼後整首會攤平在記憶體裡（10 分鐘立體聲大約 200MB），再長下去平板會直接當掉，所以先擋下來。請先剪成 10 分鐘以內再載入。",
+    errTooBig: "這個檔案有 {size}，太大了。請改用 10 分鐘以內、300MB 以下的檔案。",
+    errDecode: "讀不到這個音檔，可能是瀏覽器不支援它的編碼格式。轉成 MP3 或 WAV 再試一次通常就可以了。",
+    errEngine: "變速引擎載入失敗，可能是網路不通或被擋下來了。請檢查連線後重新整理頁面再試一次。",
+    errNoWorklet: "這個瀏覽器不支援 AudioWorklet，沒辦法做變速。請改用較新的 Chrome / Edge / Safari（iOS 需要 14.5 以上）。",
+    errGeneric: "載入過程出了問題，請再試一次。",
+    footerText: '音訊變速使用 <a href="https://github.com/cutterbl/SoundTouchJS" target="_blank" rel="noopener">SoundTouchJS</a> ・ musicsteven.com 開發',
+  },
+  en: {
+    pageTitle: "PitchMaster — Practice player with tempo and pitch control",
+    metaDesc: "Slow a track down or speed it up without changing its pitch, and transpose the whole thing by up to 12 semitones. No install, and your file never leaves your computer.",
+    ogLocale: "en_US",
+    homeLinkLabel: "Toolbox",
+    themeToggleTitle: "Light / dark",
+    themeToggleLabel: "Switch between light and dark theme",
+    langToggleToEn: "Switch to English",
+    langToggleToZh: "Switch to Chinese",
+    emptyAria: "Load an audio file",
+    emptyTitle: "Click to choose an audio file, or drop one here",
+    emptySub: "MP3 / WAV / M4A / AAC / FLAC and other common formats, up to 10 minutes",
+    emptyPrivacy: "Everything runs in your browser — nothing is uploaded to a server",
+    dropHere: "Drop to load",
+    loadingText: "Reading the file…",
+    loadingDecode: "Decoding… (longer files take longer)",
+    loadingEngine: "Loading the time-stretch engine…",
+    playLabel: "Play",
+    pauseLabel: "Pause",
+    seekLabel: "Playback position",
+    speedLabel: "Speed",
+    pitchLabel: "Pitch",
+    semitoneUnit: "st",
+    pitchDownLabel: "Down a semitone",
+    pitchUpLabel: "Up a semitone",
+    quickReset: "Reset",
+    changeFile: "Load another file",
+    kbdHint: "<kbd>Space</kbd> play / pause",
+    fileMeta: "{dur} · {size}",
+    errorTitle: "Couldn't load this file",
+    errorRetry: "Try another file",
+    errTooLong: "This file is {dur} long, over the 10-minute limit. Decoding lays the whole track out in memory (about 200MB for 10 minutes of stereo) and anything longer tends to crash a tablet, so it's blocked here. Trim it to 10 minutes or less and try again.",
+    errTooBig: "This file is {size}, which is too large. Please use a file under 10 minutes and 300MB.",
+    errDecode: "This file couldn't be decoded — the browser probably doesn't support its codec. Converting it to MP3 or WAV usually fixes it.",
+    errEngine: "The time-stretch engine failed to load, probably a network problem. Check your connection, reload the page and try again.",
+    errNoWorklet: "This browser doesn't support AudioWorklet, so time-stretching isn't possible. Please use a recent Chrome / Edge / Safari (iOS 14.5 or later).",
+    errGeneric: "Something went wrong while loading. Please try again.",
+    footerText: 'Time-stretching by <a href="https://github.com/cutterbl/SoundTouchJS" target="_blank" rel="noopener">SoundTouchJS</a> · built by musicsteven.com',
+  },
+};
+
+function getStoredLang(){
+  try {
+    const v = localStorage.getItem(LANG_KEY);
+    return (v === "en" || v === "zh") ? v : "zh";
+  } catch (e) { return "zh"; }
+}
+let currentLang = getStoredLang();
+
+/* T(key, vars):執行期組字串的翻譯入口,{name} 佔位符做簡單取代。
+   找不到 key 時原樣印出 key,方便一眼看出漏翻的地方 */
+function T(key, vars){
+  const dict = I18N[currentLang] || I18N.zh;
+  let s = Object.prototype.hasOwnProperty.call(dict, key) ? dict[key] : key;
+  if (vars) for (const k of Object.keys(vars)) s = s.split("{" + k + "}").join(vars[k]);
+  return s;
+}
+
+function applyLanguage(lang){
+  currentLang = (lang === "en") ? "en" : "zh";
+  try { localStorage.setItem(LANG_KEY, currentLang); } catch (e) {}
+  document.documentElement.lang = currentLang === "en" ? "en" : "zh-Hant";
+
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    const key = el.getAttribute("data-i18n");
+    if (key) el.textContent = T(key);
+  });
+  document.querySelectorAll("[data-i18n-html]").forEach(el => {
+    const key = el.getAttribute("data-i18n-html");
+    if (key) el.innerHTML = T(key);
+  });
+  document.querySelectorAll("[data-i18n-attr]").forEach(el => {
+    const spec = el.getAttribute("data-i18n-attr");
+    if (!spec) return;
+    for (const pair of spec.split(",")) {
+      const [attr, key] = pair.split(":").map(s => s.trim());
+      if (attr && key) el.setAttribute(attr, T(key));
+    }
+  });
+
+  const lt = $("langToggle");
+  lt.textContent = currentLang === "en" ? "中" : "EN";
+  const next = currentLang === "en" ? T("langToggleToZh") : T("langToggleToEn");
+  lt.setAttribute("aria-label", next);
+  lt.setAttribute("title", next);
+  lt.setAttribute("aria-pressed", currentLang === "en" ? "true" : "false");
+
+  refreshDynamicText();
+}
+
+/* 執行期才組出來的文字(檔名列、速度/移調數值、錯誤訊息、播放/暫停)不在 data-i18n 的
+   掃描範圍內,切語言時要另外重畫一次 */
+function refreshDynamicText(){
+  updateSpeedText();
+  updatePitchText();
+  updatePlayButton();
+  updateFileMeta();
+  if (lastError) showError(lastError.key, lastError.vars);
+}
+
+$("langToggle").addEventListener("click", () => applyLanguage(currentLang === "zh" ? "en" : "zh"));
+
+/* ── 主題 ─────────────────────────────────────────────────────
+   sm_theme 一樣是所有工具共用的 key,值只有 "light" / "dark"。
+   沒存過的時候用本工具自己的預設(深色),使用者按過切換鈕之後才會一致——
+   共用的是「使用者的選擇」,不是「還沒選之前的預設」。 */
+function applyTheme(light){
+  document.body.classList.toggle("light", light);
+  $("themeToggle").setAttribute("aria-pressed", light ? "true" : "false");
+  document.querySelector('meta[name="theme-color"]').setAttribute("content", light ? "#FBF7EE" : "#0C0A07");
+  try { localStorage.setItem(THEME_KEY, light ? "light" : "dark"); } catch (e) {}
+}
+$("themeToggle").setAttribute("aria-pressed", document.body.classList.contains("light") ? "true" : "false");
+$("themeToggle").addEventListener("click", () => applyTheme(!document.body.classList.contains("light")));
+
+/* ── 變速引擎 ─────────────────────────────────────────────────
+   @soundtouchjs/audio-worklet 的 dist/soundtouch-worklet.js 是一個自帶所有相依、
+   直接 registerProcessor('soundtouch-processor') 的檔案,可以整支丟給 addModule()。
+   版本釘死:CDN 上的 latest 哪天換了實作,這頁不會跟著壞掉。
+
+   坑:addModule() 會被 CDN 的 Content-Type / CORS 擋掉(某些 CDN 對 .js 回
+   text/plain,Worklet 規範會直接拒絕)。所以失敗時改成自己 fetch 回來、包成
+   Blob URL 再 addModule —— Blob 的 type 是我們自己指定的,一定過。
+   兩個 CDN 都試,任何一個成功就算數。 */
+const WORKLET_VERSION = "0.2.1";
+const WORKLET_URLS = [
+  "https://cdn.jsdelivr.net/npm/@soundtouchjs/audio-worklet@" + WORKLET_VERSION + "/dist/soundtouch-worklet.js",
+  "https://unpkg.com/@soundtouchjs/audio-worklet@" + WORKLET_VERSION + "/dist/soundtouch-worklet.js",
+];
+const PROCESSOR_NAME = "soundtouch-processor";
+
+let ctx = null;          // AudioContext
+let enginePromise = null; // addModule() 只跑一次,之後共用同一個 promise
+
+function ensureContext(){
+  if (!ctx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) throw new Error("no-audiocontext");
+    ctx = new AC();
+  }
+  return ctx;
+}
+
+/* 坑:AudioContext 一定要在使用者手勢之後才 resume(),不然 iOS / Chrome 會讓它
+   停在 suspended,畫面上看起來在播、實際上一點聲音都沒有。每次要出聲前都叫一次,
+   從背景切回來被系統暫停的情況也一起救回來。 */
+async function resumeContext(){
+  ensureContext();
+  if (ctx.state === "suspended") {
+    try { await ctx.resume(); } catch (e) {}
+  }
+}
+
+function loadEngine(){
+  if (enginePromise) return enginePromise;
+  enginePromise = (async () => {
+    ensureContext();
+    if (!ctx.audioWorklet) throw new Error("no-worklet");
+    let lastErr = null;
+    for (const url of WORKLET_URLS) {
+      // 先照正規做法直接餵網址
+      try { await ctx.audioWorklet.addModule(url); return; } catch (e) { lastErr = e; }
+      // 被 Content-Type / CORS 擋下來的話,自己抓回來轉 Blob URL
+      try {
+        const res = await fetch(url, { mode: "cors", credentials: "omit" });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const code = await res.text();
+        const blobUrl = URL.createObjectURL(new Blob([code], { type: "text/javascript" }));
+        try {
+          await ctx.audioWorklet.addModule(blobUrl);
+          return;
+        } finally {
+          // addModule 已經解析完模組,這裡可以立刻釋放
+          URL.revokeObjectURL(blobUrl);
+        }
+      } catch (e) { lastErr = e; }
+    }
+    throw lastErr || new Error("engine");
+  })();
+  // 失敗的話不要把壞掉的 promise 留著,下次載檔案還能重試一次
+  enginePromise.catch(() => { enginePromise = null; });
+  return enginePromise;
+}
+
+/* ── 播放狀態 ───────────────────────────────────────────────── */
+const MAX_SECONDS = 600;          // 10 分鐘
+const MAX_BYTES = 300 * 1024 * 1024;
+const SPEED_MIN = 50, SPEED_MAX = 150, SPEED_SNAP = 100;
+const FADE = 0.02;                // 起停的淡入淡出,避免喀一聲
+
+let audioBuffer = null;
+let fileInfo = null;              // {name, size}
+let speed = 100;                  // 百分比
+let semitones = 0;
+let playing = false;
+let startedAt = 0;                // 開始播放當下的 ctx.currentTime
+let startOffset = 0;              // 開始播放的位置(秒,音檔自己的時間軸)
+let srcNode = null, stNode = null, gainNode = null;
+let rafId = 0;
+let seeking = false;
+let lastError = null;
+
+const app = $("app");
+function setState(s){ app.setAttribute("data-state", s); }
+
+/* 目前播放到音檔的第幾秒。
+   速度是靠 BufferSource 的 playbackRate 做的,所以牆鐘時間要乘上速度才是音檔時間;
+   速度中途改變時會重新錨定(setSpeed),這裡永遠只算「最後一次錨定之後」的那一段。 */
+function positionNow(){
+  if (!audioBuffer) return 0;
+  if (!playing) return startOffset;
+  const t = startOffset + (ctx.currentTime - startedAt) * (speed / 100);
+  return Math.max(0, Math.min(audioBuffer.duration, t));
+}
+
+function startPlayback(offset){
+  stopSource(false);
+  const src = ctx.createBufferSource();
+  src.buffer = audioBuffer;
+  src.playbackRate.value = speed / 100;
+
+  /* 明確指定 2 進 2 出:單聲道音檔在這裡會被上混成立體聲,worklet 內部就一定拿得到
+     左右兩條,不用另外處理單聲道的分支 */
+  const st = new AudioWorkletNode(ctx, PROCESSOR_NAME, {
+    numberOfInputs: 1,
+    numberOfOutputs: 1,
+    outputChannelCount: [2],
+    channelCount: 2,
+    channelCountMode: "explicit",
+    channelInterpretation: "speakers",
+  });
+
+  /* 關鍵:worklet 的 tempo / rate 一律維持 1,變速完全交給 playbackRate。
+     這顆 processor 是即時的,每個 render quantum 進 128 格就要吐 128 格;
+     如果改用它自己的 tempo,進出格數就不相等(tempo=2 只吐得出 64 格),
+     缺的部分會變成破音或愈拖愈長的延遲。
+     改成「playbackRate 負責變速(音高也跟著跑掉)、pitch 負責把音高補回來」之後,
+     SoundTouch 內部是 rate=pitch、tempo=1/pitch,進出格數剛好 1:1,不會欠料。
+     移調則是再乘上 2^(n/12) —— worklet 內部就是 pitch * 2^(pitchSemitones/12)。 */
+  st.parameters.get("tempo").value = 1;
+  st.parameters.get("rate").value = 1;
+  st.parameters.get("pitch").value = 100 / speed;
+  st.parameters.get("pitchSemitones").value = semitones;
+
+  const g = ctx.createGain();
+  const now = ctx.currentTime;
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.linearRampToValueAtTime(1, now + FADE);
+
+  src.connect(st).connect(g).connect(ctx.destination);
+
+  src.onended = () => {
+    // 只有「自然播到底」才會走到這裡:主動停止前會先拆掉 onended
+    playing = false;
+    startOffset = 0;
+    stopSource(false);
+    updatePlayButton();
+    updateProgress();
+    stopRaf();
+  };
+
+  srcNode = src; stNode = st; gainNode = g;
+  src.start(0, offset);
+  startedAt = ctx.currentTime;
+  startOffset = offset;
+  playing = true;
+  updatePlayButton();
+  startRaf();
+}
+
+/* fade=true 時先把音量拉下來再停,避免暫停/拖動進度時的爆音。
+   每次播放都是全新的 source + worklet + gain,所以舊的那組淡完自己收掉就好,
+   不會跟新的那組互相干擾。 */
+function stopSource(fade){
+  const src = srcNode, st = stNode, g = gainNode;
+  srcNode = null; stNode = null; gainNode = null;
+  if (!src) return;
+  src.onended = null;
+  const cleanup = () => {
+    try { src.stop(); } catch (e) {}
+    try { src.disconnect(); } catch (e) {}
+    try { st.disconnect(); } catch (e) {}
+    try { g.disconnect(); } catch (e) {}
+  };
+  if (fade && ctx) {
+    const now = ctx.currentTime;
+    try {
+      g.gain.cancelScheduledValues(now);
+      g.gain.setValueAtTime(g.gain.value, now);
+      g.gain.linearRampToValueAtTime(0.0001, now + FADE);
+    } catch (e) {}
+    setTimeout(cleanup, FADE * 1000 + 30);
+  } else {
+    cleanup();
+  }
+}
+
+async function play(){
+  if (!audioBuffer) return;
+  await resumeContext();
+  const from = startOffset >= audioBuffer.duration - 0.05 ? 0 : startOffset;
+  startPlayback(from);
+}
+
+function pause(){
+  if (!playing) return;
+  startOffset = positionNow();
+  playing = false;
+  stopSource(true);
+  updatePlayButton();
+  updateProgress();
+  stopRaf();
+}
+
+function togglePlay(){ playing ? pause() : play(); }
+
+function seekTo(t){
+  if (!audioBuffer) return;
+  const pos = Math.max(0, Math.min(audioBuffer.duration, t));
+  if (playing) {
+    startPlayback(pos);
+  } else {
+    startOffset = pos;
+    updateProgress();
+  }
+}
+
+/* ── 進度 ───────────────────────────────────────────────────── */
+function fmtTime(sec){
+  if (!isFinite(sec) || sec < 0) sec = 0;
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return m + ":" + String(s).padStart(2, "0");
+}
+
+function updateProgress(){
+  if (!audioBuffer) return;
+  const pos = positionNow();
+  const dur = audioBuffer.duration;
+  if (!seeking) {
+    $("seek").value = String(pos);
+    $("seek").style.setProperty("--pct", (dur ? (pos / dur) * 100 : 0) + "%");
+  }
+  $("timeNow").textContent = fmtTime(pos);
+}
+
+function startRaf(){
+  stopRaf();
+  const tick = () => {
+    updateProgress();
+    rafId = requestAnimationFrame(tick);
+  };
+  rafId = requestAnimationFrame(tick);
+}
+function stopRaf(){ if (rafId) { cancelAnimationFrame(rafId); rafId = 0; } }
+
+/* SVGElement 沒有 hidden 這個 IDL 屬性(那是 HTMLElement 才有的),
+   el.hidden = true 只會掛一個沒人看的 JS 屬性上去,畫面不會變。一律改動屬性本身。 */
+function setHidden(el, on){
+  if (on) el.setAttribute("hidden", ""); else el.removeAttribute("hidden");
+}
+
+function updatePlayButton(){
+  const btn = $("playBtn");
+  setHidden($("iconPlay"), playing);
+  setHidden($("iconPause"), !playing);
+  const label = T(playing ? "pauseLabel" : "playLabel");
+  btn.setAttribute("aria-label", label);
+  btn.setAttribute("title", label);
+}
+
+/* ── 速度 / 移調 ───────────────────────────────────────────── */
+function updateSpeedText(){
+  $("speedValue").innerHTML = speed + '<span class="unit">%</span>';
+  $("q075").setAttribute("aria-pressed", speed === 75 ? "true" : "false");
+  $("q100").setAttribute("aria-pressed", speed === 100 ? "true" : "false");
+}
+function updatePitchText(){
+  const sign = semitones > 0 ? "+" : (semitones < 0 ? "−" : "");
+  $("pitchValue").innerHTML = sign + Math.abs(semitones) +
+    '<span class="unit">' + T("semitoneUnit") + "</span>";
+  $("pitchDown").disabled = semitones <= -12;
+  $("pitchUp").disabled = semitones >= 12;
+}
+
+function setSpeed(v, fromSlider){
+  v = Math.max(SPEED_MIN, Math.min(SPEED_MAX, Math.round(v / 5) * 5));
+  if (v === speed) { if (!fromSlider) $("speed").value = String(v); updateSpeedText(); return; }
+  // 播放中改速度:先把目前位置定下來再換錨點,不然舊速度算出來的時間會被新速度重算一遍
+  if (playing) {
+    startOffset = positionNow();
+    startedAt = ctx.currentTime;
+  }
+  speed = v;
+  if (!fromSlider) $("speed").value = String(v);
+  if (playing && srcNode && stNode) {
+    srcNode.playbackRate.value = speed / 100;
+    stNode.parameters.get("pitch").value = 100 / speed;
+  }
+  updateSpeedText();
+}
+
+function setSemitones(n){
+  n = Math.max(-12, Math.min(12, Math.round(n)));
+  semitones = n;
+  $("pitch").value = String(n);
+  if (stNode) stNode.parameters.get("pitchSemitones").value = n;
+  updatePitchText();
+}
+
+/* 100% 吸附:step 已經是 5,每一格本來就會停在 5 的倍數,這裡多做的是
+   「從 100% 滑走要更費一點力」——指標得離 100% 的位置超過 SNAP_PX 才放行。
+   只在用指標拖曳時生效:鍵盤方向鍵也套的話,使用者會發現按了沒反應,卡在 100% 出不去。 */
+const SNAP_PX = 14;
+let pointerX = null;
+const speedEl = $("speed");
+["pointerdown", "pointermove"].forEach(ev =>
+  speedEl.addEventListener(ev, e => { pointerX = e.clientX; }, { passive: true }));
+["pointerup", "pointercancel", "pointerleave"].forEach(ev =>
+  speedEl.addEventListener(ev, () => { pointerX = null; }, { passive: true }));
+
+speedEl.addEventListener("input", () => {
+  let v = Number(speedEl.value);
+  if (pointerX !== null && speed === SPEED_SNAP && v !== SPEED_SNAP) {
+    const r = speedEl.getBoundingClientRect();
+    const thumb = 20;                     // 跟 CSS 的 thumb 同寬
+    const usable = Math.max(1, r.width - thumb);
+    const x100 = r.left + thumb / 2 + usable * ((SPEED_SNAP - SPEED_MIN) / (SPEED_MAX - SPEED_MIN));
+    if (Math.abs(pointerX - x100) < SNAP_PX) {
+      speedEl.value = String(SPEED_SNAP);
+      v = SPEED_SNAP;
+    }
+  }
+  setSpeed(v, true);
+});
+
+$("pitch").addEventListener("input", () => setSemitones(Number($("pitch").value)));
+$("pitchDown").addEventListener("click", () => setSemitones(semitones - 1));
+$("pitchUp").addEventListener("click", () => setSemitones(semitones + 1));
+$("q075").addEventListener("click", () => setSpeed(75));
+$("q100").addEventListener("click", () => setSpeed(100));
+$("qReset").addEventListener("click", () => { setSpeed(100); setSemitones(0); });
+
+/* ── 進度條拖曳 ─────────────────────────────────────────────
+   拖的過程只更新畫面,放開才真的 seek:每動一格就重建一次 BufferSource 的話,
+   拖到一半會變成連續的破音 */
+const seekEl = $("seek");
+seekEl.addEventListener("pointerdown", () => { seeking = true; });
+seekEl.addEventListener("keydown", () => { seeking = true; });
+seekEl.addEventListener("input", () => {
+  const v = Number(seekEl.value);
+  const dur = audioBuffer ? audioBuffer.duration : 0;
+  seekEl.style.setProperty("--pct", (dur ? (v / dur) * 100 : 0) + "%");
+  $("timeNow").textContent = fmtTime(v);
+});
+seekEl.addEventListener("change", () => {
+  seeking = false;
+  seekTo(Number(seekEl.value));
+});
+
+$("playBtn").addEventListener("click", togglePlay);
+
+// 空白鍵播放/暫停。焦點在按鈕或滑桿上時不搶——那些元件自己就吃空白鍵
+document.addEventListener("keydown", e => {
+  if (e.code !== "Space" && e.key !== " ") return;
+  const el = document.activeElement;
+  if (el && (el.tagName === "INPUT" || el.tagName === "BUTTON" ||
+             el.tagName === "SELECT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
+  if (app.getAttribute("data-state") !== "ready") return;
+  e.preventDefault();
+  togglePlay();
+});
+
+/* ── 載入檔案 ─────────────────────────────────────────────── */
+function fmtSize(bytes){
+  if (bytes >= 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + " MB";
+  return Math.max(1, Math.round(bytes / 1024)) + " KB";
+}
+
+function updateFileMeta(){
+  if (!fileInfo || !audioBuffer) return;
+  $("fileName").textContent = fileInfo.name;
+  $("fileMeta").textContent = T("fileMeta", {
+    dur: fmtTime(audioBuffer.duration),
+    size: fmtSize(fileInfo.size),
+  });
+}
+
+function showError(key, vars){
+  lastError = { key, vars };
+  $("errorText").textContent = T(key, vars);
+  setState("error");
+}
+
+/* 先問長度再解碼。decodeAudioData 會把整首攤成 Float32(10 分鐘立體聲約 200MB),
+   等解完才發現太長,記憶體早就爆了 —— 所以用 <audio> 的 metadata 先問一次,
+   那只讀檔頭,幾乎不花記憶體。拿不到(某些容器沒寫時長)就退回解碼後再檢查。 */
+function probeDuration(file){
+  return new Promise(resolve => {
+    let done = false;
+    const el = document.createElement("audio");
+    const url = URL.createObjectURL(file);
+    const finish = v => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      el.removeAttribute("src");
+      try { el.load(); } catch (e) {}
+      URL.revokeObjectURL(url);
+      resolve(v);
+    };
+    const timer = setTimeout(() => finish(null), 8000);
+    el.preload = "metadata";
+    el.onloadedmetadata = () => finish(isFinite(el.duration) && el.duration > 0 ? el.duration : null);
+    el.onerror = () => finish(null);
+    el.src = url;
+  });
+}
+
+function decode(arrayBuffer){
+  // callback 形式,舊版 Safari 的 decodeAudioData 不回 promise
+  return new Promise((resolve, reject) => {
+    const ret = ctx.decodeAudioData(arrayBuffer, resolve, reject);
+    if (ret && typeof ret.then === "function") ret.then(resolve, reject);
+  });
+}
+
+async function loadFile(file){
+  if (!file) return;
+  lastError = null;
+  resetPlayback();
+  setState("loading");
+  $("loadingText").textContent = T("loadingText");
+
+  if (file.size > MAX_BYTES) {
+    showError("errTooBig", { size: fmtSize(file.size) });
+    return;
+  }
+
+  try {
+    ensureContext();
+  } catch (e) {
+    showError("errNoWorklet");
+    return;
+  }
+
+  // 選檔/拖放本身就是使用者手勢,在這裡先把 context 叫醒,按下播放時就不會卡在 suspended
+  await resumeContext();
+
+  const probed = await probeDuration(file);
+  if (probed != null && probed > MAX_SECONDS) {
+    showError("errTooLong", { dur: fmtTime(probed) });
+    return;
+  }
+
+  $("loadingText").textContent = T("loadingEngine");
+  try {
+    await loadEngine();
+  } catch (e) {
+    showError(e && e.message === "no-worklet" ? "errNoWorklet" : "errEngine");
+    return;
+  }
+
+  $("loadingText").textContent = T("loadingDecode");
+  let buf;
+  try {
+    const arr = await file.arrayBuffer();
+    buf = await decode(arr);
+  } catch (e) {
+    showError("errDecode");
+    return;
+  }
+
+  // 檔頭沒寫時長的情況:解完才知道,這時還是要擋,並且立刻把 buffer 放掉
+  if (buf.duration > MAX_SECONDS) {
+    showError("errTooLong", { dur: fmtTime(buf.duration) });
+    return;
+  }
+
+  audioBuffer = buf;
+  fileInfo = { name: file.name, size: file.size };
+  startOffset = 0;
+  seekEl.max = String(buf.duration);
+  seekEl.value = "0";
+  seekEl.style.setProperty("--pct", "0%");
+  $("timeTotal").textContent = fmtTime(buf.duration);
+  $("timeNow").textContent = "0:00";
+  updateFileMeta();
+  updatePlayButton();
+  setState("ready");
+}
+
+function resetPlayback(){
+  if (playing || srcNode) {
+    playing = false;
+    stopSource(false);
+  }
+  stopRaf();
+  audioBuffer = null;
+  startOffset = 0;
+  updatePlayButton();
+}
+
+/* ── 選檔 / 拖放 ───────────────────────────────────────────── */
+const fileInput = $("fileInput");
+const emptyCard = $("emptyCard");
+
+emptyCard.addEventListener("click", () => fileInput.click());
+emptyCard.addEventListener("keydown", e => {
+  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInput.click(); }
+});
+$("changeFile").addEventListener("click", () => fileInput.click());
+$("errorRetry").addEventListener("click", () => { lastError = null; setState("empty"); fileInput.click(); });
+
+fileInput.addEventListener("change", () => {
+  const f = fileInput.files && fileInput.files[0];
+  // 清掉 value:同一個檔案再選一次也要能觸發 change
+  fileInput.value = "";
+  if (f) loadFile(f);
+});
+
+/* 整頁都能放:拖進視窗任何位置都算,不用精準瞄準那張卡。
+   dragleave 會在滑過子元素時亂跳,所以用進出計數而不是單看事件 */
+const veil = $("dropVeil");
+let dragDepth = 0;
+function hasFiles(e){
+  const dt = e.dataTransfer;
+  return dt && Array.from(dt.types || []).indexOf("Files") !== -1;
+}
+window.addEventListener("dragenter", e => {
+  if (!hasFiles(e)) return;
+  e.preventDefault();
+  dragDepth++;
+  veil.classList.add("on");
+});
+window.addEventListener("dragover", e => { if (hasFiles(e)) e.preventDefault(); });
+window.addEventListener("dragleave", e => {
+  if (!hasFiles(e)) return;
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (!dragDepth) veil.classList.remove("on");
+});
+window.addEventListener("drop", e => {
+  if (!hasFiles(e)) return;
+  e.preventDefault();
+  dragDepth = 0;
+  veil.classList.remove("on");
+  const f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) loadFile(f);
+});
+
+// 頁籤切到背景時不用繼續跑 rAF(瀏覽器本來也會節流,但這樣連計時器都省了)
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) stopRaf();
+  else if (playing) startRaf();
+});
+
+applyLanguage(currentLang);
+updateSpeedText();
+updatePitchText();
+</script>
+</body>
+</html>

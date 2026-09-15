@@ -109,7 +109,9 @@ header h1 span{color:var(--ivory);font-weight:600}
 .home-link:hover,.home-link:focus-visible{color:var(--gold-bright)}
 /* 中英文字數不同,固定保留較寬那個語言的寬度,切換語言時後面的標題不會位移 */
 .home-link .btn-label{display:inline-block;min-width:3.4em;text-align:center}
-@media (max-width:420px){.home-link .btn-label{display:none}}
+/* 600px 是 ScrollScore 與 LoudMaster 收掉這行字的同一個斷點,不要自己另訂——
+   手機上六個工具的左上角要嘛都只有箭頭、要嘛都有字,不能只有這一頁不一樣 */
+@media (max-width:600px){.home-link .btn-label{display:none}}
 
 .btn{
   display:inline-flex;align-items:center;justify-content:center;gap:6px;line-height:1;
@@ -713,11 +715,25 @@ function ensureContext(){
 /* 坑:AudioContext 一定要在使用者手勢之後才 resume(),不然 iOS / Chrome 會讓它
    停在 suspended,畫面上看起來在播、實際上一點聲音都沒有。每次要出聲前都叫一次,
    從背景切回來被系統暫停的情況也一起救回來。 */
-async function resumeContext(){
+/* 一定要包 timeout:iOS Safari 在沒有有效使用者手勢時,resume() 回傳的 promise
+   不會 reject,而是整個掛住永遠不 settle。誰去 await 它,誰就跟著卡死——
+   實測就是卡在「讀取音檔中…」那一格不動。這裡最多等 1.2 秒就放行。 */
+function resumeContext(){
   ensureContext();
-  if (ctx.state === "suspended") {
-    try { await ctx.resume(); } catch (e) {}
-  }
+  if (ctx.state !== "suspended") return Promise.resolve();
+  let p;
+  try { p = ctx.resume(); } catch (e) { return Promise.resolve(); }
+  return Promise.race([
+    Promise.resolve(p).catch(() => {}),
+    new Promise(r => setTimeout(r, 1200)),
+  ]);
+}
+
+/* 在「使用者點了頁面上的東西」的當下把 AudioContext 叫醒。
+   iOS 的重點在於:點我們自己的按鈕才算數,從系統檔案選擇器回來的 change 事件不算,
+   所以解鎖要趁開啟選擇器的那一下,而不是等檔案選完。不等結果,純粹先叫醒。 */
+function unlockAudio(){
+  try { resumeContext(); } catch (e) {}
 }
 
 function loadEngine(){
@@ -1113,8 +1129,10 @@ async function loadFile(file){
     return;
   }
 
-  // 選檔/拖放本身就是使用者手勢,在這裡先把 context 叫醒,按下播放時就不會卡在 suspended
-  await resumeContext();
+  /* 這裡「不能」await:iOS 上從系統檔案選擇器回來的 change 事件不算使用者手勢,
+     resume() 會掛住不 settle,整個載入流程就停在「讀取音檔中…」。叫醒歸叫醒,
+     不擋後面的路;真正要出聲是按播放鈕的時候,那才是頁面上如假包換的點擊。 */
+  unlockAudio();
 
   const probed = await probeDuration(file);
   if (probed != null && probed > MAX_SECONDS) {
@@ -1174,12 +1192,12 @@ function resetPlayback(){
 const fileInput = $("fileInput");
 const emptyCard = $("emptyCard");
 
-emptyCard.addEventListener("click", () => fileInput.click());
+emptyCard.addEventListener("click", () => { unlockAudio(); fileInput.click(); });
 emptyCard.addEventListener("keydown", e => {
-  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInput.click(); }
+  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); unlockAudio(); fileInput.click(); }
 });
-$("changeFile").addEventListener("click", () => fileInput.click());
-$("errorRetry").addEventListener("click", () => { lastError = null; setState("empty"); fileInput.click(); });
+$("changeFile").addEventListener("click", () => { unlockAudio(); fileInput.click(); });
+$("errorRetry").addEventListener("click", () => { lastError = null; setState("empty"); unlockAudio(); fileInput.click(); });
 
 fileInput.addEventListener("change", () => {
   const f = fileInput.files && fileInput.files[0];
@@ -1213,6 +1231,7 @@ window.addEventListener("drop", e => {
   e.preventDefault();
   dragDepth = 0;
   veil.classList.remove("on");
+  unlockAudio();
   const f = e.dataTransfer.files && e.dataTransfer.files[0];
   if (f) loadFile(f);
 });

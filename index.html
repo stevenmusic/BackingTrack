@@ -1305,21 +1305,34 @@ const DRUM_FILES = {
   snare: ["snare/mid_snare_center_vl24.flac", "snare/mid_snare_center_vl28.flac"],
   hihat: ["hh/mid_hh_closed_vl3_rr1.flac", "hh/mid_hh_closed_vl3_rr2.flac", "hh/mid_hh_closed_vl3_rr3.flac"],
 };
-const drumBuffers = { kick: [], snare: [], hihat: [] };
-const drumRR = { kick: 0, snare: 0, hihat: 0 };
-let drumsLoading = null;
+/* 過門才用得到的鼓件。這幾顆加起來兩百多 MB 的十分之一,但也有 2MB 出頭,
+   等它們載完才開始播太久了,所以背景載:還沒到位的那幾次過門先用合成音頂著 */
+const DRUM_EXTRA_FILES = {
+  htom:  ["htom/mid_htom_center_vl14.flac"],
+  ltom:  ["ltom/mid_ltom_center_vl14.flac"],
+  crash: ["crash/mid_crash_crash_vl1_rr1.flac"],
+};
+const drumBuffers = { kick: [], snare: [], hihat: [], htom: [], ltom: [], crash: [] };
+const drumRR = { kick: 0, snare: 0, hihat: 0, htom: 0, ltom: 0, crash: 0 };
+let drumsLoading = null, drumExtraLoading = null;
 
-function ensureDrums(){
-  if (drumsLoading) return drumsLoading;
+function loadDrumSet(files){
   const jobs = [];
-  for (const piece of Object.keys(DRUM_FILES)) {
-    for (const path of DRUM_FILES[piece]) {
+  for (const piece of Object.keys(files)) {
+    for (const path of files[piece]) {
       jobs.push(fetchDecode(SRC_DRUMS, path)
         .then(b => { drumBuffers[piece].push(b); })
         .catch(() => {}));   // 這一顆載不到就少一個 round-robin,不影響其他鼓件
     }
   }
-  drumsLoading = Promise.all(jobs);
+  return Promise.all(jobs);
+}
+
+function ensureDrums(){
+  if (drumsLoading) return drumsLoading;
+  drumsLoading = loadDrumSet(DRUM_FILES);
+  // 過門那幾顆不放進回傳的 promise 裡,播放不必等它
+  if (!drumExtraLoading) drumExtraLoading = loadDrumSet(DRUM_EXTRA_FILES);
   return drumsLoading;
 }
 
@@ -1383,7 +1396,20 @@ function synthDrum(piece, when, gain){
     o.onended = () => { activeSources.delete(o); try { o.disconnect(); g.disconnect(); } catch (e) {} };
     return;
   }
-  const dur = piece === "snare" ? 0.19 : 0.05;
+  if (piece === "htom" || piece === "ltom") {
+    const o = ctx.createOscillator();
+    const f0 = piece === "htom" ? 260 : 170;
+    o.type = "sine";
+    o.frequency.setValueAtTime(f0, when);
+    o.frequency.exponentialRampToValueAtTime(f0 * 0.62, when + 0.22);
+    g.gain.setValueAtTime(gain, when);
+    g.gain.exponentialRampToValueAtTime(0.0001, when + 0.4);
+    o.connect(g); o.start(when); o.stop(when + 0.42);
+    activeSources.add(o);
+    o.onended = () => { activeSources.delete(o); try { o.disconnect(); g.disconnect(); } catch (e) {} };
+    return;
+  }
+  const dur = piece === "crash" ? 1.4 : piece === "snare" ? 0.19 : 0.05;
   const len = Math.max(1, Math.floor(ctx.sampleRate * dur));
   const buf = ctx.createBuffer(1, len, ctx.sampleRate);
   const d = buf.getChannelData(0);
@@ -1392,8 +1418,8 @@ function synthDrum(piece, when, gain){
   src.buffer = buf;
   const f = ctx.createBiquadFilter();
   f.type = piece === "snare" ? "bandpass" : "highpass";
-  f.frequency.value = piece === "snare" ? 1900 : 8000;
-  g.gain.setValueAtTime(gain * (piece === "snare" ? 1 : 0.8), when);
+  f.frequency.value = piece === "snare" ? 1900 : piece === "crash" ? 3500 : 8000;
+  g.gain.setValueAtTime(gain * (piece === "snare" ? 1 : piece === "crash" ? 0.5 : 0.8), when);
   g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
   src.connect(f); f.connect(g);
   src.start(when); src.stop(when + dur + 0.02);
@@ -1485,51 +1511,137 @@ const DRUM_PATTERNS = {
   eighth:  { kick: [0, 4], snare: [2, 6], hihat: [0, 1, 2, 3, 4, 5, 6, 7] },
 };
 
-function scheduleDrums(barStartBeat, b){
+/* ── 變化 ─────────────────────────────────────────────────────
+   同一個伴奏樣式每小節都一模一樣,聽起來就是個 loop。這裡讓每一小節依
+   「絕對小節號」去查一組固定的亂數:同一個小節號永遠得到同一種變化(可重現、
+   好除錯),但繞第二圈時小節號往上加,所以第二圈跟第一圈不會一樣。
+
+   刻意不用 Math.random():那樣連「這一拍到底加了沒」都無法重現,
+   出問題時沒辦法追。 */
+/* 兩輪 murmur 收尾。第一版只混一輪,整體分布看起來沒問題,
+   但把 salt 固定、小節號從 0 數上去時會連出好幾個很小的值——
+   實測貝斯前五小節全部選到同一條路。雪崩不夠就是會這樣,不要簡化這段 */
+function hash01(a, b){
+  let h = Math.imul(a ^ 0x9e3779b9, 2654435761) ^ Math.imul(b ^ 0x85ebca6b, 1597334677);
+  h = Math.imul(h ^ (h >>> 15), 2246822519);
+  h = Math.imul(h ^ (h >>> 13), 3266489917);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+function chance(absBar, salt, p){ return hash01(absBar, salt) < p; }
+/* 力度抖動:同一顆鼓每次打不會一樣大力,差個 ±8% 就夠讓它不像機器 */
+function humanize(absBar, salt, gain){ return gain * (0.92 + hash01(absBar, salt + 900) * 0.16); }
+
+/* 過門的三種型:寫成十六分音符的格子(最後兩拍共 8 格),
+   值是要打的鼓件,null 是休息。三選一由小節號決定 */
+const FILLS = [
+  ["snare", "snare", "htom", "htom", "ltom", "ltom", "snare", "snare"],
+  [null, "snare", "snare", "htom", "htom", "ltom", "ltom", "ltom"],
+  ["snare", null, "snare", "snare", "htom", "ltom", "snare", "ltom"],
+];
+
+function scheduleDrums(barStartBeat, b, absBar, isFill){
   const pat = DRUM_PATTERNS[styleOn] || DRUM_PATTERNS.pad;
   const half = spb / 2;
+
+  // 過門在最後兩拍,改走十六分音符
+  if (isFill && b >= 2) {
+    const fill = FILLS[Math.floor(hash01(absBar, 11) * FILLS.length) % FILLS.length];
+    const q = spb / 4;
+    if (b === 2) playDrum("kick", beatTime(barStartBeat + b), humanize(absBar, 12, 0.8));
+    for (let k = 0; k < 4; k++) {
+      const slot = (b - 2) * 4 + k;          // 0–7,最後兩拍的第幾個十六分
+      const piece = fill[slot];
+      if (!piece) continue;
+      const t = beatTime(barStartBeat + b) + k * q;
+      // 過門往後愈打愈重,收尾才有推進感
+      const g = humanize(absBar, 20 + slot, 0.5 + slot * 0.05);
+      playDrum(piece, t, g);
+    }
+    // 過門收在下一小節的頭:銅鈸不是每次都打,每次都打會膩
+    if (b === 3 && chance(absBar, 31, 0.6)) {
+      playDrum("crash", beatTime(barStartBeat + 4), humanize(absBar, 32, 0.55));
+    }
+    return;
+  }
+
   for (let e = 0; e < 2; e++) {
     const idx = b * 2 + e;
     const t = beatTime(barStartBeat + b) + e * half;
-    if (pat.kick.indexOf(idx) >= 0) playDrum("kick", t, 0.85);
-    if (pat.snare.indexOf(idx) >= 0) playDrum("snare", t, 0.7);
-    // 正拍的 hi-hat 重一點、反拍輕一點,不然八分音符會變成一條平平的沙沙聲
-    if (pat.hihat.indexOf(idx) >= 0) playDrum("hihat", t, idx % 2 === 0 ? 0.4 : 0.26);
+    let kick = pat.kick.indexOf(idx) >= 0;
+    // 偶爾在「二的後半」「四的後半」多補一顆大鼓,groove 才不會每小節一樣
+    if (!kick && idx === 3 && chance(absBar, 1, 0.3)) kick = true;
+    if (!kick && idx === 7 && chance(absBar, 2, 0.2)) kick = true;
+    if (kick) playDrum("kick", t, humanize(absBar, idx, 0.85));
+
+    if (pat.snare.indexOf(idx) >= 0) playDrum("snare", t, humanize(absBar, idx + 40, 0.7));
+    // 幽靈音:很輕的小鼓,填在反拍上,量感有了但不會搶拍
+    else if (idx === 5 && chance(absBar, 3, 0.25)) playDrum("snare", t, humanize(absBar, 55, 0.16));
+
+    if (pat.hihat.indexOf(idx) >= 0) {
+      // 最後一個八分偶爾空掉,留個呼吸再進下一小節
+      if (idx === 7 && chance(absBar, 4, 0.18)) continue;
+      playDrum("hihat", t, humanize(absBar, idx + 60, idx % 2 === 0 ? 0.4 : 0.26));
+    }
   }
 }
 
 /* 貝斯:第一拍走和弦的低音(轉位就走轉位音),第三拍走五音。
-   全音符墊底那個樣式撐滿整小節,另外兩種各撐兩拍 */
-function scheduleBass(chord, barStartBeat, b){
+   全音符墊底那個樣式撐滿整小節,另外兩種各撐兩拍。
+   過門那一小節在第四拍補一顆「接到下一個和弦」的經過音 */
+function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord){
+  if (styleOn !== "pad" && isFill && b === 3 && nextChord) {
+    // 半音或全音往下接到下一小節的根音,是最順的走法
+    const target = bassMidiFor((((nextChord.bassPc + transposeOn) % 12) + 12) % 12);
+    const step = chance(absBar, 7, 0.5) ? 1 : 2;
+    playBassNote(target - step, beatTime(barStartBeat + 3) + spb / 2, spb / 2, 0.42);
+  }
   if (b !== 0 && b !== 2) return;
   if (styleOn === "pad" && b !== 0) return;
-  const raw = b === 0 ? chord.bassPc : chord.rootPc + 7;
+  let raw = b === 0 ? chord.bassPc : chord.rootPc + 7;
+  // 第三拍偶爾不走五音,改回根音,聽起來像有人在彈而不是照表操課
+  if (b === 2 && chance(absBar, 5, 0.25)) raw = chord.bassPc;
   const pc = (((raw + transposeOn) % 12) + 12) % 12;
   const t = beatTime(barStartBeat + b);
-  const dur = styleOn === "pad" ? spb * 4 : spb * 2;
-  playBassNote(bassMidiFor(pc), t, dur, b === 0 ? 0.52 : 0.44);
+  let dur = styleOn === "pad" ? spb * 4 : spb * 2;
+  if (isFill && styleOn !== "pad" && b === 2) dur = spb * 1.5;   // 讓位給經過音
+  playBassNote(bassMidiFor(pc), t, dur, humanize(absBar, b + 70, b === 0 ? 0.52 : 0.44));
 }
 
 const STYLE_FNS = {
-  /* 全音符墊底:低音與和弦都撐滿整個小節 */
-  pad(v, barStartBeat, b, transpose){
+  /* 全音符墊底:低音與和弦都撐滿整個小節。
+     過門那一小節在第三拍再點一次和弦,告訴聽的人「要換段了」 */
+  pad(v, barStartBeat, b, transpose, absBar, isFill){
+    if (b === 2 && isFill && chance(absBar, 80, 0.55)) {
+      const t2 = beatTime(barStartBeat + 2);
+      for (const n of v.upper) playNote(n + transpose, t2, spb * 2, 0.26);
+      return;
+    }
     if (b !== 0) return;
     const t = beatTime(barStartBeat);
     const dur = spb * 4;
     playNote(v.bass + transpose, t, dur, 0.5 * lhGain());
-    for (const n of v.upper) playNote(n + transpose, t, dur, 0.34);
+    for (const n of v.upper) playNote(n + transpose, t, dur, humanize(absBar, 81, 0.34));
   },
   /* 四分打:低音落在第一、三拍,和弦每拍都點一下。
      低音撐滿兩拍到下一個低音為止,左手才不會一顆一顆斷掉 */
-  quarter(v, barStartBeat, b, transpose){
+  quarter(v, barStartBeat, b, transpose, absBar, isFill){
     const t = beatTime(barStartBeat + b);
     if (b === 0 || b === 2) playNote(v.bass + transpose, t, spb * 2, (b === 0 ? 0.52 : 0.42) * lhGain());
+    // 第二、四拍偶爾空掉一次,四顆一樣的和弦連著敲四拍太像節拍器
+    if ((b === 1 || b === 3) && chance(absBar, 82 + b, 0.18)) return;
     const peak = b === 0 ? 0.34 : 0.27;   // 第一拍稍微重一點,拍子才站得住
-    for (const n of v.upper) playNote(n + transpose, t, spb * 0.9, peak);
+    for (const n of v.upper) playNote(n + transpose, t, spb * 0.9, humanize(absBar, 84 + b, peak));
+    // 過門的第四拍補一個切分,跟鼓的十六分一起把段落推過去
+    if (isFill && b === 3) {
+      const t2 = t + spb / 2;
+      for (const n of v.upper) playNote(n + transpose, t2, spb * 0.5, 0.3);
+    }
   },
   /* 八分分解:每拍兩個八分音符。第一、三拍的正拍給低音,其餘把和弦音依序拆開 */
-  eighth(v, barStartBeat, b, transpose){
+  eighth(v, barStartBeat, b, transpose, absBar, isFill){
     const half = spb / 2;
+    // 整小節決定這次是上行還是下行,同一組進行連彈幾圈才不會每圈都一樣
+    const down = chance(absBar, 86, 0.35);
     for (let e = 0; e < 2; e++) {
       const idx = b * 2 + e;                 // 這一小節裡的第幾個八分音符(0–7)
       const t = beatTime(barStartBeat + b) + e * half;
@@ -1537,10 +1649,17 @@ const STYLE_FNS = {
         // 同樣撐滿兩拍,不要只響一個八分音符就收掉
         playNote(v.bass + transpose, t, spb * 2, (idx === 0 ? 0.5 : 0.42) * lhGain());
       } else {
-        const k = (idx % 4) - 1;             // 0,1,2 循環,兩個半小節走同一條上行
-        const n = v.upper[k % v.upper.length];
-        playNote(n + transpose, t, half * 1.7, idx === 1 || idx === 5 ? 0.3 : 0.26);
+        let k = (idx % 4) - 1;               // 0,1,2 循環,兩個半小節走同一條
+        if (down) k = v.upper.length - 1 - (k % v.upper.length);
+        const n = v.upper[((k % v.upper.length) + v.upper.length) % v.upper.length];
+        playNote(n + transpose, t, half * 1.7,
+                 humanize(absBar, 88 + idx, idx === 1 || idx === 5 ? 0.3 : 0.26));
       }
+    }
+    // 過門最後半拍補一顆高音,把句子收上去
+    if (isFill && b === 3) {
+      const top = v.upper[v.upper.length - 1] + 12;
+      playNote(top + transpose, beatTime(barStartBeat + 3) + half, half, 0.28);
     }
   },
 };
@@ -1559,11 +1678,20 @@ function scheduleBeat(i, when){
   if (!v) return;                            // 這一格解析失敗(理論上播放前就擋掉了)
   const b = ((musicBeat % 4) + 4) % 4;
   const barStartBeat = countInBeats + Math.floor(musicBeat / 4) * 4;
-  (STYLE_FNS[styleOn] || STYLE_FNS.pad)(v, barStartBeat, b, transposeOn);
-  if (drumsOn) scheduleDrums(barStartBeat, b);
+  /* absBar 是「從頭數到現在的第幾小節」,繞第二圈時會繼續往上加——
+     變化就是靠它,同一格和弦第二圈聽起來才不會跟第一圈一模一樣 */
+  const absBar = Math.floor(musicBeat / 4);
+  // 一格的進行沒有「最後一格」可言,每小節都過門會很吵,所以兩格以上才給
+  const isFill = nBars >= 2 && bar === nBars - 1;
+
+  (STYLE_FNS[styleOn] || STYLE_FNS.pad)(v, barStartBeat, b, transposeOn, absBar, isFill);
+  if (drumsOn) scheduleDrums(barStartBeat, b, absBar, isFill);
   if (bassOn) {
     const ch = parsed.bars[bar] && parsed.bars[bar].chord;
-    if (ch) scheduleBass(ch, barStartBeat, b);
+    // 過門的經過音要接到下一小節的根音;不循環時最後一格後面沒東西可接
+    const nextIdx = bar + 1 >= nBars ? (loopOn ? 0 : -1) : bar + 1;
+    const nextCh = nextIdx >= 0 && parsed.bars[nextIdx] ? parsed.bars[nextIdx].chord : null;
+    if (ch) scheduleBass(ch, barStartBeat, b, absBar, isFill, nextCh);
   }
 }
 

@@ -187,7 +187,7 @@ main{
 /* 範例用格線不用 flex:進行長短差很多,flex 排出來每顆寬度都不一樣、
    最後一行還會落單。auto-fill 讓每一格等寬,空格子也保留寬度 */
 .examples{
-  display:grid;grid-template-columns:repeat(auto-fill,minmax(188px,1fr));
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(164px,1fr));
   gap:4px;margin-top:7px;
 }
 .ex-btn{
@@ -304,7 +304,7 @@ svg[hidden]{display:none}
   background:var(--surface-inset);border:1px solid var(--line);border-radius:var(--radius-md);
 }
 /* 速度與移調並排。夠寬就兩欄,窄了自己疊回一欄 */
-.control-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(196px,1fr));gap:10px}
+.control-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(152px,1fr));gap:10px}
 .control-pair > .control{margin-top:10px}
 .control-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:7px}
 .control-head .label{font-size:var(--fs-xs);color:var(--muted);letter-spacing:.08em;text-transform:uppercase}

@@ -20,6 +20,21 @@ VCSL 看起來像是鼓，其實是管弦打擊樂（定音鼓、大鑼、碰鈸
 raw.githubusercontent（鋼琴多一條 tonejs.github.io）。同一份檔案不同路由，
 新增音源時照這個模式走，不要只寫一個網址。
 
+## 風格
+偏流行爵士，不是方正的流行伴奏。四個地方撐起這個味道，不要單獨拿掉其中一個：
+- 八分音符微搖擺，後半拍在 58%（`SWING`）。過門的十六分維持平均，搖了會糊
+- 四個音以上的和弦右手不彈根音（shell voicing，見 `trimTones`）。
+  三和弦不能這樣做——拿掉根音只剩三度五度，和弦聽不出來
+- 貝斯每小節從 A/B/C 三種走法挑一種（`bassPlan`），C 是走動低音
+- 四分打的第二、四拍有機會挪到反拍（comping 切分）
+
+## 版面
+- 860px 以上分兩欄（左 `.col` 輸入、右 `.col` 播放），目標是整頁一個螢幕高。
+  改版面時拿 `document.body.scrollHeight` 量一下，1280px 下不要超過 900
+- 窄螢幕疊回一欄，兩欄的 DOM 順序必須跟單欄想要的順序一致
+- 一排按鈕數量不固定時用 grid 不要用 flex：flex 會把最後一行剩下的幾顆撐滿整列，
+  同一顆鈕在不同行寬度差一倍（音名列、開關列都踩過）
+
 ## 技術棧
 - 單檔 HTML，CSS/JS 內嵌，CDN only，無 build，GitHub Pages 直接部署
 - 配色/字體/元件樣式跟 ScrollScore、SightScore、LoudMaster 共用同一套變數，不要自己發明新的
@@ -67,3 +82,5 @@ raw.githubusercontent（鋼琴多一條 tonejs.github.io）。同一份檔案不
 - 過門的鼓件（htom / ltom / crash）加起來 2MB 出頭，要背景載、不要擋播放
   （見 `ensureDrums` 裡沒有 await 的那條）。還沒到位時 `synthDrum` 會頂著
 - 一格的進行沒有「最後一格」可言，過門只在兩格以上才給
+- 過門不要佔滿最後兩拍、也不要寫成整串 tom 滾奏：從八分突然跳成十六分很突兀。
+  預設只佔最後一拍，hi-hat 要繼續走不能斷，力度從很輕推上去

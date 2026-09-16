@@ -135,6 +135,14 @@ main{
   padding:24px 20px;position:relative;
 }
 .stage{width:100%;max-width:680px}
+/* 夠寬時把卡片拆成兩欄,整頁就不用一直往下捲。
+   860px 以下自動疊回一欄,原本的順序不變 */
+@media (min-width:860px){
+  .stage{max-width:1000px}
+  .card{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 26px;align-items:start}
+  .card-foot{grid-column:1 / -1}
+  .col > *:first-child{margin-top:0}
+}
 
 .card{
   background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-lg);
@@ -146,7 +154,7 @@ main{
 .field-head .label{font-size:var(--fs-xs);color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
 .field-head .bars{font-size:var(--fs-xs);color:var(--muted);font-variant-numeric:tabular-nums}
 #chordInput{
-  width:100%;min-height:76px;resize:vertical;
+  width:100%;min-height:58px;resize:vertical;
   background:var(--surface-inset);border:1px solid var(--line);border-radius:var(--radius-md);
   color:var(--ivory);font-family:"Noto Serif TC",serif;font-size:var(--fs-xl);
   letter-spacing:.04em;line-height:1.7;padding:12px 14px;
@@ -156,7 +164,7 @@ main{
 .field-hint{margin-top:7px;font-size:var(--fs-2xs);color:var(--muted);line-height:1.7;text-wrap:pretty}
 
 /* 範例進行:一排安靜的小膠囊,點一下就填進去 */
-.examples{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.examples{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
 .ex-btn{
   border:1px solid var(--line);background:transparent;color:var(--muted-bright);
   font-family:"Noto Serif TC",serif;font-size:var(--fs-xs);letter-spacing:.03em;
@@ -169,16 +177,19 @@ main{
    兩排:上排音名、下排性質。點音名加一格、點性質改最後一格,
    兩下就能打出 Cm7,不必記得完整寫法 */
 .palette{
-  margin-top:14px;padding:12px 13px;
+  margin-top:10px;padding:9px 10px;
   background:var(--surface-inset);border:1px solid var(--line);border-radius:var(--radius-md);
 }
 .pal-row{display:flex;flex-wrap:wrap;gap:6px}
-.pal-row + .pal-row{margin-top:8px;padding-top:9px;border-top:1px solid var(--line)}
+/* 音名用 grid 排。flex 會把最後一行剩下的幾顆撐滿整列,
+   同一顆鈕在不同行寬度差一倍,看起來像壞掉 */
+#palRoots{display:grid;grid-template-columns:repeat(auto-fit,minmax(46px,1fr));gap:6px}
+.pal-row + .pal-row{margin-top:6px;padding-top:7px;border-top:1px solid var(--line)}
 .pal-btn{
-  flex:1 1 auto;min-width:40px;
+  min-width:0;
   border:1px solid var(--line);background:transparent;color:var(--ivory);
   font-family:"Noto Serif TC",serif;font-size:var(--fs-md);font-weight:600;letter-spacing:.02em;
-  padding:8px 6px;border-radius:var(--radius-sm);cursor:pointer;
+  padding:6px 5px;border-radius:var(--radius-sm);cursor:pointer;
   transition:background .15s,color .15s,border-color .15s;
 }
 .pal-btn:hover,.pal-btn:focus-visible{background:var(--gold);border-color:var(--gold);color:var(--bg);outline:none}
@@ -192,20 +203,22 @@ main{
   color:var(--muted-bright);min-width:52px;padding:8px 12px;
 }
 .pal-qual .pal-btn:hover,.pal-qual .pal-btn:focus-visible{color:var(--bg)}
-.pal-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px}
+.pal-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:7px}
 .pal-hint{font-size:var(--fs-2xs);color:var(--muted);line-height:1.6;text-wrap:pretty}
 #palDel{height:30px;font-size:var(--fs-xs);padding:0 12px;flex:none}
 
 /* ── 小節格:每格一個和弦,播到哪一格就亮哪一格 ───────────── */
 .bars-grid{
   display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;
-  margin-top:16px;
+  margin-top:11px;
 }
 @media (max-width:480px){.bars-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* 兩欄時右欄一行放四格會太擠,改成兩格一行 */
+@media (min-width:860px){.bars-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .bar-chip{
   position:relative;
   display:flex;align-items:center;justify-content:center;
-  width:100%;min-height:52px;padding:8px 6px;cursor:pointer;
+  width:100%;min-height:46px;padding:7px 6px;cursor:pointer;
   background:var(--surface-inset);border:1px solid var(--line);border-radius:var(--radius-md);
   font-family:"Noto Serif TC",serif;font-size:var(--fs-lg);font-weight:600;
   color:var(--ivory);letter-spacing:.02em;text-align:center;word-break:break-all;
@@ -236,7 +249,7 @@ main{
 .parse-error svg{flex:none}
 
 /* ── 走帶列 ───────────────────────── */
-.transport{display:flex;align-items:center;gap:14px;margin-top:20px}
+.transport{display:flex;align-items:center;gap:14px;margin-top:14px}
 .play-btn{
   flex:none;display:flex;align-items:center;justify-content:center;
   width:56px;height:56px;border-radius:50%;
@@ -256,10 +269,13 @@ svg[hidden]{display:none}
 
 /* ── 控制項區塊 ───────────────────── */
 .control{
-  margin-top:16px;padding:14px 16px;
+  margin-top:10px;padding:11px 13px;
   background:var(--surface-inset);border:1px solid var(--line);border-radius:var(--radius-md);
 }
-.control-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:12px}
+/* 速度與移調並排。夠寬就兩欄,窄了自己疊回一欄 */
+.control-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.control-pair > .control{margin-top:10px}
+.control-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:9px}
 .control-head .label{font-size:var(--fs-xs);color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
 .control-head .value{
   font-family:"Noto Serif TC",serif;
@@ -281,7 +297,7 @@ svg[hidden]{display:none}
 .step-btn:disabled{opacity:.3;cursor:not-allowed}
 .scale{
   display:flex;justify-content:space-between;
-  margin-top:7px;font-size:var(--fs-2xs);color:var(--muted);font-variant-numeric:tabular-nums;
+  margin-top:6px;font-size:var(--fs-2xs);color:var(--muted);font-variant-numeric:tabular-nums;
 }
 /* −/＋ 鈕佔掉滑桿兩端的寬度,刻度要跟著縮排才會對到滑桿的頭尾 */
 .scale.inset{padding:0 42px}
@@ -308,7 +324,7 @@ input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px rgba(201,
 /* BPM:數字直接輸入,兩側 −/＋ 微調 */
 .bpm-row{display:flex;align-items:center;gap:10px}
 #bpmInput{
-  flex:1;min-width:0;height:44px;text-align:center;
+  flex:1;min-width:0;height:40px;text-align:center;
   background:var(--card-tint);border:1px solid var(--line);border-radius:var(--radius-md);
   color:var(--gold-bright);font-family:"Noto Serif TC",serif;font-size:var(--fs-2xl);font-weight:700;
   font-variant-numeric:tabular-nums;letter-spacing:.02em;
@@ -316,7 +332,7 @@ input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px rgba(201,
 }
 #bpmInput::-webkit-outer-spin-button,#bpmInput::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 #bpmInput:focus{outline:none;border-color:var(--gold);background:var(--surface-inset-hi)}
-.bpm-quick{display:flex;gap:8px;margin-top:10px}
+.bpm-quick{display:flex;gap:7px;margin-top:8px}
 .bpm-quick .btn{
   flex:1;height:34px;padding:0 10px;font-size:var(--fs-sm);
   border-color:var(--line);color:var(--muted-bright);
@@ -327,7 +343,7 @@ input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px rgba(201,
 .seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .seg button{
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
-  padding:11px 6px;min-height:66px;
+  padding:8px 6px;min-height:54px;
   border:1px solid var(--line);background:transparent;color:var(--muted-bright);
   font-family:inherit;font-size:var(--fs-sm);font-weight:500;line-height:1.35;text-align:center;
   border-radius:var(--radius-md);cursor:pointer;
@@ -342,13 +358,13 @@ input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px rgba(201,
 /* 四個開關用 grid 排:flex-wrap 會讓落單的那個獨佔一整行、寬度跟別人差一截。
    auto-fit 會依寬度自己決定一行放幾個,每一行都填得滿 */
 .toggles{
-  display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
-  gap:8px;margin-top:16px;
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:7px;margin-top:10px;
 }
 .toggle{
   min-width:0;
   display:flex;align-items:center;gap:9px;
-  padding:11px 13px;border:1px solid var(--line);background:var(--surface-inset);
+  padding:9px 12px;border:1px solid var(--line);background:var(--surface-inset);
   border-radius:var(--radius-md);cursor:pointer;
   font-size:var(--fs-sm);color:var(--muted-bright);
   transition:background .2s,color .2s,border-color .2s;
@@ -363,8 +379,8 @@ input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px rgba(201,
 .toggle[aria-pressed="true"] .box svg{opacity:1}
 
 /* ── 儲存的進行 ───────────────────── */
-.saved{margin-top:16px}
-.saved-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
+.saved{margin-top:11px}
+.saved-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px}
 .saved-head .label{font-size:var(--fs-xs);color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
 .saved-list{display:flex;flex-wrap:wrap;gap:6px}
 .saved-empty{font-size:var(--fs-2xs);color:var(--muted);line-height:1.7}
@@ -385,7 +401,7 @@ input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px rgba(201,
 }
 .saved-item .del:hover,.saved-item .del:focus-visible{color:var(--danger);outline:none}
 
-.card-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:18px}
+.card-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}
 .hint-kbd{font-size:var(--fs-2xs);color:var(--muted);line-height:1.6}
 .hint-kbd kbd{
   font-family:inherit;font-size:var(--fs-2xs);color:var(--muted-bright);
@@ -454,6 +470,9 @@ try {
 <main>
   <div class="stage">
     <div class="card">
+      <!-- 寬螢幕分兩欄:左邊「怎麼輸入」、右邊「怎麼播」。
+           窄螢幕自動疊回一欄,順序跟原本完全一樣 -->
+      <div class="col">
 
       <!-- 和弦輸入 -->
       <div class="field-head">
@@ -486,6 +505,9 @@ try {
         <span id="parseErrorText"></span>
       </div>
 
+      </div>
+      <div class="col">
+
       <!-- 走帶 -->
       <div class="transport">
         <button class="play-btn" id="playBtn" type="button" data-i18n-attr="aria-label:playLabel,title:playLabel" aria-label="播放" title="播放">
@@ -517,7 +539,8 @@ try {
         </div>
       </div>
 
-      <!-- 速度 -->
+      <!-- 速度與移調並排:兩個都是「一行標題 + 一排控制」,擺一起省掉一整塊高度 -->
+      <div class="control-pair">
       <div class="control">
         <div class="control-head">
           <span class="label" data-i18n="bpmLabel">速度</span>
@@ -550,6 +573,7 @@ try {
         </div>
         <div class="scale inset"><span>−12</span><span>0</span><span>+12</span></div>
       </div>
+      </div>
 
       <!-- 開關 -->
       <div class="toggles">
@@ -578,6 +602,8 @@ try {
           <button class="btn ghost" id="saveBtn" type="button" style="height:30px;font-size:var(--fs-xs);padding:0 13px" data-i18n="saveBtn">存這組</button>
         </div>
         <div class="saved-list" id="savedList"></div>
+      </div>
+
       </div>
 
       <div class="card-foot">
@@ -1002,6 +1028,14 @@ const MAX_UPPER = 4;
 
 function trimTones(intervals, rootInBass){
   const iv = intervals.slice();
+  /* 有七度/六度的和弦(四個音以上),右手不彈根音——低音已經有了。
+     少了根音,三度與七度才站得出來,這是爵士鋼琴最基本的 shell voicing;
+     照著根音一起彈會變成很方正的「和弦塊」,流行爵士不會那樣彈。
+     三和弦只有三個音,拿掉根音只剩三度五度,和弦聽不出來,所以不動 */
+  if (rootInBass && iv.length >= 4) {
+    const r = iv.indexOf(0);
+    if (r >= 0) iv.splice(r, 1);
+  }
   for (const d of DROP_ORDER) {
     if (iv.length <= MAX_UPPER) break;
     if (d === 0 && !rootInBass) continue;   // 轉位時低音不是根音,根音得留在上聲部
@@ -1528,45 +1562,68 @@ function hash01(a, b){
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
 function chance(absBar, salt, p){ return hash01(absBar, salt) < p; }
+
+/* 流行爵士的八分音符不是對半分,後半拍會晚一點進來。
+   0.5 是完全平均、0.667 是三連音的標準搖擺;0.58 落在中間偏平,
+   聽得出律動又不會變成大搖大擺的爵士三連音。
+   只搖八分音符,過門的十六分維持平均——十六分也搖會糊成一團 */
+const SWING = 0.58;
+function eighthTime(barStartBeat, b, e){
+  return beatTime(barStartBeat + b) + (e ? spb * SWING : 0);
+}
 /* 力度抖動:同一顆鼓每次打不會一樣大力,差個 ±8% 就夠讓它不像機器 */
 function humanize(absBar, salt, gain){ return gain * (0.92 + hash01(absBar, salt + 900) * 0.16); }
 
-/* 過門的三種型:寫成十六分音符的格子(最後兩拍共 8 格),
-   值是要打的鼓件,null 是休息。三選一由小節號決定 */
-const FILLS = [
-  ["snare", "snare", "htom", "htom", "ltom", "ltom", "snare", "snare"],
-  [null, "snare", "snare", "htom", "htom", "ltom", "ltom", "ltom"],
-  ["snare", null, "snare", "snare", "htom", "ltom", "snare", "ltom"],
+/* 過門。原本一次佔滿最後兩拍、又是整串 tom 滾奏,從八分的律動突然跳成十六分,
+   聽起來很突兀。改成:
+   - 預設只佔最後一拍,大部分時候是小鼓與幽靈音的小句子
+   - 只有偶爾(25%)才擴成兩拍的大過門,tom 也只點綴一兩下
+   - hi-hat 在過門期間繼續走,不要整個消失造成斷層
+   - 力度從很輕開始慢慢推上去,而不是一進來就打滿 */
+const FILLS_1BEAT = [
+  ["snare", null, "snare", "snare"],
+  [null, "snare", "snare", "htom"],
+  ["snare", "snare", null, "snare"],
+  [null, null, "snare", "htom"],
+];
+const FILLS_2BEAT = [
+  [null, "snare", null, "snare", "snare", null, "htom", "ltom"],
+  ["snare", null, "snare", "snare", null, "htom", "ltom", "ltom"],
+  [null, null, "snare", "snare", "htom", null, "ltom", "snare"],
 ];
 
 function scheduleDrums(barStartBeat, b, absBar, isFill){
   const pat = DRUM_PATTERNS[styleOn] || DRUM_PATTERNS.pad;
-  const half = spb / 2;
+  // 大過門佔最後兩拍,小過門只佔最後一拍
+  const big = isFill && chance(absBar, 10, 0.25);
+  const fillFrom = big ? 2 : 3;
 
-  // 過門在最後兩拍,改走十六分音符
-  if (isFill && b >= 2) {
-    const fill = FILLS[Math.floor(hash01(absBar, 11) * FILLS.length) % FILLS.length];
+  if (isFill && b >= fillFrom) {
+    const list = big ? FILLS_2BEAT : FILLS_1BEAT;
+    const fill = list[Math.floor(hash01(absBar, 11) * list.length) % list.length];
     const q = spb / 4;
+    // 大鼓照常落在第三拍,過門才有底
     if (b === 2) playDrum("kick", beatTime(barStartBeat + b), humanize(absBar, 12, 0.8));
+    // hi-hat 繼續走正拍,不要整個斷掉
+    if (pat.hihat.length) playDrum("hihat", beatTime(barStartBeat + b), humanize(absBar, 13, 0.22));
     for (let k = 0; k < 4; k++) {
-      const slot = (b - 2) * 4 + k;          // 0–7,最後兩拍的第幾個十六分
+      const slot = (b - fillFrom) * 4 + k;
       const piece = fill[slot];
       if (!piece) continue;
       const t = beatTime(barStartBeat + b) + k * q;
-      // 過門往後愈打愈重,收尾才有推進感
-      const g = humanize(absBar, 20 + slot, 0.5 + slot * 0.05);
+      // 從很輕推上去,收尾也只到 0.55,不要比正常的小鼓還大聲
+      const g = humanize(absBar, 20 + slot, 0.26 + slot * (big ? 0.035 : 0.07));
       playDrum(piece, t, g);
     }
-    // 過門收在下一小節的頭:銅鈸不是每次都打,每次都打會膩
-    if (b === 3 && chance(absBar, 31, 0.6)) {
-      playDrum("crash", beatTime(barStartBeat + 4), humanize(absBar, 32, 0.55));
+    if (b === 3 && chance(absBar, 31, 0.45)) {
+      playDrum("crash", beatTime(barStartBeat + 4), humanize(absBar, 32, 0.4));
     }
     return;
   }
 
   for (let e = 0; e < 2; e++) {
     const idx = b * 2 + e;
-    const t = beatTime(barStartBeat + b) + e * half;
+    const t = eighthTime(barStartBeat, b, e);
     let kick = pat.kick.indexOf(idx) >= 0;
     // 偶爾在「二的後半」「四的後半」多補一顆大鼓,groove 才不會每小節一樣
     if (!kick && idx === 3 && chance(absBar, 1, 0.3)) kick = true;
@@ -1585,26 +1642,72 @@ function scheduleDrums(barStartBeat, b, absBar, isFill){
   }
 }
 
-/* 貝斯:第一拍走和弦的低音(轉位就走轉位音),第三拍走五音。
-   全音符墊底那個樣式撐滿整小節,另外兩種各撐兩拍。
-   過門那一小節在第四拍補一顆「接到下一個和弦」的經過音 */
+/* 貝斯。流行爵士的貝斯不是每小節都「根音撐兩拍、五音撐兩拍」那樣方正,
+   所以每小節從三種走法裡挑一種(由小節號決定,第二圈會不一樣):
+   A 根音—五音,各撐兩拍(最穩,出現機率最高)
+   B 根音—切分的預備音—五音,帶一點推進
+   C 走動低音:四個四分音符走 根—三—五—接音,最爵士的那一種
+   最後一小節都會在第四拍後半補一顆接到下一個和弦的經過音。 */
+function bassPlan(absBar){
+  const r = hash01(absBar, 6);
+  if (r < 0.5) return "A";
+  if (r < 0.8) return "B";
+  return "C";
+}
+
 function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord){
-  if (styleOn !== "pad" && isFill && b === 3 && nextChord) {
-    // 半音或全音往下接到下一小節的根音,是最順的走法
-    const target = bassMidiFor((((nextChord.bassPc + transposeOn) % 12) + 12) % 12);
-    const step = chance(absBar, 7, 0.5) ? 1 : 2;
-    playBassNote(target - step, beatTime(barStartBeat + 3) + spb / 2, spb / 2, 0.42);
+  const tp = transposeOn;
+  const pcOf = (raw) => ((((raw + tp) % 12) + 12) % 12);
+  const rootPc = pcOf(chord.bassPc);
+  // 三度取和弦自己的三度(大三或小三都照它寫的),不要自己假設大調
+  const third = chord.intervals.indexOf(3) >= 0 ? 3 : 4;
+
+  if (styleOn === "pad") {
+    if (b === 0) playBassNote(bassMidiFor(rootPc), beatTime(barStartBeat), spb * 4,
+                              humanize(absBar, 70, 0.52));
+    return;
   }
-  if (b !== 0 && b !== 2) return;
-  if (styleOn === "pad" && b !== 0) return;
-  let raw = b === 0 ? chord.bassPc : chord.rootPc + 7;
-  // 第三拍偶爾不走五音,改回根音,聽起來像有人在彈而不是照表操課
-  if (b === 2 && chance(absBar, 5, 0.25)) raw = chord.bassPc;
-  const pc = (((raw + transposeOn) % 12) + 12) % 12;
-  const t = beatTime(barStartBeat + b);
-  let dur = styleOn === "pad" ? spb * 4 : spb * 2;
-  if (isFill && styleOn !== "pad" && b === 2) dur = spb * 1.5;   // 讓位給經過音
-  playBassNote(bassMidiFor(pc), t, dur, humanize(absBar, b + 70, b === 0 ? 0.52 : 0.44));
+
+  // 過門那一小節,第四拍後半接到下一個和弦的根音
+  if (isFill && b === 3 && nextChord) {
+    const target = bassMidiFor(pcOf(nextChord.bassPc));
+    const step = chance(absBar, 7, 0.5) ? 1 : 2;   // 半音或全音,兩種都順
+    playBassNote(target - step, eighthTime(barStartBeat, 3, 1), spb * 0.45, 0.42);
+  }
+
+  const plan = bassPlan(absBar);
+
+  if (plan === "C") {
+    // 走動低音:一拍一個音,第四拍走「接音」往下一小節靠
+    const seq = [rootPc, pcOf(chord.rootPc + third), pcOf(chord.rootPc + 7), null];
+    if (b < 3) {
+      playBassNote(bassMidiFor(seq[b]), beatTime(barStartBeat + b), spb * 0.92,
+                   humanize(absBar, 70 + b, b === 0 ? 0.5 : 0.42));
+    } else {
+      const nextRoot = nextChord ? bassMidiFor(pcOf(nextChord.bassPc)) : bassMidiFor(rootPc);
+      const approach = nextRoot + (chance(absBar, 8, 0.5) ? -1 : 1);
+      playBassNote(approach, beatTime(barStartBeat + 3), spb * 0.92, humanize(absBar, 73, 0.42));
+    }
+    return;
+  }
+
+  if (b === 0) {
+    const dur = plan === "B" ? spb * 1.4 : spb * 2;
+    playBassNote(bassMidiFor(rootPc), beatTime(barStartBeat), dur, humanize(absBar, 70, 0.52));
+    // B:第二拍後半先偷跑一顆根音,是流行爵士很常見的推進
+    if (plan === "B") {
+      playBassNote(bassMidiFor(rootPc), eighthTime(barStartBeat, 1, 1), spb * 0.5,
+                   humanize(absBar, 71, 0.34));
+    }
+    return;
+  }
+  if (b === 2) {
+    // 第三拍偶爾不走五音,改回根音,聽起來像有人在彈而不是照表操課
+    const pc = chance(absBar, 5, 0.25) ? rootPc : pcOf(chord.rootPc + 7);
+    let dur = spb * 2;
+    if (isFill) dur = spb * 1.5;                   // 讓位給經過音
+    playBassNote(bassMidiFor(pc), beatTime(barStartBeat + 2), dur, humanize(absBar, 72, 0.44));
+  }
 }
 
 const STYLE_FNS = {
@@ -1629,22 +1732,25 @@ const STYLE_FNS = {
     if (b === 0 || b === 2) playNote(v.bass + transpose, t, spb * 2, (b === 0 ? 0.52 : 0.42) * lhGain());
     // 第二、四拍偶爾空掉一次,四顆一樣的和弦連著敲四拍太像節拍器
     if ((b === 1 || b === 3) && chance(absBar, 82 + b, 0.18)) return;
-    const peak = b === 0 ? 0.34 : 0.27;   // 第一拍稍微重一點,拍子才站得住
-    for (const n of v.upper) playNote(n + transpose, t, spb * 0.9, humanize(absBar, 84 + b, peak));
-    // 過門的第四拍補一個切分,跟鼓的十六分一起把段落推過去
-    if (isFill && b === 3) {
-      const t2 = t + spb / 2;
-      for (const n of v.upper) playNote(n + transpose, t2, spb * 0.5, 0.3);
+    /* 流行爵士的 comping 不會四拍都打在正拍上。第二、四拍有機會往後挪到反拍,
+       變成切分;挪過去的那一下稍微輕一點,聽起來才像順手帶過去的 */
+    const push = (b === 1 || b === 3) && chance(absBar, 90 + b, 0.45);
+    const hit = push ? eighthTime(barStartBeat, b, 1) : t;
+    const peak = b === 0 ? 0.34 : push ? 0.24 : 0.27;
+    for (const n of v.upper) playNote(n + transpose, hit, spb * 0.9, humanize(absBar, 84 + b, peak));
+    // 過門的第四拍補一個切分,跟鼓一起把段落推過去
+    if (isFill && b === 3 && !push) {
+      const t2 = eighthTime(barStartBeat, 3, 1);
+      for (const n of v.upper) playNote(n + transpose, t2, spb * 0.5, 0.26);
     }
   },
-  /* 八分分解:每拍兩個八分音符。第一、三拍的正拍給低音,其餘把和弦音依序拆開 */
   eighth(v, barStartBeat, b, transpose, absBar, isFill){
     const half = spb / 2;
     // 整小節決定這次是上行還是下行,同一組進行連彈幾圈才不會每圈都一樣
     const down = chance(absBar, 86, 0.35);
     for (let e = 0; e < 2; e++) {
       const idx = b * 2 + e;                 // 這一小節裡的第幾個八分音符(0–7)
-      const t = beatTime(barStartBeat + b) + e * half;
+      const t = eighthTime(barStartBeat, b, e);
       if (idx === 0 || idx === 4) {
         // 同樣撐滿兩拍,不要只響一個八分音符就收掉
         playNote(v.bass + transpose, t, spb * 2, (idx === 0 ? 0.5 : 0.42) * lhGain());
@@ -1659,7 +1765,7 @@ const STYLE_FNS = {
     // 過門最後半拍補一顆高音,把句子收上去
     if (isFill && b === 3) {
       const top = v.upper[v.upper.length - 1] + 12;
-      playNote(top + transpose, beatTime(barStartBeat + 3) + half, half, 0.28);
+      playNote(top + transpose, eighthTime(barStartBeat, 3, 1), half, 0.28);
     }
   },
 };

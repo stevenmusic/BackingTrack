@@ -2337,19 +2337,20 @@ function renderPalette(){
 }
 
 /* ══ 範例進行 ══════════════════════════════════════════════════ */
-/* 現成的八組。刻意讓調性、和聲手法、感覺都散開,不要八組都在 C 大調繞:
-   調性涵蓋 C / Am / F / Em / G / Bb,手法從流行的 I-V-vi-IV、搖滾的 i-VI-VII、
-   安達魯西亞終止,到 bossa 的 I-VI7-ii-V 與爵士的 ii-V-I。
+/* 現成的八組,全部維持在 C 大調 / A 小調——這是拿來練的,調性固定才好上手,
+   要換調用移調滑桿就好。變化靠和聲手法,不靠轉調:
+   大調小調各四組,流行、搖滾、bossa、爵士的常見走法各有代表,
+   三種感覺(直/拉丁/搖擺)都涵蓋到。
    膠囊上只顯示和弦;感覺由和弦自己決定,這裡只順手把伴奏疏密調到合適的那一個 */
 const EXAMPLES = [
-  { text: "C - G - Am - F",              style: "comp"  },  // C 大調,流行 I-V-vi-IV
-  { text: "Am - F - G - Am",             style: "drive" },  // A 小調,搖滾 i-VI-VII-i
-  { text: "F - Bb - C - F",              style: "drive" },  // F 大調,I-IV-V-I
-  { text: "Em - D - C - B7",             style: "comp"  },  // E 小調,安達魯西亞終止
-  { text: "Cmaj7 - A7 - Dm7 - G7",       style: "comp"  },  // C,bossa 的 I-VI7-ii-V
-  { text: "Am7 - D7 - Gmaj7 - Gmaj7",    style: "comp"  },  // G 大調,ii-V-I
-  { text: "Dm9 - G13 - Cmaj9 - Cmaj9",   style: "comp"  },  // C,smooth jazz ii-V-I
-  { text: "Cm9 - F13 - Bbmaj9 - Bbmaj9", style: "pad"   },  // Bb 大調,小調起頭的 ii-V-I
+  { text: "C - G - Am - F",            style: "comp"  },  // C 大調,流行 I-V-vi-IV
+  { text: "C - Am - Dm - G",           style: "comp"  },  // C 大調,I-vi-ii-V
+  { text: "Am - F - G - Am",           style: "drive" },  // A 小調,搖滾 i-VI-VII-i
+  { text: "Am - G - F - E7",           style: "drive" },  // A 小調,安達魯西亞終止
+  { text: "Cmaj7 - A7 - Dm7 - G7",     style: "comp"  },  // C 大調,bossa 的 I-VI7-ii-V
+  { text: "Am7 - Dm7 - E7 - Am7",      style: "comp"  },  // A 小調,i-iv-V7-i
+  { text: "Dm9 - G13 - Cmaj9 - Cmaj9", style: "comp"  },  // C 大調,smooth jazz ii-V-I
+  { text: "Am9 - Dm9 - E7b9 - Am9",    style: "pad"   },  // A 小調,爵士 i-iv-V7-i
 ];
 
 function renderExamples(){

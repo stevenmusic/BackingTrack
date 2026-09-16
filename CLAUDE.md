@@ -1,5 +1,11 @@
 # BackingTrack 專案規則
 
+## 和弦詞彙
+- `QUALITY` 表是對著 HarmonyMap 的和弦資料庫生出來的：它的 80 種和弦類型、
+  連同每種的別名寫法，共 134 種拼法。HarmonyMap 加了新和弦，這裡要跟著補，
+  兩個工具看得懂的東西必須是同一套
+- 兩個不收：「So What」有空白當不了 token；「♯5」跟 `C♯5` 撞在一起，一律當後者
+
 ## 技術棧
 - 單檔 HTML，CSS/JS 內嵌，CDN only，無 build，GitHub Pages 直接部署
 - 取樣鋼琴用 Salamander Grand（`https://tonejs.github.io/audio/salamander/`），
@@ -22,8 +28,14 @@
   要自己寫一條 `svg[hidden]{display:none}`
 - 速度改變時不能直接拿舊的 anchorTime 來減，要重新錨定：讓「下一個還沒排的拍」維持原本
   該響的時間，新速度從那一拍之後才生效，已經排進去的音不會被改到一半（見 `reanchorTempo`）
-- 正規化和弦記號時，`+` → aug 那條 replace 的 regex 要寫成 `/[+]/g`。
-  直接寫 `/+/g` 是「Nothing to repeat」語法錯誤，整支 script 都不會跑
+- 正規化時不要動 `+`。寫 `/+/g` 是「Nothing to repeat」語法錯誤（整支 script 都不會跑），
+  就算改成 `/[+]/g` 寫對了，`It+6` 也會被換成 `Itaug6`、`7+5` 變 `7aug5`，兩個都查不到。
+  `+`、`7+5`、`It+6` 一律當字面 key 收在 QUALITY 表裡
+- `/` 有兩個意思：`C/E` 是轉位低音，`6/9` 是和弦記號自己帶的斜線。只有斜線後面
+  真的是音名時才當轉位，否則整串留著查表（用 lastIndexOf，`C6/9/E` 才切得對）
+- 中文輸入法很容易打出 `Ｃ７` 這種全形字，正規化第一步就要把全形英數符號轉半形
+- 六、七個音的和弦不要整組照彈。捨音順序：五音 → 根音（轉位時不能捨）→ 延伸音，
+  上聲部最多四個音（見 `trimTones`）
 - 和弦品質表的 key 大小寫有意義（`M7` 是大七、`m7` 是小七），不能整串 toLowerCase
 - 每小節都要從所有轉位裡挑離前一小節最近的那個，不然 C→F→G 會整組跳上跳下，
   聽起來像機器在按琴鍵（見 `buildVoicing` 的 cost）

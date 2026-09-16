@@ -17,7 +17,9 @@
 - **看得懂的和弦**：跟 HarmonyMap 同一套詞彙——80 種和弦類型、134 種拼法。
   大三、小三、七和弦、`sus`、`dim` / `aug` / `m7b5`、六和弦，一路到 `9` `11` `13`
   `7alt` `maj13♯11`，以及轉位 `C/E`
-- **三種伴奏樣式**：全音符墊底、四分打、八分分解
+- **三種伴奏樣式**：全音符墊底、四分打、八分分解。三種的左手低音都撐滿兩拍（墊底是整小節），
+  不會一顆一顆斷掉
+- **鼓與貝斯**：真實爵士鼓組與指彈電貝斯，可以各自關掉
 - **速度**：BPM 直接輸入（40–240），另有 70 / 100 / 120 快捷
 - **移調**：−12 ～ +12 半音，改的是取樣選擇，不是拉速度，所以沒有音質損失
 - **count-in 兩小節**與**循環播放**，都可以關掉
@@ -26,21 +28,40 @@
 
 ## v1 刻意沒有
 
-鼓、貝斯、其他音色、複雜拍號、匯出檔案、譜面顯示。
-這些留到 v2 再說，先把「輸入和弦就有伴奏」這件事做順。
+其他音色、複雜拍號、匯出檔案、譜面顯示、自訂鼓節奏。
+先把「輸入和弦就有伴奏」這件事做順。
 
 ## 怎麼運作
 
 單檔 HTML，CSS/JS 全部內嵌，沒有 build，GitHub Pages 直接上。
 
-鋼琴音色是 [Salamander Grand Piano](https://github.com/sfzinstruments/SalamanderGrandPiano)
-的取樣，跟 ScrollScore 指向同一組檔案（Tone.js 官方託管的完整版）。
-這套每個八度只錄 `C` / `D#` / `F#` / `A` 四個音，其餘的音用 `playbackRate` 變調補位——
-最遠只差 1.5 個半音，聽不出失真。音域是 A0–C8，鋼琴全音域都蓋得到，低音區不必另外處理。
+三軌的音源都在 [sfzinstruments](https://github.com/sfzinstruments) 底下：
+
+| 軌 | 音源 | 說明 |
+| --- | --- | --- |
+| 鋼琴 | [Salamander Grand Piano](https://github.com/sfzinstruments/SalamanderGrandPiano) | 跟 ScrollScore 指向同一組檔案 |
+| 鼓 | [Virtuosity Drums](https://github.com/sfzinstruments/virtuosity_drums) | Versilian Studios × Karoryfer，KVRDC'21。在波士頓 Virtuosity 樂器行實錄的**爵士鼓組**，鼓手 Austin McMahon |
+| 貝斯 | [Black And Blue Basses](https://github.com/sfzinstruments/karoryfer.black-and-blue-basses) | Karoryfer，KVRDC'23。用 darkblack 那把指彈電貝斯，mf 力度 |
+
+鋼琴每個八度只錄 `C` / `D#` / `F#` / `A` 四個音，貝斯每三個半音收一顆，
+其餘的音用 `playbackRate` 變調補位——最遠只差 1.5 個半音，聽不出失真。
+
+鼓取的是中距離麥克風那一組。大鼓與 hi-hat 各收了幾個 round-robin，
+同一個音連打會輪流換不同的錄音，不會像機關槍。
 
 ```
-和弦文字 → 解析 → 配置(voicing) → 依樣式排成音符 → Salamander 取樣 → 殘響 → 限幅器
+和弦文字 → 解析 → 配置(voicing) → 依樣式排成音符 ┬→ 鋼琴取樣 ─┬→ 殘響 → 限幅器
+                                              ├→ 爵士鼓 ───┤
+                                              └→ 電貝斯 ───┘
 ```
+
+鼓只沾一點殘響（太濕拍點會糊），貝斯幾乎全乾——低音一加殘響整個低頻就糊成一團。
+貝斯軌開著時鋼琴左手會自動降一點音量，同一個根音疊兩層不會打架。
+
+### 音源的三條路
+
+每一份檔案都先試 jsDelivr（有 CDN 快取），失敗再退 `raw.githubusercontent.com`，
+鋼琴還多一條 `tonejs.github.io`。同一份檔案、不同路由，任何一條被擋掉都還有得救。
 
 ### 排程
 
@@ -95,10 +116,12 @@
 
 ## 之後想加的
 
-鼓與貝斯軌。取樣庫可以看 Versilian VCSL（CC0，含打擊樂與貝斯）、
-Freesound 上的 CC0 打擊樂。
+自訂鼓節奏型、複雜拍號、其他鼓組音色（Virtuosity Drums 有六組麥克風可以切）。
 
 ## 授權與出處
 
-鋼琴取樣來自 [Salamander Grand Piano](https://github.com/sfzinstruments/SalamanderGrandPiano)
-（Alexander Holm，CC-BY 3.0）。
+- 鋼琴：[Salamander Grand Piano](https://github.com/sfzinstruments/SalamanderGrandPiano)（Alexander Holm，CC-BY 3.0）
+- 鼓：[Virtuosity Drums](https://github.com/sfzinstruments/virtuosity_drums)（Versilian Studios × Karoryfer Samples）
+- 貝斯：[Black And Blue Basses](https://github.com/sfzinstruments/karoryfer.black-and-blue-basses)（Karoryfer Samples）
+
+各自的授權條款以 repo 內的 LICENSE 為準。

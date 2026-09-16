@@ -6,10 +6,22 @@
   兩個工具看得懂的東西必須是同一套
 - 兩個不收：「So What」有空白當不了 token；「♯5」跟 `C♯5` 撞在一起，一律當後者
 
+## 音源
+三軌都在 sfzinstruments 這個 org 底下（跟鋼琴同一家），要換之前先問：
+- 鋼琴：Salamander Grand，跟 ScrollScore 指向同一組檔案
+- 鼓：Virtuosity Drums（Versilian Studios × Karoryfer，KVRDC'21）。
+  這是波士頓實錄的**爵士鼓組**（鼓手 Austin McMahon），不是管弦打擊樂。
+  取 `Samples/mid/`（中距離麥克風）那一組
+- 貝斯：Black And Blue Basses 的 `darkblack` 指彈電貝斯，mf 力度
+
+VCSL 看起來像是鼓，其實是管弦打擊樂（定音鼓、大鑼、碰鈸），不要拿來當爵士鼓用。
+
+每一份檔案都走 `fetchDecode()` 的多來源清單：jsDelivr →
+raw.githubusercontent（鋼琴多一條 tonejs.github.io）。同一份檔案不同路由，
+新增音源時照這個模式走，不要只寫一個網址。
+
 ## 技術棧
 - 單檔 HTML，CSS/JS 內嵌，CDN only，無 build，GitHub Pages 直接部署
-- 取樣鋼琴用 Salamander Grand（`https://tonejs.github.io/audio/salamander/`），
-  跟 ScrollScore 指向同一組檔案，不要自己另外找一套音源
 - 配色/字體/元件樣式跟 ScrollScore、SightScore、LoudMaster 共用同一套變數，不要自己發明新的
 - 拍號固定 4/4，一個和弦一小節
 
@@ -41,3 +53,9 @@
   聽起來像機器在按琴鍵（見 `buildVoicing` 的 cost）
 - Salamander 每個八度只錄 C / D# / F# / A 四個音，其餘用 playbackRate 補位。
   音域是 A0–C8，鋼琴全音域都蓋得到，低音區不需要另外處理
+- 鼓是 FLAC，`decodeAudioData` 對 FLAC 的支援不如 mp3（舊的 iOS Safari 可能吃不下），
+  所以每個鼓件都要留合成備援（見 `synthDrum`），不能假設取樣一定載得到
+- 貝斯一律待在 E1–D#2（`bassMidiFor`）。移調只換音級、不跟著跑到別的音域，
+  不然移幾度貝斯就飛到鋼琴中間、低音整個空掉
+- 貝斯軌開著時鋼琴左手要降音量（`lhGain`），同一個根音疊兩層低頻會糊
+- 三種伴奏樣式的左手低音都要留長（撐兩拍，墊底撐整小節），不要只響一個音就收掉

@@ -339,9 +339,14 @@ input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px rgba(201,
 .seg button[aria-pressed="true"] svg{opacity:1}
 
 /* 開關列:count-in 與循環 */
-.toggles{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+/* 四個開關用 grid 排:flex-wrap 會讓落單的那個獨佔一整行、寬度跟別人差一截。
+   auto-fit 會依寬度自己決定一行放幾個,每一行都填得滿 */
+.toggles{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:8px;margin-top:16px;
+}
 .toggle{
-  flex:1;min-width:150px;
+  min-width:0;
   display:flex;align-items:center;gap:9px;
   padding:11px 13px;border:1px solid var(--line);background:var(--surface-inset);
   border-radius:var(--radius-md);cursor:pointer;
@@ -458,7 +463,7 @@ try {
       <textarea id="chordInput" spellcheck="false" autocapitalize="off" autocorrect="off"
         data-i18n-attr="placeholder:chordPlaceholder,aria-label:chordLabel"
         placeholder="C - Am - F - G">C - Am - F - G</textarea>
-      <p class="field-hint" data-i18n="chordHint">一個和弦一小節,4/4 拍。用空白、「-」或「|」分隔。和弦寫法跟 HarmonyMap 同一套:大三、小三、七和弦、sus、dim/aug、六和弦,一路到 9、11、13 與 alt 都看得懂,也吃轉位(C/E)。不想打字就用下面那排點。</p>
+      <p class="field-hint" data-i18n="chordHint">一個和弦一小節,4/4 拍。用空白或「-」分隔;不想打字就點下面那排。</p>
 
       <div class="examples" id="examples"></div>
 
@@ -556,6 +561,14 @@ try {
           <span class="box"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5.5 5.5L20 7"/></svg></span>
           <span data-i18n="loopLabel">循環播放</span>
         </button>
+        <button class="toggle" id="drumsToggle" type="button" aria-pressed="true">
+          <span class="box"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5.5 5.5L20 7"/></svg></span>
+          <span data-i18n="drumsLabel">鼓</span>
+        </button>
+        <button class="toggle" id="bassToggle" type="button" aria-pressed="true">
+          <span class="box"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5.5 5.5L20 7"/></svg></span>
+          <span data-i18n="bassLabel">貝斯</span>
+        </button>
       </div>
 
       <!-- 存下來的進行 -->
@@ -577,7 +590,7 @@ try {
 </main>
 
 <footer>
-  <span data-i18n-html="footerText">鋼琴音色來自 <a href="https://github.com/sfzinstruments/SalamanderGrandPiano" target="_blank" rel="noopener">Salamander Grand Piano</a>(CC-BY)・musicsteven.com 開發</span>
+  <span data-i18n-html="footerText">音色:<a href="https://github.com/sfzinstruments/SalamanderGrandPiano" target="_blank" rel="noopener">Salamander</a> 鋼琴、<a href="https://github.com/sfzinstruments/virtuosity_drums" target="_blank" rel="noopener">Virtuosity Drums</a>、<a href="https://github.com/sfzinstruments/karoryfer.black-and-blue-basses" target="_blank" rel="noopener">Black And Blue Basses</a>・musicsteven.com 開發</span>
 </footer>
 
 <script>
@@ -608,7 +621,7 @@ const I18N = {
     langToggleToZh: "切換為中文",
     chordLabel: "和弦進行",
     chordPlaceholder: "C - Am - F - G",
-    chordHint: "一個和弦一小節,4/4 拍。用空白、「-」或「|」分隔。和弦寫法跟 HarmonyMap 同一套:大三、小三、七和弦、sus、dim/aug、六和弦,一路到 9、11、13 與 alt 都看得懂,也吃轉位(C/E)。不想打字就用下面那排點。",
+    chordHint: "一個和弦一小節,4/4 拍。用空白或「-」分隔;不想打字就點下面那排。",
     barCount: "{n} 小節",
     styleLabel: "伴奏樣式",
     stylePad: "全音符墊底",
@@ -632,6 +645,8 @@ const I18N = {
     palDelSel: "刪掉第 {n} 格",
     qualMaj: "大三",
     qualMin: "小三",
+    drumsLabel: "鼓",
+    bassLabel: "貝斯",
     savedLabel: "存下來的進行",
     saveBtn: "存這組",
     savedEmpty: "還沒存過。調好一組滿意的進行,按「存這組」就會留在這台裝置上。",
@@ -649,15 +664,15 @@ const I18N = {
     playingTitle: "第 {bar} 小節 ・ {chord}",
     playingSub: "{bpm} BPM ・ {style}{loop}",
     loopSuffix: " ・ 循環",
-    loadingSamples: "載入鋼琴取樣中…",
-    loadingSamplesSub: "只抓這次會用到的音,第一次會稍微久一點",
+    loadingSamples: "載入音色中…",
+    loadingSamplesSub: "只抓這次會用到的音;鼓與貝斯第一次載會久一點",
     statusSamples: "已載入 {n} 個取樣",
     statusSynth: "取樣載入失敗,改用合成音色",
     statusPartial: "有 {n} 個取樣沒載到,那幾個音改用鄰近的取樣變調補上",
     errUnknownChord: "看不懂「{tok}」這個和弦,先把它改掉才能播放。",
     errTooMany: "一次最多 {n} 小節,後面的先拿掉吧。",
     hintKbd: '按 <kbd>空白鍵</kbd> 播放或停止',
-    footerText: '鋼琴音色來自 <a href="https://github.com/sfzinstruments/SalamanderGrandPiano" target="_blank" rel="noopener">Salamander Grand Piano</a>(CC-BY)・musicsteven.com 開發',
+    footerText: '音色:<a href="https://github.com/sfzinstruments/SalamanderGrandPiano" target="_blank" rel="noopener">Salamander</a> 鋼琴、<a href="https://github.com/sfzinstruments/virtuosity_drums" target="_blank" rel="noopener">Virtuosity Drums</a>、<a href="https://github.com/sfzinstruments/karoryfer.black-and-blue-basses" target="_blank" rel="noopener">Black And Blue Basses</a>・musicsteven.com 開發',
   },
   en: {
     pageTitle: "BackingTrack — type chords, get an accompaniment",
@@ -670,7 +685,7 @@ const I18N = {
     langToggleToZh: "切換為中文",
     chordLabel: "Chord progression",
     chordPlaceholder: "C - Am - F - G",
-    chordHint: "One chord per bar, 4/4 time. Separate with spaces, \"-\" or \"|\". Same chord vocabulary as HarmonyMap: triads, sevenths, sus, dim/aug, 6ths, all the way through 9ths, 11ths, 13ths and alt, plus slash chords (C/E). Or skip typing and tap the pad below.",
+    chordHint: "One chord per bar, 4/4 time. Separate with spaces or \"-\"; or just tap the pad below.",
     barCount: "{n} bars",
     styleLabel: "Comping style",
     stylePad: "Whole-note pad",
@@ -694,6 +709,8 @@ const I18N = {
     palDelSel: "Delete bar {n}",
     qualMaj: "maj",
     qualMin: "min",
+    drumsLabel: "Drums",
+    bassLabel: "Bass",
     savedLabel: "Saved progressions",
     saveBtn: "Save this",
     savedEmpty: "Nothing saved yet. Dial in a progression you like and hit \"Save this\" — it stays on this device.",
@@ -711,15 +728,15 @@ const I18N = {
     playingTitle: "Bar {bar} · {chord}",
     playingSub: "{bpm} BPM · {style}{loop}",
     loopSuffix: " · looping",
-    loadingSamples: "Loading piano samples…",
-    loadingSamplesSub: "Only the notes this progression needs — the first time takes a moment",
+    loadingSamples: "Loading sounds…",
+    loadingSamplesSub: "Only what this progression needs; drums and bass take a moment the first time",
     statusSamples: "{n} samples loaded",
     statusSynth: "Samples failed to load — using a synthesized tone",
     statusPartial: "{n} samples didn't load; those notes are pitched from a neighbouring sample",
     errUnknownChord: "\"{tok}\" isn't a chord I recognise — fix it to play.",
     errTooMany: "{n} bars is the maximum — trim the rest.",
     hintKbd: 'Press <kbd>Space</kbd> to play or stop',
-    footerText: 'Piano by <a href="https://github.com/sfzinstruments/SalamanderGrandPiano" target="_blank" rel="noopener">Salamander Grand Piano</a> (CC-BY) · built by musicsteven.com',
+    footerText: 'Sounds: <a href="https://github.com/sfzinstruments/SalamanderGrandPiano" target="_blank" rel="noopener">Salamander</a> piano, <a href="https://github.com/sfzinstruments/virtuosity_drums" target="_blank" rel="noopener">Virtuosity Drums</a>, <a href="https://github.com/sfzinstruments/karoryfer.black-and-blue-basses" target="_blank" rel="noopener">Black And Blue Basses</a> · built by musicsteven.com',
   },
 };
 
@@ -1046,7 +1063,14 @@ function buildVoicings(bars){
    這組每個八度只錄 C / D# / F# / A 四個音,其餘音用 playbackRate 變調補位,
    最遠只差 1.5 個半音,聽不出失真。音域 A0–C8,鋼琴全音域都蓋得到,
    所以低音區不需要另外處理。 */
-const PIANO_BASE = "https://tonejs.github.io/audio/salamander/";
+/* 同一組 Salamander 檔案的三條路:tonejs.github.io 是 ScrollScore 指的那條,
+   後面兩條是同一份檔案在 Tonejs/audio repo 裡的 CDN 與 raw 位置。
+   任何一條被擋掉(公司網路、地區封鎖)都還有得救 */
+const SRC_PIANO = [
+  "https://tonejs.github.io/audio/salamander/",
+  "https://cdn.jsdelivr.net/gh/Tonejs/audio@master/salamander/",
+  "https://raw.githubusercontent.com/Tonejs/audio/master/salamander/",
+];
 const SAMPLE_TABLE = (() => {
   const list = [{ letter: "A", oct: 0, pc: 9 }];
   for (let oct = 1; oct <= 7; oct++) {
@@ -1058,7 +1082,7 @@ const SAMPLE_TABLE = (() => {
   list.push({ letter: "C", oct: 8, pc: 0 });
   return list.map(s => ({
     midi: (s.oct + 1) * 12 + s.pc,
-    url: PIANO_BASE + s.letter + s.oct + ".mp3",
+    file: s.letter + s.oct + ".mp3",
   }));
 })();
 
@@ -1088,9 +1112,7 @@ function ensureSamples(midis){
   if (!want.length) return Promise.resolve();
   const jobs = want.map(midi => {
     const entry = SAMPLE_TABLE.find(s => s.midi === midi);
-    return fetch(entry.url)
-      .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.arrayBuffer(); })
-      .then(arr => ctx.decodeAudioData(arr))
+    return fetchDecode(SRC_PIANO, entry.file)
       .then(buf => { loadedSamples.set(midi, buf); })
       .catch(() => { failedSamples.add(midi); });   // 單一取樣缺了不影響其他音
   });
@@ -1100,7 +1122,7 @@ function ensureSamples(midis){
 
 /* ══ 音訊 ══════════════════════════════════════════════════════ */
 let ctx = null, masterGain = null, limiter = null;
-let reverbBus = null;
+let reverbBus = null, drumBus = null, bassBus = null;
 
 /* 殘響用程式合成的脈衝響應,不外掛音檔,維持單檔架構。
    Salamander 是近距離收音、幾乎全乾的,沒有這層空間感會很「貼在臉上」。
@@ -1154,6 +1176,19 @@ function ensureAudio(){
     wet.gain.value = 0.26;
     reverbBus.connect(pre); pre.connect(conv); conv.connect(wet);
     wet.connect(masterGain);   // 接在 masterGain 之前,殘響一樣受限幅器保護
+
+    /* 鼓與貝斯各走自己的匯流排:鼓只沾一點殘響(太濕會糊掉拍點),
+       貝斯幾乎全乾,低音一有殘響整個低頻就糊成一團 */
+    drumBus = ctx.createGain();
+    drumBus.gain.value = 0.8;
+    drumBus.connect(masterGain);
+    const dSend = ctx.createGain();
+    dSend.gain.value = 0.1;
+    drumBus.connect(dSend); dSend.connect(reverbBus);
+
+    bassBus = ctx.createGain();
+    bassBus.gain.value = 0.95;
+    bassBus.connect(masterGain);
   }
   // iOS/Safari 一定要在使用者手勢之後 resume,不然看起來在播、實際一點聲音都沒有。
   // 從背景切回來被系統暫停的情況也一起救回來
@@ -1237,6 +1272,176 @@ function playClick(when, strong){
   osc.onended = () => { activeSources.delete(osc); try { osc.disconnect(); g.disconnect(); } catch (e) {} };
 }
 
+/* ══ 鼓與貝斯 ══════════════════════════════════════════════════
+   音源都在 sfzinstruments 底下,跟鋼琴的 Salamander 同一個 org:
+   - 鼓:Virtuosity Drums(Versilian Studios × Karoryfer,KVRDC'21 參賽作),
+     取中距離麥克風那一組,24bit/48k FLAC。大鼓與 hi-hat 各收幾個 round-robin,
+     同一個音連打才不會像機關槍
+   - 貝斯:Black And Blue Basses 的 darkblack 指彈電貝斯(Karoryfer,KVRDC'23),
+     mf 力度。每三個半音收一顆,中間用 playbackRate 補,最遠差 1.5 個半音
+   先走 jsDelivr(有 CDN 快取),失敗再退 raw.githubusercontent —— 兩邊同一份檔案。
+   FLAC 走 decodeAudioData 的支援度不如 mp3,所以每個鼓件都留一份合成備援。 */
+const SRC_DRUMS = [
+  "https://cdn.jsdelivr.net/gh/sfzinstruments/virtuosity_drums@master/Samples/mid/",
+  "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/master/Samples/mid/",
+];
+const SRC_BASS = [
+  "https://cdn.jsdelivr.net/gh/sfzinstruments/karoryfer.black-and-blue-basses@main/Samples/darkblack/reg/",
+  "https://raw.githubusercontent.com/sfzinstruments/karoryfer.black-and-blue-basses/main/Samples/darkblack/reg/",
+];
+
+/* 依序試每個來源,第一個成功的就用;全部失敗才丟出去給呼叫端決定怎麼退 */
+function fetchDecode(bases, path){
+  let i = 0;
+  const attempt = () => fetch(bases[i] + path)
+    .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.arrayBuffer(); })
+    .then(a => ctx.decodeAudioData(a))
+    .catch(err => { i++; if (i < bases.length) return attempt(); throw err; });
+  return attempt();
+}
+
+const DRUM_FILES = {
+  kick:  ["kick/mid_kick_snon_vl3_rr1.flac", "kick/mid_kick_snon_vl3_rr2.flac"],
+  snare: ["snare/mid_snare_center_vl24.flac", "snare/mid_snare_center_vl28.flac"],
+  hihat: ["hh/mid_hh_closed_vl3_rr1.flac", "hh/mid_hh_closed_vl3_rr2.flac", "hh/mid_hh_closed_vl3_rr3.flac"],
+};
+const drumBuffers = { kick: [], snare: [], hihat: [] };
+const drumRR = { kick: 0, snare: 0, hihat: 0 };
+let drumsLoading = null;
+
+function ensureDrums(){
+  if (drumsLoading) return drumsLoading;
+  const jobs = [];
+  for (const piece of Object.keys(DRUM_FILES)) {
+    for (const path of DRUM_FILES[piece]) {
+      jobs.push(fetchDecode(SRC_DRUMS, path)
+        .then(b => { drumBuffers[piece].push(b); })
+        .catch(() => {}));   // 這一顆載不到就少一個 round-robin,不影響其他鼓件
+    }
+  }
+  drumsLoading = Promise.all(jobs);
+  return drumsLoading;
+}
+
+/* 檔名的八度寫法是 midi = 八度 × 12 + 音級(e2 = 28 = 四弦貝斯的最低音 E) */
+const BASS_FILES = [
+  [28, "darkblack_e2_mf_rr1.wav"],  [31, "darkblack_g2_mf_rr1.wav"],
+  [34, "darkblack_bb2_mf_rr1.wav"], [37, "darkblack_db3_mf_rr1.wav"],
+  [40, "darkblack_e3_mf_rr1.wav"],  [43, "darkblack_g3_mf_rr1.wav"],
+  [46, "darkblack_bb3_mf_rr1.wav"],
+];
+const bassBuffers = new Map();   // midi -> AudioBuffer
+const bassFailed = new Set();
+
+function ensureBass(midis){
+  const want = new Set();
+  for (const m of midis) {
+    let best = BASS_FILES[0];
+    for (const e of BASS_FILES) if (Math.abs(e[0] - m) < Math.abs(best[0] - m)) best = e;
+    want.add(best);
+  }
+  const jobs = [...want]
+    .filter(e => !bassBuffers.has(e[0]) && !bassFailed.has(e[0]))
+    .map(e => fetchDecode(SRC_BASS, e[1])
+      .then(b => { bassBuffers.set(e[0], b); })
+      .catch(() => { bassFailed.add(e[0]); }));
+  return Promise.all(jobs);
+}
+
+/* 貝斯一律待在 E1–D#2 這個八度裡:移調時跟著換音級,但不跟著跑到別的音域去,
+   不然移個幾度貝斯就飛到鋼琴中間,整個低音就空了 */
+function bassMidiFor(pc){
+  return 28 + ((((pc - 4) % 12) + 12) % 12);
+}
+
+function playDrum(piece, when, gain){
+  const list = drumBuffers[piece];
+  if (!list || !list.length) { synthDrum(piece, when, gain); return; }
+  const src = ctx.createBufferSource();
+  src.buffer = list[drumRR[piece]++ % list.length];
+  const g = ctx.createGain();
+  g.gain.value = gain;
+  src.connect(g); g.connect(drumBus);
+  src.start(when);
+  activeSources.add(src);
+  src.onended = () => { activeSources.delete(src); try { src.disconnect(); g.disconnect(); } catch (e) {} };
+}
+
+/* 取樣載不到時的備援鼓:大鼓是往下掉的正弦、小鼓是雜訊加一點中頻、hi-hat 是高通雜訊 */
+function synthDrum(piece, when, gain){
+  const g = ctx.createGain();
+  g.connect(drumBus);
+  if (piece === "kick") {
+    const o = ctx.createOscillator();
+    o.type = "sine";
+    o.frequency.setValueAtTime(150, when);
+    o.frequency.exponentialRampToValueAtTime(48, when + 0.11);
+    g.gain.setValueAtTime(gain, when);
+    g.gain.exponentialRampToValueAtTime(0.0001, when + 0.34);
+    o.connect(g); o.start(when); o.stop(when + 0.36);
+    activeSources.add(o);
+    o.onended = () => { activeSources.delete(o); try { o.disconnect(); g.disconnect(); } catch (e) {} };
+    return;
+  }
+  const dur = piece === "snare" ? 0.19 : 0.05;
+  const len = Math.max(1, Math.floor(ctx.sampleRate * dur));
+  const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  const f = ctx.createBiquadFilter();
+  f.type = piece === "snare" ? "bandpass" : "highpass";
+  f.frequency.value = piece === "snare" ? 1900 : 8000;
+  g.gain.setValueAtTime(gain * (piece === "snare" ? 1 : 0.8), when);
+  g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+  src.connect(f); f.connect(g);
+  src.start(when); src.stop(when + dur + 0.02);
+  activeSources.add(src);
+  src.onended = () => { activeSources.delete(src); try { src.disconnect(); f.disconnect(); g.disconnect(); } catch (e) {} };
+}
+
+function playBassNote(midi, when, dur, peak){
+  const g = ctx.createGain();
+  g.connect(bassBus);
+  let src;
+  const keys = [...bassBuffers.keys()];
+  if (keys.length) {
+    let best = keys[0];
+    for (const k of keys) if (Math.abs(k - midi) < Math.abs(best - midi)) best = k;
+    const buf = bassBuffers.get(best);
+    src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.playbackRate.value = Math.pow(2, (midi - best) / 12);
+    const needed = (dur + 0.4) * src.playbackRate.value;
+    if (buf.duration < needed && buf.duration > 0.3) {
+      src.loop = true;
+      const loopLen = Math.min(0.5, buf.duration * 0.3);
+      src.loopStart = Math.max(0, buf.duration - loopLen);
+      src.loopEnd = buf.duration;
+    }
+  } else {
+    // 備援貝斯:三角波加一顆低通,至少低音還在
+    src = ctx.createOscillator();
+    src.type = "triangle";
+    src.frequency.value = 440 * Math.pow(2, (midi - 69) / 12);
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass"; lp.frequency.value = 700;
+    src.connect(lp); lp.connect(g);
+  }
+  if (src.buffer) src.connect(g);
+  // 貝斯不像鋼琴會一路自然衰減,撐住整個音長再收
+  g.gain.setValueAtTime(0.0001, when);
+  g.gain.linearRampToValueAtTime(peak, when + 0.012);
+  g.gain.setTargetAtTime(peak * 0.75, when + 0.012, 0.35);
+  g.gain.setTargetAtTime(0.0001, when + Math.max(dur, 0.08), 0.07);
+  const stopAt = when + Math.max(dur, 0.08) + 0.45;
+  src.start(when);
+  src.stop(stopAt);
+  activeSources.add(src);
+  src.onended = () => { activeSources.delete(src); try { src.disconnect(); g.disconnect(); } catch (e) {} };
+}
+
 /* ══ 播放狀態 ══════════════════════════════════════════════════
    排程用 AudioContext.currentTime 提前排,setInterval 只負責「每隔一陣子來看一下」,
    不決定任何一個音的實際時間點——setTimeout 的抖動會直接變成拍子飄。 */
@@ -1268,19 +1473,57 @@ function reanchorTempo(newBpm){
   anchorTime = keepTime;
 }
 
+/* 貝斯軌開著時,鋼琴左手讓一點位置出來,不然同一個根音疊兩層,低頻會糊 */
+function lhGain(){ return bassOn ? 0.55 : 1; }
+
+/* 鼓的節奏型,用「這一小節的第幾個八分音符(0–7)」來寫。
+   大鼓在一、三拍,小鼓在二、四拍(backbeat);hi-hat 的密度跟著伴奏樣式走——
+   全音符墊底配四分 hi-hat 比較不吵,另外兩種配八分 */
+const DRUM_PATTERNS = {
+  pad:     { kick: [0, 4], snare: [2, 6], hihat: [0, 2, 4, 6] },
+  quarter: { kick: [0, 4], snare: [2, 6], hihat: [0, 1, 2, 3, 4, 5, 6, 7] },
+  eighth:  { kick: [0, 4], snare: [2, 6], hihat: [0, 1, 2, 3, 4, 5, 6, 7] },
+};
+
+function scheduleDrums(barStartBeat, b){
+  const pat = DRUM_PATTERNS[styleOn] || DRUM_PATTERNS.pad;
+  const half = spb / 2;
+  for (let e = 0; e < 2; e++) {
+    const idx = b * 2 + e;
+    const t = beatTime(barStartBeat + b) + e * half;
+    if (pat.kick.indexOf(idx) >= 0) playDrum("kick", t, 0.85);
+    if (pat.snare.indexOf(idx) >= 0) playDrum("snare", t, 0.7);
+    // 正拍的 hi-hat 重一點、反拍輕一點,不然八分音符會變成一條平平的沙沙聲
+    if (pat.hihat.indexOf(idx) >= 0) playDrum("hihat", t, idx % 2 === 0 ? 0.4 : 0.26);
+  }
+}
+
+/* 貝斯:第一拍走和弦的低音(轉位就走轉位音),第三拍走五音。
+   全音符墊底那個樣式撐滿整小節,另外兩種各撐兩拍 */
+function scheduleBass(chord, barStartBeat, b){
+  if (b !== 0 && b !== 2) return;
+  if (styleOn === "pad" && b !== 0) return;
+  const raw = b === 0 ? chord.bassPc : chord.rootPc + 7;
+  const pc = (((raw + transposeOn) % 12) + 12) % 12;
+  const t = beatTime(barStartBeat + b);
+  const dur = styleOn === "pad" ? spb * 4 : spb * 2;
+  playBassNote(bassMidiFor(pc), t, dur, b === 0 ? 0.52 : 0.44);
+}
+
 const STYLE_FNS = {
   /* 全音符墊底:低音與和弦都撐滿整個小節 */
   pad(v, barStartBeat, b, transpose){
     if (b !== 0) return;
     const t = beatTime(barStartBeat);
     const dur = spb * 4;
-    playNote(v.bass + transpose, t, dur, 0.5);
+    playNote(v.bass + transpose, t, dur, 0.5 * lhGain());
     for (const n of v.upper) playNote(n + transpose, t, dur, 0.34);
   },
-  /* 四分打:低音落在第一、三拍,和弦每拍都點一下 */
+  /* 四分打:低音落在第一、三拍,和弦每拍都點一下。
+     低音撐滿兩拍到下一個低音為止,左手才不會一顆一顆斷掉 */
   quarter(v, barStartBeat, b, transpose){
     const t = beatTime(barStartBeat + b);
-    if (b === 0 || b === 2) playNote(v.bass + transpose, t, spb * 0.95, b === 0 ? 0.52 : 0.42);
+    if (b === 0 || b === 2) playNote(v.bass + transpose, t, spb * 2, (b === 0 ? 0.52 : 0.42) * lhGain());
     const peak = b === 0 ? 0.34 : 0.27;   // 第一拍稍微重一點,拍子才站得住
     for (const n of v.upper) playNote(n + transpose, t, spb * 0.9, peak);
   },
@@ -1291,7 +1534,8 @@ const STYLE_FNS = {
       const idx = b * 2 + e;                 // 這一小節裡的第幾個八分音符(0–7)
       const t = beatTime(barStartBeat + b) + e * half;
       if (idx === 0 || idx === 4) {
-        playNote(v.bass + transpose, t, half * 1.8, idx === 0 ? 0.5 : 0.42);
+        // 同樣撐滿兩拍,不要只響一個八分音符就收掉
+        playNote(v.bass + transpose, t, spb * 2, (idx === 0 ? 0.5 : 0.42) * lhGain());
       } else {
         const k = (idx % 4) - 1;             // 0,1,2 循環,兩個半小節走同一條上行
         const n = v.upper[k % v.upper.length];
@@ -1316,6 +1560,11 @@ function scheduleBeat(i, when){
   const b = ((musicBeat % 4) + 4) % 4;
   const barStartBeat = countInBeats + Math.floor(musicBeat / 4) * 4;
   (STYLE_FNS[styleOn] || STYLE_FNS.pad)(v, barStartBeat, b, transposeOn);
+  if (drumsOn) scheduleDrums(barStartBeat, b);
+  if (bassOn) {
+    const ch = parsed.bars[bar] && parsed.bars[bar].chord;
+    if (ch) scheduleBass(ch, barStartBeat, b);
+  }
 }
 
 function schedulerTick(){
@@ -1346,10 +1595,25 @@ function startPlayback(){
     for (const n of v.upper) midis.push(n + transposeOn);
   }
 
+  // 貝斯用的音(含移調)跟鋼琴不同,要另外算
+  const bassMidis = [];
+  if (bassOn) {
+    for (const b of parsed.bars) {
+      if (!b.ok) continue;
+      for (const raw of [b.chord.bassPc, b.chord.rootPc + 7]) {
+        bassMidis.push(bassMidiFor((((raw + transposeOn) % 12) + 12) % 12));
+      }
+    }
+  }
+
   setTransport(T("loadingSamples"), T("loadingSamplesSub"));
   playBtn.disabled = true;
 
-  ensureSamples(midis).then(() => {
+  Promise.all([
+    ensureSamples(midis),
+    drumsOn ? ensureDrums() : Promise.resolve(),
+    bassOn ? ensureBass(bassMidis) : Promise.resolve(),
+  ]).then(() => {
     playBtn.disabled = false;
     if (!loadedSamples.size) setStatus(T("statusSynth"), true);
     else if (failedSamples.size) setStatus(T("statusPartial", { n: failedSamples.size }), true);
@@ -1391,6 +1655,7 @@ const barsGrid = $("barsGrid");
 const playBtn = $("playBtn");
 
 let bpmOn = 100, transposeOn = 0, styleOn = "pad", countInOn = true, loopOn = true;
+let drumsOn = true, bassOn = true;
 let lastHighlight = -1;
 
 /* SVGElement 沒有 hidden 這個 IDL 屬性,el.hidden = true 只會掛上一個沒人看的 JS 屬性,
@@ -1551,6 +1816,7 @@ function saveState(){
     localStorage.setItem(STATE_KEY, JSON.stringify({
       text: chordInput.value, bpm: bpmOn, transpose: transposeOn,
       style: styleOn, countIn: countInOn, loop: loopOn,
+      drums: drumsOn, bass: bassOn,
     }));
   } catch (e) {}
 }
@@ -1884,6 +2150,17 @@ $("loopToggle").addEventListener("click", () => {
   saveState();
 });
 
+$("drumsToggle").addEventListener("click", () => {
+  drumsOn = !drumsOn;
+  setToggle($("drumsToggle"), drumsOn);
+  saveState();
+});
+$("bassToggle").addEventListener("click", () => {
+  bassOn = !bassOn;
+  setToggle($("bassToggle"), bassOn);
+  saveState();
+});
+
 $("palDel").addEventListener("click", palDelete);
 
 $("saveBtn").addEventListener("click", () => {
@@ -1915,12 +2192,16 @@ document.addEventListener("keydown", (e) => {
     if (st.style && STYLE_FNS[st.style]) styleOn = st.style;
     if (typeof st.countIn === "boolean") countInOn = st.countIn;
     if (typeof st.loop === "boolean") loopOn = st.loop;
+    if (typeof st.drums === "boolean") drumsOn = st.drums;
+    if (typeof st.bass === "boolean") bassOn = st.bass;
     if (typeof st.bpm === "number") bpmOn = st.bpm;
     if (typeof st.transpose === "number") transposeOn = st.transpose;
   }
   setStyle(styleOn);
   setToggle($("countInToggle"), countInOn);
   setToggle($("loopToggle"), loopOn);
+  setToggle($("drumsToggle"), drumsOn);
+  setToggle($("bassToggle"), bassOn);
   setBpm(bpmOn);
   setTranspose(transposeOn);
   renderExamples();

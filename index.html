@@ -342,12 +342,6 @@ input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px rgba(201,
 /* 伴奏樣式:三選一 */
 .seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .seg-3{grid-template-columns:repeat(3,minmax(0,1fr))}
-/* 感覺是自動判斷的,不是按鈕。放在標題右邊當說明,樣式要看起來「不能點」 */
-.feel-tag{
-  font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.04em;
-  border:1px solid var(--line);border-radius:var(--radius-pill);padding:2px 9px;
-  white-space:nowrap;
-}
 .seg button{
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
   padding:8px 6px;min-height:54px;
@@ -529,10 +523,7 @@ try {
 
       <!-- 伴奏樣式 -->
       <div class="control">
-        <div class="control-head">
-          <span class="label" data-i18n="styleLabel">伴奏樣式</span>
-          <span class="feel-tag" id="feelTag"></span>
-        </div>
+        <div class="control-head"><span class="label" data-i18n="styleLabel">伴奏樣式</span></div>
         <div class="seg seg-3" id="styleSeg">
           <button type="button" data-style="pad" aria-pressed="false">
             <svg width="26" height="14" viewBox="0 0 26 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 7h20"/><circle cx="4" cy="7" r="2.2" fill="currentColor" stroke="none"/></svg>
@@ -655,10 +646,6 @@ const I18N = {
     stylePad: "墊底",
     styleComp: "打點",
     styleDrive: "推進",
-    feelStraight: "直",
-    feelLatin: "拉丁",
-    feelSwing: "搖擺",
-    feelTagText: "{feel}感覺 ・ 依和弦自動判斷",
     bpmLabel: "速度",
     bpmDownLabel: "慢一點",
     bpmUpLabel: "快一點",
@@ -721,10 +708,6 @@ const I18N = {
     stylePad: "Sustained",
     styleComp: "Comping",
     styleDrive: "Driving",
-    feelStraight: "straight",
-    feelLatin: "latin",
-    feelSwing: "swing",
-    feelTagText: "{feel} feel \u00b7 from the chords",
     bpmLabel: "Tempo",
     bpmDownLabel: "Slower",
     bpmUpLabel: "Faster",
@@ -1992,17 +1975,10 @@ function setStatus(text, warn){
 }
 
 const STYLE_I18N = { pad: "stylePad", comp: "styleComp", drive: "styleDrive" };
-const FEEL_I18N = { straight: "feelStraight", latin: "feelLatin", swing: "feelSwing" };
 function styleName(){ return T(STYLE_I18N[styleOn] || "styleComp"); }
-function feelName(){ return T(FEEL_I18N[feelNow] || "feelStraight"); }
 
-/* 感覺是自動判斷的,和弦一改就要重算,並且把判斷結果寫在畫面上——
-   使用者要知道為什麼伴奏聽起來變了 */
-function updateFeel(){
-  feelNow = detectFeel(parsed.bars);
-  const el = $("feelTag");
-  if (el) el.textContent = parsed.bars.length ? T("feelTagText", { feel: feelName() }) : "";
-}
+/* 感覺是和弦決定的,和弦一改就要重算 */
+function updateFeel(){ feelNow = detectFeel(parsed.bars); }
 
 function updateTransportIdle(){
   const n = parsed.bars.length;
@@ -2419,7 +2395,6 @@ function refreshDynamicText(){
   setPlayIcon(playing);
   renderSaved();
   renderPalette();
-  updateFeel();
   if (!playing) updateTransportIdle();
   const bad = parsed.bars.find(b => !b.ok);
   if (bad) $("parseErrorText").textContent = T("errUnknownChord", { tok: bad.text });

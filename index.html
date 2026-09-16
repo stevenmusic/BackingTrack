@@ -132,16 +132,20 @@ header h1 span{color:var(--ivory);font-weight:600}
 /* ── 主舞台 ─────────────────────── */
 main{
   flex:1;display:flex;flex-direction:column;align-items:center;
-  padding:24px 20px;position:relative;
+  padding:13px;position:relative;
 }
 .stage{width:100%;max-width:680px}
 /* 夠寬時把卡片拆成兩欄,整頁就不用一直往下捲。
    860px 以下自動疊回一欄,原本的順序不變 */
-@media (min-width:860px){
-  .stage{max-width:1000px}
-  .card{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 26px;align-items:start}
+@media (min-width:680px){
+  .stage{max-width:900px}
+  .card{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 18px;align-items:start}
   .card-foot{grid-column:1 / -1}
   .col > *:first-child{margin-top:0}
+}
+@media (min-width:900px){
+  .stage{max-width:1040px}
+  .card{gap:0 26px}
 }
 
 .card{
@@ -154,26 +158,42 @@ main{
 .field-head .label{font-size:var(--fs-xs);color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
 .field-head .bars{font-size:var(--fs-xs);color:var(--muted);font-variant-numeric:tabular-nums}
 #chordInput{
-  width:100%;min-height:58px;resize:vertical;
+  width:100%;min-height:46px;resize:vertical;
   background:var(--surface-inset);border:1px solid var(--line);border-radius:var(--radius-md);
-  color:var(--ivory);font-family:"Noto Serif TC",serif;font-size:var(--fs-xl);
-  letter-spacing:.04em;line-height:1.7;padding:12px 14px;
+  color:var(--ivory);font-family:"Noto Serif TC",serif;font-size:var(--fs-lg);
+  letter-spacing:.04em;line-height:1.55;padding:9px 12px;
 }
 #chordInput:focus{outline:none;border-color:var(--gold);background:var(--surface-inset-hi)}
 #chordInput::placeholder{color:var(--muted);font-family:"Noto Sans TC",sans-serif;font-size:var(--fs-md);letter-spacing:0}
-.field-hint{margin-top:7px;font-size:var(--fs-2xs);color:var(--muted);line-height:1.7;text-wrap:pretty}
+.field-hint{margin-top:5px;font-size:var(--fs-2xs);color:var(--muted);line-height:1.7;text-wrap:pretty}
 
 /* 範例進行:一排安靜的小膠囊,點一下就填進去 */
+/* 段落庫的那一排小控制:長度、重複次數、清空 */
+.ex-head{display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap}
+.seg-mini{display:flex;border:1px solid var(--line);border-radius:var(--radius-pill);overflow:hidden}
+.seg-mini button{
+  border:none;background:transparent;color:var(--muted-bright);
+  font-family:inherit;font-size:var(--fs-2xs);padding:4px 9px;cursor:pointer;white-space:nowrap;
+  transition:background .15s,color .15s;
+}
+.seg-mini button + button{border-left:1px solid var(--line)}
+.seg-mini button[aria-pressed="true"]{background:var(--gold);color:var(--bg);font-weight:700}
+#formClear{height:24px;font-size:var(--fs-2xs);padding:0 10px;margin-left:auto}
+.form-line{
+  margin-top:4px;font-size:var(--fs-2xs);color:var(--muted);line-height:1.6;
+  font-variant-numeric:tabular-nums;
+}
+
 /* 範例用格線不用 flex:進行長短差很多,flex 排出來每顆寬度都不一樣、
    最後一行還會落單。auto-fill 讓每一格等寬,空格子也保留寬度 */
 .examples{
   display:grid;grid-template-columns:repeat(auto-fill,minmax(188px,1fr));
-  gap:5px;margin-top:8px;
+  gap:4px;margin-top:7px;
 }
 .ex-btn{
   border:1px solid var(--line);background:transparent;color:var(--muted-bright);
   font-family:"Noto Serif TC",serif;font-size:var(--fs-xs);letter-spacing:.02em;
-  padding:5px 8px;border-radius:var(--radius-pill);cursor:pointer;
+  padding:4px 8px;border-radius:var(--radius-pill);cursor:pointer;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   transition:background .2s,color .2s,border-color .2s;
 }
@@ -183,21 +203,21 @@ main{
    兩排:上排音名、下排性質。點音名加一格、點性質改最後一格,
    兩下就能打出 Cm7,不必記得完整寫法 */
 .palette{
-  margin-top:10px;padding:9px 10px;
+  margin-top:8px;padding:8px 9px;
   background:var(--surface-inset);border:1px solid var(--line);border-radius:var(--radius-md);
 }
 .pal-row{display:flex;flex-wrap:wrap;gap:6px}
 /* 音名用 grid 排。flex 會把最後一行剩下的幾顆撐滿整列,
    同一顆鈕在不同行寬度差一倍,看起來像壞掉 */
-#palRoots{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+#palRoots{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}
 /* 性質也走格線。14 顆用 auto-fill 排出來每格等寬,不會像 flex 那樣一行七顆一行六顆 */
-#palQuals{display:grid;grid-template-columns:repeat(auto-fill,minmax(54px,1fr));gap:6px}
-.pal-row + .pal-row{margin-top:6px;padding-top:7px;border-top:1px solid var(--line)}
+#palQuals{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:5px}
+.pal-row + .pal-row{margin-top:5px;padding-top:6px;border-top:1px solid var(--line)}
 .pal-btn{
   min-width:0;
   border:1px solid var(--line);background:transparent;color:var(--ivory);
   font-family:"Noto Serif TC",serif;font-size:var(--fs-md);font-weight:600;letter-spacing:.02em;
-  padding:6px 5px;border-radius:var(--radius-sm);cursor:pointer;
+  padding:5px 4px;border-radius:var(--radius-sm);cursor:pointer;
   transition:background .15s,color .15s,border-color .15s;
 }
 .pal-btn:hover,.pal-btn:focus-visible{background:var(--gold);border-color:var(--gold);color:var(--bg);outline:none}
@@ -206,26 +226,26 @@ main{
 /* 性質鈕不跟著撐滿:14 顆會換行,若讓最後一行的幾顆平分寬度,
    同一顆鈕在不同行寬度差很多,看起來像壞掉 */
 .pal-qual .pal-btn{
-  font-family:"Noto Sans TC",sans-serif;font-size:var(--fs-sm);font-weight:500;
-  color:var(--muted-bright);padding:6px 4px;
+  font-family:"Noto Sans TC",sans-serif;font-size:var(--fs-xs);font-weight:500;
+  color:var(--muted-bright);padding:5px 3px;
 }
 .pal-qual .pal-btn:hover,.pal-qual .pal-btn:focus-visible{color:var(--bg)}
-.pal-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:7px}
+.pal-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px}
 .pal-hint{font-size:var(--fs-2xs);color:var(--muted);line-height:1.6;text-wrap:pretty}
 #palDel{height:30px;font-size:var(--fs-xs);padding:0 12px;flex:none}
 
 /* ── 小節格:每格一個和弦,播到哪一格就亮哪一格 ───────────── */
 .bars-grid{
   display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;
-  margin-top:11px;
+  margin-top:9px;
 }
-@media (max-width:480px){.bars-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:600px){.bars-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 /* 兩欄時右欄一行放四格會太擠,改成兩格一行 */
-@media (min-width:860px){.bars-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (min-width:680px){.bars-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .bar-chip{
   position:relative;
   display:flex;align-items:center;justify-content:center;
-  width:100%;min-height:46px;padding:7px 6px;cursor:pointer;
+  width:100%;min-height:42px;padding:6px 5px;cursor:pointer;
   background:var(--surface-inset);border:1px solid var(--line);border-radius:var(--radius-md);
   font-family:"Noto Serif TC",serif;font-size:var(--fs-lg);font-weight:600;
   color:var(--ivory);letter-spacing:.02em;text-align:center;word-break:break-all;
@@ -238,6 +258,10 @@ main{
 /* 目前正在響的小節。用邊框+底色,不用 transform,免得整排格子在每小節抖一下 */
 .bar-chip.on{background:var(--gold);border-color:var(--gold);color:var(--bg)}
 .bar-chip.bad{border-color:var(--danger);color:var(--danger);background:var(--danger-bg)}
+/* 小節一多就換四欄小格:12 小節的進行也只佔三列,跟四小節的兩列差不多高,
+   整頁高度不會跟著進行長度跑掉 */
+.bars-grid.dense .bar-chip{min-height:28px;font-size:var(--fs-sm);padding:3px 2px}
+.bars-grid.dense .bar-chip .num{top:1px;left:4px;font-size:9px}
 .bar-chip .num{
   position:absolute;top:3px;left:7px;
   font-family:"Noto Sans TC",sans-serif;font-size:var(--fs-2xs);font-weight:400;
@@ -256,10 +280,10 @@ main{
 .parse-error svg{flex:none}
 
 /* ── 走帶列 ───────────────────────── */
-.transport{display:flex;align-items:center;gap:14px;margin-top:14px}
+.transport{display:flex;align-items:center;gap:12px;margin-top:10px}
 .play-btn{
   flex:none;display:flex;align-items:center;justify-content:center;
-  width:56px;height:56px;border-radius:50%;
+  width:48px;height:48px;border-radius:50%;
   border:1px solid var(--gold);background:var(--gold);color:var(--bg);
   cursor:pointer;transition:background .2s,transform .1s;
 }
@@ -276,13 +300,13 @@ svg[hidden]{display:none}
 
 /* ── 控制項區塊 ───────────────────── */
 .control{
-  margin-top:10px;padding:11px 13px;
+  margin-top:8px;padding:9px 11px;
   background:var(--surface-inset);border:1px solid var(--line);border-radius:var(--radius-md);
 }
 /* 速度與移調並排。夠寬就兩欄,窄了自己疊回一欄 */
-.control-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.control-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(196px,1fr));gap:10px}
 .control-pair > .control{margin-top:10px}
-.control-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:9px}
+.control-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:7px}
 .control-head .label{font-size:var(--fs-xs);color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
 .control-head .value{
   font-family:"Noto Serif TC",serif;
@@ -331,7 +355,7 @@ input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px rgba(201,
 /* BPM:數字直接輸入,兩側 −/＋ 微調 */
 .bpm-row{display:flex;align-items:center;gap:10px}
 #bpmInput{
-  flex:1;min-width:0;height:40px;text-align:center;
+  flex:1;min-width:0;height:36px;text-align:center;
   background:var(--card-tint);border:1px solid var(--line);border-radius:var(--radius-md);
   color:var(--gold-bright);font-family:"Noto Serif TC",serif;font-size:var(--fs-2xl);font-weight:700;
   font-variant-numeric:tabular-nums;letter-spacing:.02em;
@@ -339,9 +363,9 @@ input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px rgba(201,
 }
 #bpmInput::-webkit-outer-spin-button,#bpmInput::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 #bpmInput:focus{outline:none;border-color:var(--gold);background:var(--surface-inset-hi)}
-.bpm-quick{display:flex;gap:7px;margin-top:8px}
+.bpm-quick{display:flex;gap:6px;margin-top:6px}
 .bpm-quick .btn{
-  flex:1;height:34px;padding:0 10px;font-size:var(--fs-sm);
+  flex:1;height:30px;padding:0 10px;font-size:var(--fs-sm);
   border-color:var(--line);color:var(--muted-bright);
 }
 .bpm-quick .btn:hover,.bpm-quick .btn:focus-visible{background:var(--gold);border-color:var(--gold);color:var(--bg)}
@@ -351,7 +375,7 @@ input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px rgba(201,
 .seg-3{grid-template-columns:repeat(3,minmax(0,1fr))}
 .seg button{
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
-  padding:8px 6px;min-height:54px;
+  padding:6px 5px;min-height:46px;
   border:1px solid var(--line);background:transparent;color:var(--muted-bright);
   font-family:inherit;font-size:var(--fs-sm);font-weight:500;line-height:1.35;text-align:center;
   border-radius:var(--radius-md);cursor:pointer;
@@ -367,12 +391,12 @@ input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px rgba(201,
    auto-fit 會依寬度自己決定一行放幾個,每一行都填得滿 */
 .toggles{
   display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:7px;margin-top:10px;
+  gap:7px;margin-top:8px;
 }
 .toggle{
   min-width:0;
   display:flex;align-items:center;gap:9px;
-  padding:9px 12px;border:1px solid var(--line);background:var(--surface-inset);
+  padding:8px 11px;border:1px solid var(--line);background:var(--surface-inset);
   border-radius:var(--radius-md);cursor:pointer;
   font-size:var(--fs-sm);color:var(--muted-bright);
   transition:background .2s,color .2s,border-color .2s;
@@ -387,8 +411,8 @@ input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px rgba(201,
 .toggle[aria-pressed="true"] .box svg{opacity:1}
 
 /* ── 儲存的進行 ───────────────────── */
-.saved{margin-top:11px}
-.saved-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px}
+.saved{margin-top:9px}
+.saved-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:5px}
 .saved-head .label{font-size:var(--fs-xs);color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
 .saved-list{display:flex;flex-wrap:wrap;gap:6px}
 .saved-empty{font-size:var(--fs-2xs);color:var(--muted);line-height:1.7}
@@ -409,7 +433,7 @@ input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px rgba(201,
 }
 .saved-item .del:hover,.saved-item .del:focus-visible{color:var(--danger);outline:none}
 
-.card-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}
+.card-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:5px}
 .hint-kbd{font-size:var(--fs-2xs);color:var(--muted);line-height:1.6}
 .hint-kbd kbd{
   font-family:inherit;font-size:var(--fs-2xs);color:var(--muted-bright);
@@ -426,9 +450,9 @@ footer{
 footer a{color:var(--muted-bright);text-decoration:none;border-bottom:1px solid var(--line)}
 footer a:hover{color:var(--gold-bright)}
 
-@media (min-width:560px){
-  main{padding:32px 20px}
-  .card{padding:24px 28px}
+@media (min-width:600px){
+  main{padding:20px}
+  .card{padding:18px 20px}
 }
 @media (max-width:400px){
   .card{padding:16px}
@@ -492,7 +516,21 @@ try {
         placeholder="C - Am - F - G">C - Am - F - G</textarea>
       <p class="field-hint" data-i18n="chordHint">一個和弦一小節,4/4 拍。用空白或「-」分隔;不想打字就點下面那排。</p>
 
+      <!-- 段落庫:挑長度、挑要接幾次,點一下就接到形式後面 -->
+      <div class="ex-head">
+        <div class="seg-mini" id="lenSeg">
+          <button type="button" data-len="4" aria-pressed="true" data-i18n="len4">4 小節</button>
+          <button type="button" data-len="8" aria-pressed="false" data-i18n="len8">8 小節</button>
+        </div>
+        <div class="seg-mini" id="repSeg">
+          <button type="button" data-rep="1" aria-pressed="true">×1</button>
+          <button type="button" data-rep="2" aria-pressed="false">×2</button>
+          <button type="button" data-rep="4" aria-pressed="false">×4</button>
+        </div>
+        <button class="btn ghost" id="formClear" type="button" data-i18n="formClear">清空</button>
+      </div>
       <div class="examples" id="examples"></div>
+      <p class="form-line" id="formLine"></p>
 
       <!-- 和弦鍵盤:點就好,不用打字 -->
       <div class="palette">
@@ -504,6 +542,9 @@ try {
         </div>
       </div>
 
+      </div>
+      <div class="col">
+
       <!-- 小節格 -->
       <div class="bars-grid" id="barsGrid"></div>
       <div class="parse-error" id="parseError">
@@ -512,9 +553,6 @@ try {
         </svg>
         <span id="parseErrorText"></span>
       </div>
-
-      </div>
-      <div class="col">
 
       <!-- 走帶 -->
       <div class="transport">
@@ -650,6 +688,12 @@ const I18N = {
     chordHint: "一個和弦一小節,4/4 拍。用空白或「-」分隔;不想打字就點下面那排。",
     barCount: "{n} 小節",
     styleLabel: "伴奏樣式",
+    len4: "4 小節",
+    len8: "8 小節",
+    formClear: "清空",
+    secAdd: "接上去 ×{n}",
+    formLine: "形式 {form} ・ 共 {n} 小節",
+    formFree: "自由輸入 ・ {n} 小節",
     stylePad: "墊底",
     styleComp: "打點",
     styleDrive: "推進",
@@ -663,7 +707,7 @@ const I18N = {
     countInLabel: "先數兩小節",
     loopLabel: "循環播放",
     palDel: "刪一格",
-    palHintIdle: "點音名加一格,再點下面一排改性質。點小節格可以回頭改那一格。",
+    palHintIdle: "點音名加一格,再點性質改一格。",
     palHintSel: "正在改第 {n} 格({chord}):點音名換根音、點性質換和弦種類。再點一次取消。",
     palRootLabel: "加一格 {root}",
     palQualLabel: "改成 {q}",
@@ -673,7 +717,7 @@ const I18N = {
     qualMin: "小三",
     savedLabel: "存下來的進行",
     saveBtn: "存這組",
-    savedEmpty: "還沒存過。調好一組滿意的進行,按「存這組」就會留在這台裝置上。",
+    savedEmpty: "還沒存過。按「存這組」留在這台裝置上。",
     savedNamePrompt: "幫這組進行取個名字",
     savedDelete: "刪掉「{name}」",
     savedLoad: "載入「{name}」",
@@ -712,6 +756,12 @@ const I18N = {
     chordHint: "One chord per bar, 4/4 time. Separate with spaces or \"-\"; or just tap the pad below.",
     barCount: "{n} bars",
     styleLabel: "Comping style",
+    len4: "4 bars",
+    len8: "8 bars",
+    formClear: "Clear",
+    secAdd: "Append ×{n}",
+    formLine: "Form {form} \u00b7 {n} bars",
+    formFree: "Free input \u00b7 {n} bars",
     stylePad: "Sustained",
     styleComp: "Comping",
     styleDrive: "Driving",
@@ -725,7 +775,7 @@ const I18N = {
     countInLabel: "Two-bar count-in",
     loopLabel: "Loop",
     palDel: "Delete bar",
-    palHintIdle: "Tap a note name to add a bar, then a quality below to shape it. Tap a bar to go back and change it.",
+    palHintIdle: "Tap a note name to add a bar, then a quality.",
     palHintSel: "Editing bar {n} ({chord}): tap a note name to change the root, a quality to change the chord type. Tap it again to deselect.",
     palRootLabel: "Add a bar of {root}",
     palQualLabel: "Change to {q}",
@@ -735,7 +785,7 @@ const I18N = {
     qualMin: "min",
     savedLabel: "Saved progressions",
     saveBtn: "Save this",
-    savedEmpty: "Nothing saved yet. Dial in a progression you like and hit \"Save this\" — it stays on this device.",
+    savedEmpty: "Nothing saved yet. Hit \"Save this\" to keep one on this device.",
     savedNamePrompt: "Name this progression",
     savedDelete: "Delete \"{name}\"",
     savedLoad: "Load \"{name}\"",
@@ -1574,15 +1624,25 @@ function humanize(absBar, salt, gain){ return gain * (0.92 + hash01(absBar, salt
 const EXT_INTERVALS = [13, 14, 15, 17, 18, 20, 21];   // 九度以上
 const SEVENTH_INTERVALS = [9, 10, 11];                // 六度、七度
 
+/* 屬七和弦(大三度 + 小七度)不算拉丁訊號。
+   全是屬七的 C7-F7-G7 是藍調,不是 bossa;bossa 的語彙是 maj7 / m7 / 6。
+   沒有這一條,12 小節藍調會整組被判成拉丁。 */
+function isDominant(iv){
+  return iv.indexOf(4) >= 0 && iv.indexOf(10) >= 0 && iv.indexOf(11) < 0;
+}
+
 function detectFeel(bars){
   let ext = false, sevBars = 0, total = 0;
   for (const b of bars) {
     if (!b.ok) continue;
     total++;
+    const iv = b.chord.intervals;
     let hasSev = false;
-    for (const iv of b.chord.intervals) {
-      if (EXT_INTERVALS.indexOf(iv) >= 0) ext = true;
-      else if (SEVENTH_INTERVALS.indexOf(iv) >= 0) hasSev = true;
+    for (const x of iv) {
+      if (EXT_INTERVALS.indexOf(x) >= 0) ext = true;
+    }
+    if (!isDominant(iv)) {
+      for (const x of iv) if (SEVENTH_INTERVALS.indexOf(x) >= 0) hasSev = true;
     }
     if (hasSev) sevBars++;
   }
@@ -1639,6 +1699,38 @@ let feelNow = "straight";
 function feel(){ return FEELS[feelNow] || FEELS.straight; }
 function pat(){ return PATTERNS[styleOn] || PATTERNS.comp; }
 
+/* ── 節奏單元 ───────────────────────────────────────────────────
+   之前每小節的骨架都一樣,只在上面加減一顆裝飾音,聽幾小節耳朵就鎖定骨架了。
+   改成每種感覺帶一組節奏型,每小節抽一個——換掉的是骨架本身。
+   第一個是「本家」型,出現機率 45%,其餘平分,所以還是聽得出主要的律動,
+   但不會一再重複。小鼓的 backbeat 不參與輪替:即興的人要靠它抓拍子。 */
+const COMP_CELLS = {
+  straight: [[0,2,4,6], [0,2,3,6], [0,3,4,6], [0,2,4,5,6], [0,3,6]],
+  latin:    [[0,3,6], [2,5], [0,3,6,7], [0,3,5,6]],
+  swing:    [[0,3,6], [3,6], [0,2,5], [2,6], [0,5]],
+};
+const KICK_CELLS = {
+  straight: [[0,4], [0,3,4], [0,4,7], [0,5]],
+  latin:    [[0,4], [0,4,7], [0,3,4]],
+  swing:    [[0,4], [0], [0,4,7]],
+};
+
+/* 第一個型 45%,其餘平分 55% */
+function pickCell(cells, absBar, salt){
+  const r = hash01(absBar, salt);
+  if (r < 0.45 || cells.length < 2) return cells[0];
+  const rest = cells.length - 1;
+  return cells[1 + Math.min(rest - 1, Math.floor((r - 0.45) / 0.55 * rest))];
+}
+
+/* 段落強度弧線:繞第幾圈決定整體力度。一直同一個力度彈二十分鐘會很悶,
+   真的伴奏會愈堆愈上去再收回來。四圈一個循環 */
+const ARC = [0.9, 1.0, 1.1, 1.0];
+function arcGain(absBar){
+  const n = Math.max(1, voicings.length);
+  return ARC[Math.floor(absBar / n) % ARC.length];
+}
+
 /* 後半拍要落在哪:平均的感覺就是正中間,搖擺會晚一點進來。
    只搖八分音符,過門的十六分維持平均——十六分也搖會糊成一團 */
 function eighthTime(barStartBeat, b, e){
@@ -1646,10 +1738,10 @@ function eighthTime(barStartBeat, b, e){
 }
 
 /* 右手打在哪:墊底一小節一下、推進走滿八分、打點照感覺的位置 */
-function compPositions(){
+function compPositions(absBar){
   if (styleOn === "pad") return [0];
   if (styleOn === "drive") return [0, 1, 2, 3, 4, 5, 6, 7];
-  return feel().comp;
+  return pickCell(COMP_CELLS[feelNow] || COMP_CELLS.straight, absBar, 100);
 }
 
 /* 貝斯怎麼走。推進會把它往上推一級:直的變八分推進、搖擺的直接走動低音,
@@ -1677,7 +1769,7 @@ const FILLS_2BEAT = [
 ];
 
 function scheduleDrums(barStartBeat, b, absBar, isFill){
-  const f = feel(), p = pat();
+  const f = feel(), p = pat(), arc = arcGain(absBar);
   const hihat = styleOn === "pad" ? [0, 2, 4, 6] : f.hihat;   // 墊底只打四分,不然太吵
   const big = isFill && chance(absBar, 10, 0.25 * p.fill);
   const fillFrom = big ? 2 : 3;
@@ -1704,14 +1796,14 @@ function scheduleDrums(barStartBeat, b, absBar, isFill){
   for (let e = 0; e < 2; e++) {
     const idx = b * 2 + e;
     const t = eighthTime(barStartBeat, b, e);
-    let kick = f.kick.indexOf(idx) >= 0;
+    const kickCell = pickCell(KICK_CELLS[feelNow] || KICK_CELLS.straight, absBar, 101);
+    let kick = kickCell.indexOf(idx) >= 0;
     // 推進會多一顆「二的後半」把拍子往前推
     if (!kick && idx === 3 && styleOn === "drive") kick = true;
-    if (!kick && idx === 3 && chance(absBar, 1, 0.3)) kick = true;
     if (!kick && idx === 7 && chance(absBar, 2, 0.2)) kick = true;
-    if (kick) playDrum("kick", t, humanize(absBar, idx, f.kickGain * p.energy));
+    if (kick) playDrum("kick", t, humanize(absBar, idx, f.kickGain * p.energy * arc));
 
-    if (f.snare.indexOf(idx) >= 0) playDrum("snare", t, humanize(absBar, idx + 40, f.snareGain * p.energy));
+    if (f.snare.indexOf(idx) >= 0) playDrum("snare", t, humanize(absBar, idx + 40, f.snareGain * p.energy * arc));
     // 幽靈音:很輕的小鼓填在反拍上。拉丁的小鼓本來就很輕,就不再加了
     else if (idx === 5 && f.snareGain > 0.3 && chance(absBar, 3, 0.25)) {
       playDrum("snare", t, humanize(absBar, 55, f.snareGain * 0.23));
@@ -1720,7 +1812,7 @@ function scheduleDrums(barStartBeat, b, absBar, isFill){
     if (hihat.indexOf(idx) >= 0) {
       if (idx === 7 && chance(absBar, 4, 0.18)) continue;   // 留個呼吸再進下一小節
       const g = idx % 2 === 0 ? f.hihatGain : f.hihatGain * 0.68;
-      playDrum("hihat", t, humanize(absBar, idx + 60, g * p.energy));
+      playDrum("hihat", t, humanize(absBar, idx + 60, g * p.energy * arc));
     }
   }
 }
@@ -1802,7 +1894,8 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord){
    左手低音一律留長(撐兩拍),右手照樣式與感覺決定的位置打 */
 function schedulePiano(v, barStartBeat, b, transpose, absBar, isFill){
   const f = feel(), p = pat();
-  const positions = compPositions();
+  const positions = compPositions(absBar);
+  const arc = arcGain(absBar);
 
   if (b === 0 || b === 2) {
     playNote(v.bass + transpose, beatTime(barStartBeat + b), spb * 2,
@@ -1832,7 +1925,7 @@ function schedulePiano(v, barStartBeat, b, transpose, absBar, isFill){
     const t = push ? eighthTime(barStartBeat, b, 1) : eighthTime(barStartBeat, b, e);
     const peak = idx === 0 ? p.compGain * 1.15 : push ? p.compGain * 0.8 : p.compGain;
     const dur = styleOn === "drive" ? spb * 0.45 : spb * 0.9;
-    for (const n of v.upper) playNote(n + transpose, t, dur, humanize(absBar, 84 + idx, peak));
+    for (const n of v.upper) playNote(n + transpose, t, dur, humanize(absBar, 84 + idx, peak * arc));
   }
 
   if (isFill && b === 3) {
@@ -2054,6 +2147,10 @@ function renderBars(){
     barsGrid.appendChild(chip);
   }
   lastHighlight = -1;
+  // 四小節以內兩欄看起來大方,再多就換四欄小格
+  const n = parsed.bars.length;
+  barsGrid.style.gridTemplateColumns = "repeat(" + (n > 4 ? 4 : 2) + ",minmax(0,1fr))";
+  barsGrid.classList.toggle("dense", n > 4);
   updatePalHint();
 
   const bad = parsed.bars.find(b => !b.ok);
@@ -2076,6 +2173,7 @@ function reparse(){
   parsed = parseProgression(chordInput.value);
   updateFeel();
   renderBars();
+  updateFormLine();
   if (playing) {
     // 播放中改了和弦:重算配置,下一拍開始就吃新的進行
     voicings = buildVoicings(parsed.bars);
@@ -2337,36 +2435,91 @@ function renderPalette(){
 }
 
 /* ══ 範例進行 ══════════════════════════════════════════════════ */
-/* 現成的八組,全部維持在 C 大調 / A 小調——這是拿來練的,調性固定才好上手,
-   要換調用移調滑桿就好。變化靠和聲手法,不靠轉調:
-   大調小調各四組,流行、搖滾、bossa、爵士的常見走法各有代表,
-   三種感覺(直/拉丁/搖擺)都涵蓋到。
-   膠囊上只顯示和弦;感覺由和弦自己決定,這裡只順手把伴奏疏密調到合適的那一個 */
-const EXAMPLES = [
-  { text: "C - G - Am - F",            style: "comp"  },  // C 大調,流行 I-V-vi-IV
-  { text: "C - Am - Dm - G",           style: "comp"  },  // C 大調,I-vi-ii-V
-  { text: "Am - F - G - Am",           style: "drive" },  // A 小調,搖滾 i-VI-VII-i
-  { text: "Am - G - F - E7",           style: "drive" },  // A 小調,安達魯西亞終止
-  { text: "Cmaj7 - A7 - Dm7 - G7",     style: "comp"  },  // C 大調,bossa 的 I-VI7-ii-V
-  { text: "Am7 - Dm7 - E7 - Am7",      style: "comp"  },  // A 小調,i-iv-V7-i
-  { text: "Dm9 - G13 - Cmaj9 - Cmaj9", style: "comp"  },  // C 大調,smooth jazz ii-V-I
-  { text: "Am9 - Dm9 - E7b9 - Am9",    style: "pad"   },  // A 小調,爵士 i-iv-V7-i
-];
+/* 段落庫。全部維持在 C 大調 / A 小調——這是拿來練的,調性固定才好上手,
+   要換調用移調滑桿。變化靠和聲手法,不靠轉調。
+   分成 4 小節與 8 小節兩組,可以挑幾個段落接成 A A B B 這種形式。
+   膠囊上只顯示和弦;感覺由和弦自己決定,style 只是順手把疏密調到合適的那一個 */
+const SECTIONS = {
+  4: [
+    { text: "C - G - Am - F",            style: "comp"  },  // C 大調,流行 I-V-vi-IV
+    { text: "C - Am - Dm - G",           style: "comp"  },  // C 大調,I-vi-ii-V
+    { text: "Am - F - G - Am",           style: "drive" },  // A 小調,搖滾 i-VI-VII-i
+    { text: "Am - G - F - E7",           style: "drive" },  // A 小調,安達魯西亞終止
+    { text: "Cmaj7 - A7 - Dm7 - G7",     style: "comp"  },  // C 大調,bossa 的 I-VI7-ii-V
+    { text: "Am7 - Dm7 - E7 - Am7",      style: "comp"  },  // A 小調,i-iv-V7-i
+    { text: "Dm9 - G13 - Cmaj9 - Cmaj9", style: "comp"  },  // C 大調,smooth jazz ii-V-I
+    { text: "Am9 - Dm9 - E7b9 - Am9",    style: "pad"   },  // A 小調,爵士 i-iv-V7-i
+  ],
+  8: [
+    { text: "C - G - Am - F - C - G - F - G",                        style: "comp"  },
+    { text: "Am - F - C - G - Am - F - Dm - E7",                     style: "drive" },
+    { text: "Dm7 - G7 - Cmaj7 - Cmaj7 - Dm7 - G7 - Cmaj7 - A7",      style: "comp"  },
+    { text: "Am7 - Dm7 - Am7 - Dm7 - Bm7b5 - E7 - Am7 - Am7",        style: "comp"  },
+    { text: "Cmaj9 - Cmaj9 - Dm9 - G13 - Cmaj9 - A7b9 - Dm9 - G13",  style: "comp"  },
+    { text: "Am9 - Am9 - Dm9 - Dm9 - Bm7b5 - E7b9 - Am9 - Am9",      style: "pad"   },
+    // 12 小節藍調。即興練習最重要的形式,全屬七和弦所以 detectFeel 判成「直」
+    { text: "C7 - F7 - C7 - C7 - F7 - F7 - C7 - C7 - G7 - F7 - C7 - G7", style: "comp" },
+  ],
+};
+
+/* ── 形式 ──────────────────────────────────────────────────────
+   一個 4 小節的循環聽再久都會膩,所以可以把段落接起來:
+   點兩次第一組、再點兩次第二組,就是 A A B B。
+   formParts 記的是「接了哪些段落」,文字框永遠從它重新組出來;
+   使用者自己動手打字就把它清掉,回到自由輸入模式,兩邊不會打架。 */
+let secLen = 4;        // 現在在看 4 小節還是 8 小節那組
+let secRepeat = 1;     // 下一次點段落要接幾次
+let formParts = [];    // [{ text }]
+
+function formLetters(){
+  const seen = [], out = [];
+  for (const p of formParts) {
+    let i = seen.indexOf(p.text);
+    if (i < 0) { seen.push(p.text); i = seen.length - 1; }
+    out.push(String.fromCharCode(65 + (i % 26)));
+  }
+  return out;
+}
+
+function applyForm(){
+  chordInput.value = formParts.map(p => p.text).join(" - ");
+  reparse();
+}
+
+function updateFormLine(){
+  const el = $("formLine");
+  if (!el) return;
+  const n = parsed.bars.length;
+  if (!formParts.length) {
+    el.textContent = n ? T("formFree", { n }) : "";
+    return;
+  }
+  el.textContent = T("formLine", { form: formLetters().join(" "), n });
+}
 
 function renderExamples(){
   const box = $("examples");
   box.innerHTML = "";
-  for (const ex of EXAMPLES) {
+  for (const ex of (SECTIONS[secLen] || SECTIONS[4])) {
     const b = document.createElement("button");
     b.type = "button";
     b.className = "ex-btn";
     b.textContent = ex.text;
+    // 長形式(12 小節藍調)橫跨整列,不然字會被切掉
+    if (ex.text.length > 34) b.style.gridColumn = "1 / -1";
+    b.title = T("secAdd", { n: secRepeat });
     b.addEventListener("click", () => {
-      chordInput.value = ex.text;
+      for (let i = 0; i < secRepeat; i++) formParts.push({ text: ex.text });
       setStyle(ex.style);
-      reparse();
+      applyForm();
     });
     box.appendChild(b);
+  }
+  for (const btn of $("lenSeg").children) {
+    btn.setAttribute("aria-pressed", +btn.dataset.len === secLen ? "true" : "false");
+  }
+  for (const btn of $("repSeg").children) {
+    btn.setAttribute("aria-pressed", +btn.dataset.rep === secRepeat ? "true" : "false");
   }
 }
 
@@ -2412,6 +2565,8 @@ function refreshDynamicText(){
   setPlayIcon(playing);
   renderSaved();
   renderPalette();
+  renderExamples();
+  updateFormLine();
   if (!playing) updateTransportIdle();
   const bad = parsed.bars.find(b => !b.ok);
   if (bad) $("parseErrorText").textContent = T("errUnknownChord", { tok: bad.text });
@@ -2432,7 +2587,7 @@ $("themeToggle").setAttribute("aria-pressed", document.body.classList.contains("
 $("themeToggle").addEventListener("click", () => applyTheme(!document.body.classList.contains("light")));
 
 /* ══ 綁定 ══════════════════════════════════════════════════════ */
-chordInput.addEventListener("input", reparse);
+chordInput.addEventListener("input", () => { formParts = []; reparse(); });
 
 playBtn.addEventListener("click", togglePlay);
 
@@ -2466,6 +2621,18 @@ $("loopToggle").addEventListener("click", () => {
   // 播放中切掉循環:把結束拍補上,讓它彈完這一輪就停
   if (playing) endBeat = loopOn ? Infinity : countInBeats + Math.ceil((currentBeat() - countInBeats) / (voicings.length * 4)) * voicings.length * 4;
   saveState();
+});
+
+for (const btn of $("lenSeg").children) {
+  btn.addEventListener("click", () => { secLen = +btn.dataset.len; renderExamples(); });
+}
+for (const btn of $("repSeg").children) {
+  btn.addEventListener("click", () => { secRepeat = +btn.dataset.rep; renderExamples(); });
+}
+$("formClear").addEventListener("click", () => {
+  formParts = [];
+  chordInput.value = "";
+  reparse();
 });
 
 $("palDel").addEventListener("click", palDelete);

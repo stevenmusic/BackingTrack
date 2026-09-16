@@ -341,6 +341,13 @@ input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px rgba(201,
 
 /* 伴奏樣式:三選一 */
 .seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.seg-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* 感覺是自動判斷的,不是按鈕。放在標題右邊當說明,樣式要看起來「不能點」 */
+.feel-tag{
+  font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.04em;
+  border:1px solid var(--line);border-radius:var(--radius-pill);padding:2px 9px;
+  white-space:nowrap;
+}
 .seg button{
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
   padding:8px 6px;min-height:54px;
@@ -522,23 +529,22 @@ try {
 
       <!-- 伴奏樣式 -->
       <div class="control">
-        <div class="control-head"><span class="label" data-i18n="styleLabel">伴奏樣式</span></div>
-        <div class="seg" id="styleSeg">
-          <button type="button" data-style="bossa" aria-pressed="false">
-            <svg width="26" height="14" viewBox="0 0 26 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="3" cy="7" r="2" fill="currentColor" stroke="none"/><circle cx="12" cy="7" r="2" fill="currentColor" stroke="none"/><circle cx="21" cy="7" r="2" fill="currentColor" stroke="none"/><path d="M5.5 7h4M14.5 7h4"/></svg>
-            <span data-i18n="styleBossa">Bossa Nova</span>
+        <div class="control-head">
+          <span class="label" data-i18n="styleLabel">伴奏樣式</span>
+          <span class="feel-tag" id="feelTag"></span>
+        </div>
+        <div class="seg seg-3" id="styleSeg">
+          <button type="button" data-style="pad" aria-pressed="false">
+            <svg width="26" height="14" viewBox="0 0 26 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 7h20"/><circle cx="4" cy="7" r="2.2" fill="currentColor" stroke="none"/></svg>
+            <span data-i18n="stylePad">墊底</span>
           </button>
-          <button type="button" data-style="pop" aria-pressed="true">
-            <svg width="26" height="14" viewBox="0 0 26 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="4" cy="7" r="2.2" fill="currentColor" stroke="none"/><circle cx="11" cy="7" r="2.2" fill="currentColor" stroke="none"/><circle cx="18" cy="7" r="2.2" fill="currentColor" stroke="none"/><circle cx="25" cy="7" r="2.2" fill="currentColor" stroke="none"/></svg>
-            <span data-i18n="stylePop">Pop</span>
+          <button type="button" data-style="comp" aria-pressed="true">
+            <svg width="26" height="14" viewBox="0 0 26 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="4" cy="7" r="2.2" fill="currentColor" stroke="none"/><circle cx="13" cy="7" r="2.2" fill="currentColor" stroke="none"/><circle cx="22" cy="7" r="2.2" fill="currentColor" stroke="none"/></svg>
+            <span data-i18n="styleComp">打點</span>
           </button>
-          <button type="button" data-style="rock" aria-pressed="false">
+          <button type="button" data-style="drive" aria-pressed="false">
             <svg width="26" height="14" viewBox="0 0 26 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 11V4M8 11V4M13 11V4M18 11V4M23 11V4"/></svg>
-            <span data-i18n="styleRock">Rock</span>
-          </button>
-          <button type="button" data-style="smooth" aria-pressed="false">
-            <svg width="26" height="14" viewBox="0 0 26 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 10c4-7 7 4 11-3s7 3 11-2"/></svg>
-            <span data-i18n="styleSmooth">Smooth Jazz</span>
+            <span data-i18n="styleDrive">推進</span>
           </button>
         </div>
       </div>
@@ -646,10 +652,13 @@ const I18N = {
     chordHint: "一個和弦一小節,4/4 拍。用空白或「-」分隔;不想打字就點下面那排。",
     barCount: "{n} 小節",
     styleLabel: "伴奏樣式",
-    styleBossa: "Bossa Nova",
-    stylePop: "Pop",
-    styleRock: "Rock",
-    styleSmooth: "Smooth Jazz",
+    stylePad: "墊底",
+    styleComp: "打點",
+    styleDrive: "推進",
+    feelStraight: "直",
+    feelLatin: "拉丁",
+    feelSwing: "搖擺",
+    feelTagText: "{feel}感覺 ・ 依和弦自動判斷",
     bpmLabel: "速度",
     bpmDownLabel: "慢一點",
     bpmUpLabel: "快一點",
@@ -709,10 +718,13 @@ const I18N = {
     chordHint: "One chord per bar, 4/4 time. Separate with spaces or \"-\"; or just tap the pad below.",
     barCount: "{n} bars",
     styleLabel: "Comping style",
-    styleBossa: "Bossa Nova",
-    stylePop: "Pop",
-    styleRock: "Rock",
-    styleSmooth: "Smooth Jazz",
+    stylePad: "Sustained",
+    styleComp: "Comping",
+    styleDrive: "Driving",
+    feelStraight: "straight",
+    feelLatin: "latin",
+    feelSwing: "swing",
+    feelTagText: "{feel} feel \u00b7 from the chords",
     bpmLabel: "Tempo",
     bpmDownLabel: "Slower",
     bpmUpLabel: "Faster",
@@ -1558,68 +1570,98 @@ function chance(absBar, salt, p){ return hash01(absBar, salt) < p; }
 /* 力度抖動:同一顆鼓每次打不會一樣大力,差個 ±8% 就夠讓它不像機器 */
 function humanize(absBar, salt, gain){ return gain * (0.92 + hash01(absBar, salt + 900) * 0.16); }
 
-/* ══ 四種風格 ══════════════════════════════════════════════════
-   節奏型全部用「這一小節的第幾個八分音符(0–7)」來寫:
-   0=一 1=一的後半 2=二 3=二的後半 4=三 5=三的後半 6=四 7=四的後半。
+/* ══ 感覺:由和弦自己決定,不給使用者選 ═══════════════════════════
+   一開始是讓使用者直接挑 Bossa / Pop / Rock / Smooth Jazz,但那樣會組出
+   說不通的搭配——Dm9-G13-Cmaj9 套 Rock、C-F-G-F 套 Bossa 都很怪。
+   其實「要用哪種感覺」本來就是和弦決定的,所以改成從和弦語彙判斷:
 
-   swing 是後半拍落在一拍中的哪個位置。0.5 是完全平均;0.58 是微搖擺,
-   只有 smooth jazz 用得上,其他三種都是平均的八分。 */
-const STYLES = {
-  /* Bossa nova:鋼琴走 1、二的後半、四 —— 這三下就是 bossa 的骨架。
-     鼓用很輕的小鼓打同一組位置當 rim click,大鼓只在一、三輕點。 */
-  bossa: {
+     有九度以上的延伸音(9/11/13/alt) → 搖擺
+     只有六度七度(maj7/m7/7/6)        → 拉丁
+     只剩三和弦與掛留                  → 直
+
+   使用者選的是另一件事:伴奏要多疏多密(見 PATTERNS)。兩個軸交叉出來的
+   九種組合每一種都成立,不會再有「這組和弦不能套這個風格」的問題。 */
+const EXT_INTERVALS = [13, 14, 15, 17, 18, 20, 21];   // 九度以上
+const SEVENTH_INTERVALS = [9, 10, 11];                // 六度、七度
+
+function detectFeel(bars){
+  let ext = false, sev = false;
+  for (const b of bars) {
+    if (!b.ok) continue;
+    for (const iv of b.chord.intervals) {
+      if (EXT_INTERVALS.indexOf(iv) >= 0) ext = true;
+      else if (SEVENTH_INTERVALS.indexOf(iv) >= 0) sev = true;
+    }
+  }
+  return ext ? "swing" : sev ? "latin" : "straight";
+}
+
+const FEELS = {
+  /* 直:流行與搖滾。八分平均,backbeat 紮實 */
+  straight: {
     swing: 0.5,
-    comp: [0, 3, 6],
-    compGain: 0.3,
-    kick: [0, 4], kickGain: 0.55,
-    snare: [0, 3, 6], snareGain: 0.14,     // 當 rim click 用,很輕
-    hihat: [0, 1, 2, 3, 4, 5, 6, 7], hihatGain: 0.26,
-    bass: "bossa",
-    fillWeight: 0.6,                        // 過門收斂一點
-  },
-  /* Pop:和弦落在四個正拍上,第二、四拍偶爾往後挪成切分。 */
-  pop: {
-    swing: 0.5,
-    comp: [0, 2, 4, 6],
-    compGain: 0.3,
-    push: true,
+    comp: [0, 2, 4, 6], push: true,
     kick: [0, 4], kickGain: 0.85,
     snare: [2, 6], snareGain: 0.7,
     hihat: [0, 1, 2, 3, 4, 5, 6, 7], hihatGain: 0.33,
     bass: "root5",
-    fillWeight: 1,
   },
-  /* Rock:鋼琴走八分音符推進,大鼓多一顆在二的後半,整體再大聲一點。 */
-  rock: {
+  /* 拉丁:bossa。八分平均,但鋼琴走「1 · 二的後半 · 四」,
+     小鼓很輕地打同一組位置當 rim click,貝斯第三拍常提前半拍 */
+  latin: {
     swing: 0.5,
-    comp: [0, 1, 2, 3, 4, 5, 6, 7],
-    compGain: 0.2,
-    kick: [0, 3, 4], kickGain: 0.95,
-    snare: [2, 6], snareGain: 0.8,
-    hihat: [0, 1, 2, 3, 4, 5, 6, 7], hihatGain: 0.38,
-    bass: "drive",
-    fillWeight: 1.6,                        // 過門最大,rock 就是要這個
+    comp: [0, 3, 6], push: false,
+    kick: [0, 4], kickGain: 0.55,
+    snare: [0, 3, 6], snareGain: 0.14,
+    hihat: [0, 1, 2, 3, 4, 5, 6, 7], hihatGain: 0.26,
+    bass: "bossa",
   },
-  /* Smooth jazz:微搖擺、comping 稀疏、鼓輕、貝斯會走動。 */
-  smooth: {
+  /* 搖擺:爵士。後半拍晚一點進來,comping 稀疏,鼓輕,貝斯會走動 */
+  swing: {
     swing: 0.58,
-    comp: [0, 3, 6],
-    compGain: 0.26,
-    push: true,
+    comp: [0, 3, 6], push: true,
     kick: [0, 4], kickGain: 0.6,
     snare: [2, 6], snareGain: 0.5,
     hihat: [0, 1, 2, 3, 4, 5, 6, 7], hihatGain: 0.24,
     bass: "jazz",
-    fillWeight: 0.7,
   },
 };
-const STYLE_KEYS = Object.keys(STYLES);
-function cfg(){ return STYLES[styleOn] || STYLES.pop; }
 
-/* 後半拍要落在哪:平均的風格就是正中間,smooth jazz 會晚一點進來。
+/* ══ 伴奏樣式:使用者選的那三個 ═══════════════════════════════════
+   選的是疏密,不是曲風。同一個樣式配不同的感覺會長得不一樣:
+   「推進」配直的和弦是搖滾,配延伸和弦就變成走動低音的爵士。 */
+const PATTERNS = {
+  pad:   { energy: 0.85, fill: 0.7, compGain: 0.30 },   // 墊底:一小節一下,撐滿
+  comp:  { energy: 1.0,  fill: 1.0, compGain: 0.30 },   // 打點:照感覺的位置打
+  drive: { energy: 1.15, fill: 1.4, compGain: 0.20 },   // 推進:八分音符不停
+};
+const PATTERN_KEYS = Object.keys(PATTERNS);
+
+let feelNow = "straight";
+function feel(){ return FEELS[feelNow] || FEELS.straight; }
+function pat(){ return PATTERNS[styleOn] || PATTERNS.comp; }
+
+/* 後半拍要落在哪:平均的感覺就是正中間,搖擺會晚一點進來。
    只搖八分音符,過門的十六分維持平均——十六分也搖會糊成一團 */
 function eighthTime(barStartBeat, b, e){
-  return beatTime(barStartBeat + b) + (e ? spb * cfg().swing : 0);
+  return beatTime(barStartBeat + b) + (e ? spb * feel().swing : 0);
+}
+
+/* 右手打在哪:墊底一小節一下、推進走滿八分、打點照感覺的位置 */
+function compPositions(){
+  if (styleOn === "pad") return [0];
+  if (styleOn === "drive") return [0, 1, 2, 3, 4, 5, 6, 7];
+  return feel().comp;
+}
+
+/* 貝斯怎麼走。推進會把它往上推一級:直的變八分推進、搖擺的直接走動低音,
+   拉丁維持 bossa 的形狀(那個切分就是它的味道,改掉就不是 bossa 了) */
+function bassMode(){
+  if (styleOn === "drive") {
+    if (feelNow === "straight") return "drive";
+    if (feelNow === "swing") return "walk";
+  }
+  return feel().bass;
 }
 
 /* 過門。佔滿最後兩拍、又是整串 tom 滾奏會很突兀,所以預設只佔最後一拍,
@@ -1637,27 +1679,25 @@ const FILLS_2BEAT = [
 ];
 
 function scheduleDrums(barStartBeat, b, absBar, isFill){
-  const c = cfg();
-  // rock 的過門比較常擴成兩拍,bossa / smooth 收斂
-  const big = isFill && chance(absBar, 10, 0.25 * c.fillWeight);
+  const f = feel(), p = pat();
+  const hihat = styleOn === "pad" ? [0, 2, 4, 6] : f.hihat;   // 墊底只打四分,不然太吵
+  const big = isFill && chance(absBar, 10, 0.25 * p.fill);
   const fillFrom = big ? 2 : 3;
 
   if (isFill && b >= fillFrom) {
     const list = big ? FILLS_2BEAT : FILLS_1BEAT;
     const fill = list[Math.floor(hash01(absBar, 11) * list.length) % list.length];
     const q = spb / 4;
-    if (b === 2) playDrum("kick", beatTime(barStartBeat + b), humanize(absBar, 12, c.kickGain * 0.9));
-    // hi-hat 繼續走正拍,不要整個斷掉
-    playDrum("hihat", beatTime(barStartBeat + b), humanize(absBar, 13, c.hihatGain * 0.8));
+    if (b === 2) playDrum("kick", beatTime(barStartBeat + b), humanize(absBar, 12, f.kickGain * p.energy * 0.9));
+    playDrum("hihat", beatTime(barStartBeat + b), humanize(absBar, 13, f.hihatGain * p.energy * 0.8));
     for (let k = 0; k < 4; k++) {
-      const piece = fill[(b - fillFrom) * 4 + k];
-      if (!piece) continue;
       const slot = (b - fillFrom) * 4 + k;
-      const t = beatTime(barStartBeat + b) + k * q;
-      const g = (0.26 + slot * (big ? 0.035 : 0.07)) * c.fillWeight;
-      playDrum(piece, t, humanize(absBar, 20 + slot, Math.min(g, 0.8)));
+      const piece = fill[slot];
+      if (!piece) continue;
+      const g = (0.26 + slot * (big ? 0.035 : 0.07)) * p.fill;
+      playDrum(piece, beatTime(barStartBeat + b) + k * q, humanize(absBar, 20 + slot, Math.min(g, 0.8)));
     }
-    if (b === 3 && chance(absBar, 31, 0.45 * c.fillWeight)) {
+    if (b === 3 && chance(absBar, 31, 0.45 * p.fill)) {
       playDrum("crash", beatTime(barStartBeat + 4), humanize(absBar, 32, 0.4));
     }
     return;
@@ -1666,64 +1706,62 @@ function scheduleDrums(barStartBeat, b, absBar, isFill){
   for (let e = 0; e < 2; e++) {
     const idx = b * 2 + e;
     const t = eighthTime(barStartBeat, b, e);
-    let kick = c.kick.indexOf(idx) >= 0;
-    // 偶爾多補一顆大鼓,groove 才不會每小節一樣
+    let kick = f.kick.indexOf(idx) >= 0;
+    // 推進會多一顆「二的後半」把拍子往前推
+    if (!kick && idx === 3 && styleOn === "drive") kick = true;
     if (!kick && idx === 3 && chance(absBar, 1, 0.3)) kick = true;
     if (!kick && idx === 7 && chance(absBar, 2, 0.2)) kick = true;
-    if (kick) playDrum("kick", t, humanize(absBar, idx, c.kickGain));
+    if (kick) playDrum("kick", t, humanize(absBar, idx, f.kickGain * p.energy));
 
-    if (c.snare.indexOf(idx) >= 0) playDrum("snare", t, humanize(absBar, idx + 40, c.snareGain));
-    // 幽靈音:很輕的小鼓填在反拍上。bossa 的小鼓本來就很輕,就不再加了
-    else if (idx === 5 && c.snareGain > 0.3 && chance(absBar, 3, 0.25)) {
-      playDrum("snare", t, humanize(absBar, 55, c.snareGain * 0.23));
+    if (f.snare.indexOf(idx) >= 0) playDrum("snare", t, humanize(absBar, idx + 40, f.snareGain * p.energy));
+    // 幽靈音:很輕的小鼓填在反拍上。拉丁的小鼓本來就很輕,就不再加了
+    else if (idx === 5 && f.snareGain > 0.3 && chance(absBar, 3, 0.25)) {
+      playDrum("snare", t, humanize(absBar, 55, f.snareGain * 0.23));
     }
 
-    if (c.hihat.indexOf(idx) >= 0) {
+    if (hihat.indexOf(idx) >= 0) {
       if (idx === 7 && chance(absBar, 4, 0.18)) continue;   // 留個呼吸再進下一小節
-      playDrum("hihat", t, humanize(absBar, idx + 60, idx % 2 === 0 ? c.hihatGain : c.hihatGain * 0.68));
+      const g = idx % 2 === 0 ? f.hihatGain : f.hihatGain * 0.68;
+      playDrum("hihat", t, humanize(absBar, idx + 60, g * p.energy));
     }
   }
 }
 
-/* ── 貝斯 ─────────────────────────────────────────────────────
-   四種風格各自的走法。共通點:過門那一小節會在第四拍後半補一顆
-   接到下一個和弦根音的經過音。 */
+/* ── 貝斯 ───────────────────────────────────────────────────── */
 function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord){
-  const c = cfg();
+  const mode = bassMode();
   const pcOf = (raw) => ((((raw + transposeOn) % 12) + 12) % 12);
   const rootPc = pcOf(chord.bassPc);
   const fifthPc = pcOf(chord.rootPc + 7);
   // 三度取和弦自己寫的那個三度,小調和弦不會彈成大三度
   const third = chord.intervals.indexOf(3) >= 0 ? 3 : 4;
 
-  // 過門的經過音
-  if (isFill && b === 3 && nextChord) {
+  // 過門那一小節,第四拍後半接到下一個和弦的根音
+  if (isFill && b === 3 && nextChord && mode !== "drive") {
     const target = bassMidiFor(pcOf(nextChord.bassPc));
-    const step = chance(absBar, 7, 0.5) ? 1 : 2;
-    playBassNote(target - step, eighthTime(barStartBeat, 3, 1), spb * 0.45, 0.42);
+    playBassNote(target - (chance(absBar, 7, 0.5) ? 1 : 2),
+                 eighthTime(barStartBeat, 3, 1), spb * 0.45, 0.42);
   }
 
-  if (c.bass === "bossa") {
+  if (mode === "bossa") {
     /* Bossa 的低音是「一、三」兩顆,但第三拍那顆常常提前半拍進來,
-       那個往前靠的推力就是 bossa 的味道 */
+       那個往前靠的推力就是 bossa */
+    const early = chance(absBar, 6, 0.45);
     if (b === 0) {
-      playBassNote(bassMidiFor(rootPc), beatTime(barStartBeat), spb * 1.9,
-                   humanize(absBar, 70, 0.52));
-    } else if (b === 1 && chance(absBar, 6, 0.45)) {
-      playBassNote(bassMidiFor(fifthPc), eighthTime(barStartBeat, 1, 1), spb * 1.6,
-                   humanize(absBar, 71, 0.44));
-    } else if (b === 2 && !chance(absBar, 6, 0.45)) {
-      playBassNote(bassMidiFor(fifthPc), beatTime(barStartBeat + 2), spb * 1.9,
-                   humanize(absBar, 72, 0.44));
+      playBassNote(bassMidiFor(rootPc), beatTime(barStartBeat), spb * 1.9, humanize(absBar, 70, 0.52));
+    } else if (b === 1 && early) {
+      playBassNote(bassMidiFor(fifthPc), eighthTime(barStartBeat, 1, 1), spb * 1.6, humanize(absBar, 71, 0.44));
+    } else if (b === 2 && !early) {
+      playBassNote(bassMidiFor(fifthPc), beatTime(barStartBeat + 2), spb * 1.9, humanize(absBar, 72, 0.44));
     }
     return;
   }
 
-  if (c.bass === "drive") {
-    // Rock:八分音符的根音推進,第三拍換一次五音讓它不要太死
+  if (mode === "drive") {
+    // 直 + 推進 = 搖滾:八分音符的根音推進
     for (let e = 0; e < 2; e++) {
       const idx = b * 2 + e;
-      if (idx === 7 && isFill) continue;            // 讓位給經過音
+      if (idx === 7 && isFill) continue;
       const pc = (b === 2 && chance(absBar, 5, 0.4)) ? fifthPc : rootPc;
       playBassNote(bassMidiFor(pc), eighthTime(barStartBeat, b, e), spb * 0.46,
                    humanize(absBar, 70 + idx, idx % 2 === 0 ? 0.5 : 0.38));
@@ -1731,40 +1769,30 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord){
     return;
   }
 
-  if (c.bass === "jazz") {
-    // Smooth jazz:三種走法輪流,C 是走動低音
-    const r = hash01(absBar, 6);
-    const plan = r < 0.45 ? "A" : r < 0.75 ? "B" : "C";
-    if (plan === "C") {
-      if (b < 3) {
-        const seq = [rootPc, pcOf(chord.rootPc + third), fifthPc];
-        playBassNote(bassMidiFor(seq[b]), beatTime(barStartBeat + b), spb * 0.92,
-                     humanize(absBar, 70 + b, b === 0 ? 0.5 : 0.42));
-      } else {
-        const nextRoot = nextChord ? bassMidiFor(pcOf(nextChord.bassPc)) : bassMidiFor(rootPc);
-        playBassNote(nextRoot + (chance(absBar, 8, 0.5) ? -1 : 1),
-                     beatTime(barStartBeat + 3), spb * 0.92, humanize(absBar, 73, 0.42));
-      }
-      return;
-    }
-    if (b === 0) {
-      playBassNote(bassMidiFor(rootPc), beatTime(barStartBeat),
-                   plan === "B" ? spb * 1.4 : spb * 2, humanize(absBar, 70, 0.52));
-      if (plan === "B") {
-        playBassNote(bassMidiFor(rootPc), eighthTime(barStartBeat, 1, 1), spb * 0.5,
-                     humanize(absBar, 71, 0.34));
-      }
-    } else if (b === 2) {
-      const pc = chance(absBar, 5, 0.25) ? rootPc : fifthPc;
-      playBassNote(bassMidiFor(pc), beatTime(barStartBeat + 2), isFill ? spb * 1.5 : spb * 2,
-                   humanize(absBar, 72, 0.44));
+  // walk:一拍一個音走「根—三—五—接音」。jazz 模式有 30% 的機率也會走
+  const walking = mode === "walk" || (mode === "jazz" && hash01(absBar, 6) >= 0.7);
+  if (walking) {
+    if (b < 3) {
+      const seq = [rootPc, pcOf(chord.rootPc + third), fifthPc];
+      playBassNote(bassMidiFor(seq[b]), beatTime(barStartBeat + b), spb * 0.92,
+                   humanize(absBar, 70 + b, b === 0 ? 0.5 : 0.42));
+    } else {
+      const nextRoot = nextChord ? bassMidiFor(pcOf(nextChord.bassPc)) : bassMidiFor(rootPc);
+      playBassNote(nextRoot + (chance(absBar, 8, 0.5) ? -1 : 1),
+                   beatTime(barStartBeat + 3), spb * 0.92, humanize(absBar, 73, 0.42));
     }
     return;
   }
 
-  // root5(pop):根音兩拍、五音兩拍
+  // root5 / jazz 的非走動情形:根音兩拍、五音兩拍,jazz 會多一顆切分預備音
+  const syncop = mode === "jazz" && hash01(absBar, 6) >= 0.45;
   if (b === 0) {
-    playBassNote(bassMidiFor(rootPc), beatTime(barStartBeat), spb * 2, humanize(absBar, 70, 0.52));
+    playBassNote(bassMidiFor(rootPc), beatTime(barStartBeat),
+                 syncop ? spb * 1.4 : spb * 2, humanize(absBar, 70, 0.52));
+    if (syncop) {
+      playBassNote(bassMidiFor(rootPc), eighthTime(barStartBeat, 1, 1), spb * 0.5,
+                   humanize(absBar, 71, 0.34));
+    }
   } else if (b === 2) {
     const pc = chance(absBar, 5, 0.25) ? rootPc : fifthPc;
     playBassNote(bassMidiFor(pc), beatTime(barStartBeat + 2), isFill ? spb * 1.5 : spb * 2,
@@ -1773,34 +1801,46 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord){
 }
 
 /* ── 鋼琴 ─────────────────────────────────────────────────────
-   左手低音一律留長(撐兩拍),右手照風格的 comp 位置打。 */
+   左手低音一律留長(撐兩拍),右手照樣式與感覺決定的位置打 */
 function schedulePiano(v, barStartBeat, b, transpose, absBar, isFill){
-  const c = cfg();
-  // 左手:一、三拍各撐兩拍
+  const f = feel(), p = pat();
+  const positions = compPositions();
+
   if (b === 0 || b === 2) {
     playNote(v.bass + transpose, beatTime(barStartBeat + b), spb * 2,
              (b === 0 ? 0.52 : 0.42) * lhGain());
   }
 
+  // 墊底:一小節一下,撐滿整個小節
+  if (styleOn === "pad") {
+    if (b === 0) {
+      for (const n of v.upper) playNote(n + transpose, beatTime(barStartBeat), spb * 4,
+                                        humanize(absBar, 84, p.compGain));
+    }
+    if (b === 2 && isFill && chance(absBar, 80, 0.55)) {
+      for (const n of v.upper) playNote(n + transpose, beatTime(barStartBeat + 2), spb * 2, p.compGain * 0.85);
+    }
+    return;
+  }
+
   for (let e = 0; e < 2; e++) {
     const idx = b * 2 + e;
-    if (c.comp.indexOf(idx) < 0) continue;
-    // 偶爾空一下,四拍都打滿太像節拍器
-    if (idx !== 0 && chance(absBar, 82 + idx, 0.15)) continue;
-    /* pop 與 smooth 的第二、四拍有機會往後挪成切分,
-       挪過去那一下輕一點,聽起來才像順手帶過去的 */
-    const canPush = c.push && (idx === 2 || idx === 6);
-    const push = canPush && chance(absBar, 90 + idx, 0.45);
+    if (positions.indexOf(idx) < 0) continue;
+    if (idx !== 0 && chance(absBar, 82 + idx, 0.15)) continue;   // 偶爾空一下
+    /* 有些感覺的第二、四拍會往後挪成切分,挪過去那一下輕一點,
+       聽起來才像順手帶過去的 */
+    const push = f.push && styleOn !== "drive" && (idx === 2 || idx === 6)
+                 && chance(absBar, 90 + idx, 0.45);
     const t = push ? eighthTime(barStartBeat, b, 1) : eighthTime(barStartBeat, b, e);
-    const peak = (idx === 0 ? c.compGain * 1.15 : push ? c.compGain * 0.8 : c.compGain);
-    const dur = c.comp.length > 4 ? spb * 0.45 : spb * 0.9;
+    const peak = idx === 0 ? p.compGain * 1.15 : push ? p.compGain * 0.8 : p.compGain;
+    const dur = styleOn === "drive" ? spb * 0.45 : spb * 0.9;
     for (const n of v.upper) playNote(n + transpose, t, dur, humanize(absBar, 84 + idx, peak));
   }
 
-  // 過門的第四拍補一個切分,跟鼓一起把段落推過去
   if (isFill && b === 3) {
-    const t2 = eighthTime(barStartBeat, 3, 1);
-    for (const n of v.upper) playNote(n + transpose, t2, spb * 0.5, c.compGain * 0.85);
+    for (const n of v.upper) {
+      playNote(n + transpose, eighthTime(barStartBeat, 3, 1), spb * 0.5, p.compGain * 0.85);
+    }
   }
 }
 
@@ -1922,7 +1962,7 @@ const chordInput = $("chordInput");
 const barsGrid = $("barsGrid");
 const playBtn = $("playBtn");
 
-let bpmOn = 100, transposeOn = 0, styleOn = "pop", countInOn = true, loopOn = true;
+let bpmOn = 100, transposeOn = 0, styleOn = "comp", countInOn = true, loopOn = true;
 let lastHighlight = -1;
 
 /* SVGElement 沒有 hidden 這個 IDL 屬性,el.hidden = true 只會掛上一個沒人看的 JS 屬性,
@@ -1951,8 +1991,18 @@ function setStatus(text, warn){
   el.classList.toggle("warn", !!warn);
 }
 
-const STYLE_I18N = { bossa: "styleBossa", pop: "stylePop", rock: "styleRock", smooth: "styleSmooth" };
-function styleName(){ return T(STYLE_I18N[styleOn] || "stylePop"); }
+const STYLE_I18N = { pad: "stylePad", comp: "styleComp", drive: "styleDrive" };
+const FEEL_I18N = { straight: "feelStraight", latin: "feelLatin", swing: "feelSwing" };
+function styleName(){ return T(STYLE_I18N[styleOn] || "styleComp"); }
+function feelName(){ return T(FEEL_I18N[feelNow] || "feelStraight"); }
+
+/* 感覺是自動判斷的,和弦一改就要重算,並且把判斷結果寫在畫面上——
+   使用者要知道為什麼伴奏聽起來變了 */
+function updateFeel(){
+  feelNow = detectFeel(parsed.bars);
+  const el = $("feelTag");
+  if (el) el.textContent = parsed.bars.length ? T("feelTagText", { feel: feelName() }) : "";
+}
 
 function updateTransportIdle(){
   const n = parsed.bars.length;
@@ -2033,6 +2083,7 @@ function renderBars(){
 
 function reparse(){
   parsed = parseProgression(chordInput.value);
+  updateFeel();
   renderBars();
   if (playing) {
     // 播放中改了和弦:重算配置,下一拍開始就吃新的進行
@@ -2295,17 +2346,18 @@ function renderPalette(){
 }
 
 /* ══ 範例進行 ══════════════════════════════════════════════════ */
-/* 每種風格最常見的一組和弦進行,大調小調各一。
-   膠囊上只顯示和弦,不寫風格名字——點下去伴奏風格會跟著換 */
+/* 現成的進行,大調小調成對。膠囊上只顯示和弦。
+   感覺(直/拉丁/搖擺)由和弦自己決定,這裡只順手把伴奏疏密調到合適的那一個:
+   搖滾那兩組用「推進」,其餘用「打點」 */
 const EXAMPLES = [
-  { text: "Cmaj7 - A7 - Dm7 - G7",     style: "bossa"  },  // I-VI7-ii-V
-  { text: "Am7 - Bm7b5 - E7 - Am7",    style: "bossa"  },  // i-iiø-V7-i
-  { text: "C - G - Am - F",            style: "pop"    },  // I-V-vi-IV
-  { text: "Am - F - C - G",            style: "pop"    },  // vi-IV-I-V
-  { text: "C - F - G - F",             style: "rock"   },  // I-IV-V-IV
-  { text: "Am - F - G - Am",           style: "rock"   },  // i-VI-VII-i
-  { text: "Dm9 - G13 - Cmaj9 - Cmaj9", style: "smooth" },  // ii-V-I
-  { text: "Am9 - Dm9 - E7b9 - Am9",    style: "smooth" },  // i-iv-V7-i
+  { text: "Cmaj7 - A7 - Dm7 - G7",     style: "comp"  },  // I-VI7-ii-V,拉丁
+  { text: "Am7 - Bm7b5 - E7 - Am7",    style: "comp"  },  // i-iiø-V7-i,拉丁
+  { text: "C - G - Am - F",            style: "comp"  },  // I-V-vi-IV,直
+  { text: "Am - F - C - G",            style: "comp"  },  // vi-IV-I-V,直
+  { text: "C - F - G - F",             style: "drive" },  // I-IV-V-IV,直
+  { text: "Am - F - G - Am",           style: "drive" },  // i-VI-VII-i,直
+  { text: "Dm9 - G13 - Cmaj9 - Cmaj9", style: "comp"  },  // ii-V-I,搖擺
+  { text: "Am9 - Dm9 - E7b9 - Am9",    style: "comp"  },  // i-iv-V7-i,搖擺
 ];
 
 function renderExamples(){
@@ -2367,6 +2419,7 @@ function refreshDynamicText(){
   setPlayIcon(playing);
   renderSaved();
   renderPalette();
+  updateFeel();
   if (!playing) updateTransportIdle();
   const bad = parsed.bars.find(b => !b.ok);
   if (bad) $("parseErrorText").textContent = T("errUnknownChord", { tok: bad.text });
@@ -2451,7 +2504,7 @@ document.addEventListener("keydown", (e) => {
   const st = loadState();
   if (st) {
     if (typeof st.text === "string") chordInput.value = st.text;
-    if (st.style && STYLES[st.style]) styleOn = st.style;
+    if (st.style && PATTERNS[st.style]) styleOn = st.style;
     if (typeof st.countIn === "boolean") countInOn = st.countIn;
     if (typeof st.loop === "boolean") loopOn = st.loop;
     if (typeof st.bpm === "number") bpmOn = st.bpm;
@@ -2465,6 +2518,7 @@ document.addEventListener("keydown", (e) => {
   renderExamples();
   renderSaved();
   parsed = parseProgression(chordInput.value);
+  updateFeel();
   renderBars();
   applyLanguage(currentLang);
   setPlayIcon(false);

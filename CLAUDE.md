@@ -20,17 +20,19 @@ VCSL 看起來像是鼓，其實是管弦打擊樂（定音鼓、大鑼、碰鈸
 raw.githubusercontent（鋼琴多一條 tonejs.github.io）。同一份檔案不同路由，
 新增音源時照這個模式走，不要只寫一個網址。
 
-## 風格
-四種：Bossa Nova / Pop / Rock / Smooth Jazz，全部定義在 `STYLES` 裡。
-鋼琴 comp 位置、鼓的三件、貝斯走法、swing、過門份量都在同一個物件裡，
-要調某個風格就改那一格，不要在 `schedulePiano` / `scheduleDrums` 裡寫 if。
+## 兩個軸:感覺歸和弦,疏密歸使用者
+不要再把「曲風」做成選單。一開始讓使用者直接挑 Bossa/Pop/Rock/Smooth Jazz,
+結果是 8 組進行 × 4 種風格裡一堆說不通的組合(Dm9-G13-Cmaj9 套 Rock、
+C-F-G-F 套 Bossa)。「要用哪種感覺」本來就是和弦決定的。
 
-- 節奏型一律寫成「這一小節的第幾個八分音符（0–7）」
-- 只有 smooth 的 swing 是 0.58，其他三種都是 0.5。過門的十六分永遠平均，搖了會糊
-- 四個音以上的和弦右手不彈根音（shell voicing，見 `trimTones`）。
-  三和弦不能這樣做——拿掉根音只剩三度五度，和弦聽不出來
-- 每種風格要「聽得出差別」才算數。bossa 靠鋼琴的 `1·二的後半·四` 加貝斯提前半拍；
-  rock 靠鋼琴與貝斯都走八分；smooth 靠搖擺加稀疏 comping
+- **感覺**(`FEELS`,自動):`detectFeel()` 看和弦語彙——有九度以上延伸音 → swing、
+  只有六度七度 → latin、只剩三和弦 → straight。決定 swing 比例、鼓的三件、
+  貝斯走法、comping 位置。畫面上要顯示判斷結果(`feelTag`),不能是黑箱
+- **伴奏樣式**(`PATTERNS`,使用者選):pad / comp / drive,只管疏密與力度倍率
+- 兩個在排程時交叉(`feel()` × `pat()`)。加新東西時想清楚它屬於哪一軸;
+  九種組合每一種都要成立
+- `drive` 會把貝斯往上推一級:straight → 八分推進、swing → 走動低音,
+  latin 維持 bossa 的形狀(那個切分就是它的味道,改掉就不是 bossa)
 
 ## 鼓與貝斯永遠都在
 沒有開關，不要再加回去。`lhGain()` 固定回 0.55（貝斯一直在，鋼琴左手要讓位）。

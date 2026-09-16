@@ -164,11 +164,17 @@ main{
 .field-hint{margin-top:7px;font-size:var(--fs-2xs);color:var(--muted);line-height:1.7;text-wrap:pretty}
 
 /* 範例進行:一排安靜的小膠囊,點一下就填進去 */
-.examples{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+/* 範例用格線不用 flex:進行長短差很多,flex 排出來每顆寬度都不一樣、
+   最後一行還會落單。auto-fill 讓每一格等寬,空格子也保留寬度 */
+.examples{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(188px,1fr));
+  gap:5px;margin-top:8px;
+}
 .ex-btn{
   border:1px solid var(--line);background:transparent;color:var(--muted-bright);
-  font-family:"Noto Serif TC",serif;font-size:var(--fs-xs);letter-spacing:.03em;
-  padding:5px 11px;border-radius:var(--radius-pill);cursor:pointer;
+  font-family:"Noto Serif TC",serif;font-size:var(--fs-xs);letter-spacing:.02em;
+  padding:5px 8px;border-radius:var(--radius-pill);cursor:pointer;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   transition:background .2s,color .2s,border-color .2s;
 }
 .ex-btn:hover,.ex-btn:focus-visible{background:var(--gold);border-color:var(--gold);color:var(--bg);outline:none}
@@ -183,7 +189,9 @@ main{
 .pal-row{display:flex;flex-wrap:wrap;gap:6px}
 /* 音名用 grid 排。flex 會把最後一行剩下的幾顆撐滿整列,
    同一顆鈕在不同行寬度差一倍,看起來像壞掉 */
-#palRoots{display:grid;grid-template-columns:repeat(auto-fit,minmax(46px,1fr));gap:6px}
+#palRoots{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+/* 性質也走格線。14 顆用 auto-fill 排出來每格等寬,不會像 flex 那樣一行七顆一行六顆 */
+#palQuals{display:grid;grid-template-columns:repeat(auto-fill,minmax(54px,1fr));gap:6px}
 .pal-row + .pal-row{margin-top:6px;padding-top:7px;border-top:1px solid var(--line)}
 .pal-btn{
   min-width:0;
@@ -198,9 +206,8 @@ main{
 /* 性質鈕不跟著撐滿:14 顆會換行,若讓最後一行的幾顆平分寬度,
    同一顆鈕在不同行寬度差很多,看起來像壞掉 */
 .pal-qual .pal-btn{
-  flex:0 1 auto;
   font-family:"Noto Sans TC",sans-serif;font-size:var(--fs-sm);font-weight:500;
-  color:var(--muted-bright);min-width:52px;padding:8px 12px;
+  color:var(--muted-bright);padding:6px 4px;
 }
 .pal-qual .pal-btn:hover,.pal-qual .pal-btn:focus-visible{color:var(--bg)}
 .pal-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:7px}
@@ -1568,15 +1575,23 @@ const EXT_INTERVALS = [13, 14, 15, 17, 18, 20, 21];   // 九度以上
 const SEVENTH_INTERVALS = [9, 10, 11];                // 六度、七度
 
 function detectFeel(bars){
-  let ext = false, sev = false;
+  let ext = false, sevBars = 0, total = 0;
   for (const b of bars) {
     if (!b.ok) continue;
+    total++;
+    let hasSev = false;
     for (const iv of b.chord.intervals) {
       if (EXT_INTERVALS.indexOf(iv) >= 0) ext = true;
-      else if (SEVENTH_INTERVALS.indexOf(iv) >= 0) sev = true;
+      else if (SEVENTH_INTERVALS.indexOf(iv) >= 0) hasSev = true;
     }
+    if (hasSev) sevBars++;
   }
-  return ext ? "swing" : sev ? "latin" : "straight";
+  if (ext) return "swing";
+  /* 七和弦要「過半」才算拉丁,不能有一顆就算。
+     Em - D - C - B7 是搖滾的安達魯西亞終止,只有最後那顆是屬七;
+     C - Am - F - G7 也只是流行進行收在 V7。這兩種都不該變成 bossa。
+     延伸音就不一樣了——九度以上很少不小心出現,有一顆就當爵士。 */
+  return total && sevBars * 2 >= total ? "latin" : "straight";
 }
 
 const FEELS = {
@@ -2322,18 +2337,19 @@ function renderPalette(){
 }
 
 /* ══ 範例進行 ══════════════════════════════════════════════════ */
-/* 現成的進行,大調小調成對。膠囊上只顯示和弦。
-   感覺(直/拉丁/搖擺)由和弦自己決定,這裡只順手把伴奏疏密調到合適的那一個:
-   搖滾那兩組用「推進」,其餘用「打點」 */
+/* 現成的八組。刻意讓調性、和聲手法、感覺都散開,不要八組都在 C 大調繞:
+   調性涵蓋 C / Am / F / Em / G / Bb,手法從流行的 I-V-vi-IV、搖滾的 i-VI-VII、
+   安達魯西亞終止,到 bossa 的 I-VI7-ii-V 與爵士的 ii-V-I。
+   膠囊上只顯示和弦;感覺由和弦自己決定,這裡只順手把伴奏疏密調到合適的那一個 */
 const EXAMPLES = [
-  { text: "Cmaj7 - A7 - Dm7 - G7",     style: "comp"  },  // I-VI7-ii-V,拉丁
-  { text: "Am7 - Bm7b5 - E7 - Am7",    style: "comp"  },  // i-iiø-V7-i,拉丁
-  { text: "C - G - Am - F",            style: "comp"  },  // I-V-vi-IV,直
-  { text: "Am - F - C - G",            style: "comp"  },  // vi-IV-I-V,直
-  { text: "C - F - G - F",             style: "drive" },  // I-IV-V-IV,直
-  { text: "Am - F - G - Am",           style: "drive" },  // i-VI-VII-i,直
-  { text: "Dm9 - G13 - Cmaj9 - Cmaj9", style: "comp"  },  // ii-V-I,搖擺
-  { text: "Am9 - Dm9 - E7b9 - Am9",    style: "comp"  },  // i-iv-V7-i,搖擺
+  { text: "C - G - Am - F",              style: "comp"  },  // C 大調,流行 I-V-vi-IV
+  { text: "Am - F - G - Am",             style: "drive" },  // A 小調,搖滾 i-VI-VII-i
+  { text: "F - Bb - C - F",              style: "drive" },  // F 大調,I-IV-V-I
+  { text: "Em - D - C - B7",             style: "comp"  },  // E 小調,安達魯西亞終止
+  { text: "Cmaj7 - A7 - Dm7 - G7",       style: "comp"  },  // C,bossa 的 I-VI7-ii-V
+  { text: "Am7 - D7 - Gmaj7 - Gmaj7",    style: "comp"  },  // G 大調,ii-V-I
+  { text: "Dm9 - G13 - Cmaj9 - Cmaj9",   style: "comp"  },  // C,smooth jazz ii-V-I
+  { text: "Cm9 - F13 - Bbmaj9 - Bbmaj9", style: "pad"   },  // Bb 大調,小調起頭的 ii-V-I
 ];
 
 function renderExamples(){

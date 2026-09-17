@@ -1519,9 +1519,19 @@ const DRUM_EXTRA_FILES = {
   ltom:  ["ltom/mid_ltom_center_vl14.flac"],
   crash: ["crash/mid_crash_crash_vl1_rr1.flac"],
 };
-const drumBuffers = { kick: [], snare: [], hihat: [], htom: [], ltom: [], crash: [] };
-const drumRR = { kick: 0, snare: 0, hihat: 0, htom: 0, ltom: 0, crash: 0 };
+/* 感覺不同,用到的鼓件就不同:bossa 的 clave 是框邊敲擊(cross stick)不是小鼓,
+   爵士靠 ride 與 hi-hat 踏鈸。這幾顆只在那個感覺真的會用到時才載 */
+const DRUM_FEEL_FILES = {
+  xstick: ["snare/mid_snare_crossstick_vl8.flac", "snare/mid_snare_crossstick_vl11.flac"],
+  ride:   ["ride/mid_ride_ride_vl2_rr1.flac", "ride/mid_ride_ride_vl2_rr2.flac"],
+  hhped:  ["hh/mid_hh_pedal_vl2_rr1.flac", "hh/mid_hh_pedal_vl2_rr2.flac"],
+};
+const FEEL_PIECES = { straight: [], latin: ["xstick"], swing: ["ride", "hhped"] };
+
+const drumBuffers = { kick: [], snare: [], hihat: [], htom: [], ltom: [], crash: [], xstick: [], ride: [], hhped: [] };
+const drumRR = { kick: 0, snare: 0, hihat: 0, htom: 0, ltom: 0, crash: 0, xstick: 0, ride: 0, hhped: 0 };
 let drumsLoading = null, drumExtraLoading = null;
+const feelPieceLoading = {};
 
 function loadDrumSet(files){
   const jobs = [];
@@ -1536,11 +1546,21 @@ function loadDrumSet(files){
 }
 
 function ensureDrums(){
-  if (drumsLoading) return drumsLoading;
-  drumsLoading = loadDrumSet(DRUM_FILES);
-  // 過門那幾顆不放進回傳的 promise 裡,播放不必等它
-  if (!drumExtraLoading) drumExtraLoading = loadDrumSet(DRUM_EXTRA_FILES);
-  return drumsLoading;
+  if (!drumsLoading) {
+    drumsLoading = loadDrumSet(DRUM_FILES);
+    // 過門那幾顆不放進回傳的 promise 裡,播放不必等它
+    if (!drumExtraLoading) drumExtraLoading = loadDrumSet(DRUM_EXTRA_FILES);
+  }
+  // 這次的感覺要用到的鼓件要等:ride 換成合成音就不是爵士了
+  const jobs = [drumsLoading];
+  for (const piece of (FEEL_PIECES[feelNow] || [])) {
+    if (!feelPieceLoading[piece]) {
+      const one = {}; one[piece] = DRUM_FEEL_FILES[piece];
+      feelPieceLoading[piece] = loadDrumSet(one);
+    }
+    jobs.push(feelPieceLoading[piece]);
+  }
+  return Promise.all(jobs);
 }
 
 /* 檔名的八度寫法是 midi = 八度 × 12 + 音級(e2 = 28 = 四弦貝斯的最低音 E) */
@@ -1616,7 +1636,8 @@ function synthDrum(piece, when, gain){
     o.onended = () => { activeSources.delete(o); try { o.disconnect(); g.disconnect(); } catch (e) {} };
     return;
   }
-  const dur = piece === "crash" ? 1.4 : piece === "snare" ? 0.19 : 0.05;
+  const dur = piece === "crash" ? 1.4 : piece === "ride" ? 0.6
+            : piece === "snare" ? 0.19 : piece === "xstick" ? 0.045 : 0.05;
   const len = Math.max(1, Math.floor(ctx.sampleRate * dur));
   const buf = ctx.createBuffer(1, len, ctx.sampleRate);
   const d = buf.getChannelData(0);
@@ -1624,9 +1645,11 @@ function synthDrum(piece, when, gain){
   const src = ctx.createBufferSource();
   src.buffer = buf;
   const f = ctx.createBiquadFilter();
-  f.type = piece === "snare" ? "bandpass" : "highpass";
-  f.frequency.value = piece === "snare" ? 1900 : piece === "crash" ? 3500 : 8000;
-  g.gain.setValueAtTime(gain * (piece === "snare" ? 1 : piece === "crash" ? 0.5 : 0.8), when);
+  f.type = (piece === "snare" || piece === "xstick") ? "bandpass" : "highpass";
+  f.frequency.value = piece === "snare" ? 1900 : piece === "xstick" ? 2400
+                    : piece === "crash" ? 3500 : piece === "ride" ? 5200 : 8000;
+  g.gain.setValueAtTime(gain * (piece === "snare" ? 1 : piece === "crash" ? 0.5
+                              : piece === "ride" ? 0.45 : 0.8), when);
   g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
   src.connect(f); f.connect(g);
   src.start(when); src.stop(when + dur + 0.02);
@@ -1776,32 +1799,38 @@ function detectFeel(bars){
 }
 
 const FEELS = {
-  /* 直:流行與搖滾。八分平均,backbeat 紮實 */
+  /* 直:流行與搖滾。大鼓一三、小鼓二四的 backbeat、hi-hat 走八分 */
   straight: {
     swing: 0.5,
     comp: [0, 2, 4, 6], push: true,
     kick: [0, 4], kickGain: 0.85,
-    snare: [2, 6], snareGain: 0.7,
-    hihat: [0, 1, 2, 3, 4, 5, 6, 7], hihatGain: 0.33,
+    snarePiece: "snare", snare: [2, 6], snareGain: 0.7,
+    cym: "hihat", cymPattern: [0, 1, 2, 3, 4, 5, 6, 7], cymGain: 0.33,
     bass: "root5",
   },
-  /* 拉丁:bossa。八分平均,但鋼琴走「1 · 二的後半 · 四」,
-     小鼓很輕地打同一組位置當 rim click,貝斯第三拍常提前半拍 */
+  /* 拉丁:bossa nova。clave 用框邊敲擊(cross stick),而且**兩小節一循環**——
+     3 邊「1 · 二的後半 · 4」跟 2 邊「2 · 三的後半」輪流。
+     每小節都打同一邊就只是一個節奏型,不是 clave,聽起來會卡住。
+     大鼓照 surdo 打一、三而且很輕,鈸走八分 */
   latin: {
     swing: 0.5,
     comp: [0, 3, 6], push: false,
-    kick: [0, 4], kickGain: 0.55,
-    snare: [0, 3, 6], snareGain: 0.14,
-    hihat: [0, 1, 2, 3, 4, 5, 6, 7], hihatGain: 0.26,
+    kick: [0, 4], kickGain: 0.5,
+    snarePiece: "xstick", clave: [[0, 3, 6], [2, 5]], snareGain: 0.42,
+    cym: "hihat", cymPattern: [0, 1, 2, 3, 4, 5, 6, 7], cymGain: 0.26,
     bass: "bossa",
   },
-  /* 搖擺:爵士。後半拍晚一點進來,comping 稀疏,鼓輕,貝斯會走動 */
+  /* 搖擺:爵士。三件事跟流行完全不一樣,不能只是把八分變成三連音:
+     ride 打「1 · 2 · 二的後半 · 3 · 4 · 四的後半」那個經典型(不是走滿八分),
+     2 與 4 交給 hi-hat 踏鈸(即興的人靠它抓拍子,不是靠小鼓),
+     小鼓只做稀疏的 comping、大鼓是幾乎聽不見的 feathering,偶爾才丟一顆重音 */
   swing: {
     swing: 0.58,
     comp: [0, 3, 6], push: true,
-    kick: [0, 4], kickGain: 0.6,
-    snare: [2, 6], snareGain: 0.5,
-    hihat: [0, 1, 2, 3, 4, 5, 6, 7], hihatGain: 0.24,
+    kick: [0, 2, 4, 6], kickGain: 0.16, feather: true,
+    snarePiece: "snare", snareGain: 0.36, compSnare: true,
+    cym: "ride", cymPattern: [0, 2, 3, 4, 6, 7], cymGain: 0.38,
+    hhped: [2, 6], hhpedGain: 0.34,
     bass: "jazz",
   },
 };
@@ -1833,7 +1862,13 @@ const COMP_CELLS = {
 const KICK_CELLS = {
   straight: [[0,4], [0,3,4], [0,4,7], [0,5]],
   latin:    [[0,4], [0,4,7], [0,3,4]],
-  swing:    [[0,4], [0], [0,4,7]],
+  // 爵士的大鼓底下一直在 feathering,這一組是「丟炸彈」的重音位置,多半在反拍
+  swing:    [[], [7], [3], [5], [3,7]],
+};
+/* 爵士的小鼓不是 backbeat,是 comping:一小節丟一兩顆在反拍上,有時整小節不打。
+   2 與 4 的拍子感由 hi-hat 踏鈸負責,不靠小鼓 */
+const SNARE_CELLS = {
+  swing: [[3], [6], [], [2,7], [5], [3,6], [7]],
 };
 
 /* 第一個型 45%,其餘平分 55% */
@@ -1842,6 +1877,12 @@ function pickCell(cells, absBar, salt){
   if (r < 0.45 || cells.length < 2) return cells[0];
   const rest = cells.length - 1;
   return cells[1 + Math.min(rest - 1, Math.floor((r - 0.45) / 0.55 * rest))];
+}
+/* 平均抽,沒有本家型。爵士的 comping 沒有「主要那一型」,連三小節打同一個位置
+   就變成節奏型了,那不是 comping */
+function pickCellEven(cells, absBar, salt){
+  const r = hash01(absBar, salt);
+  return cells[Math.min(cells.length - 1, Math.floor(r * cells.length))];
 }
 
 /* 段落強度弧線:繞第幾圈決定整體力度。一直同一個力度彈二十分鐘會很悶,
@@ -1891,18 +1932,23 @@ const FILLS_2BEAT = [
 
 function scheduleDrums(barStartBeat, b, absBar, isFill){
   const f = feel(), p = pat(), arc = arcGain(absBar);
-  const hihat = styleOn === "pad" ? [0, 2, 4, 6] : f.hihat;   // 墊底只打四分,不然太吵
+  const cymPat = styleOn === "pad" ? [0, 2, 4, 6] : f.cymPattern;   // 墊底只打四分,不然太吵
   const big = isFill && chance(absBar, 10, 0.25 * p.fill);
   const fillFrom = big ? 2 : 3;
 
   if (isFill && b >= fillFrom) {
     const list = big ? FILLS_2BEAT : FILLS_1BEAT;
     const fill = list[Math.floor(hash01(absBar, 11) * list.length) % list.length];
-    const q = spb / 4;
+    /* 搖擺的過門要走三連音。八分是搖擺的、過門突然變成整齊的十六分,
+       那一拍會整個掉出來 */
+    const swung = f.swing > 0.5;
+    const q = swung ? spb / 3 : spb / 4;
+    const slots = swung ? 3 : 4;
     if (b === 2) playDrum("kick", beatTime(barStartBeat + b), humanize(absBar, 12, f.kickGain * p.energy * 0.9));
-    playDrum("hihat", beatTime(barStartBeat + b), humanize(absBar, 13, f.hihatGain * p.energy * 0.8));
-    for (let k = 0; k < 4; k++) {
-      const slot = (b - fillFrom) * 4 + k;
+    // 過門時鈸繼續走,不讓律動出現斷層
+    playDrum(f.cym, beatTime(barStartBeat + b), humanize(absBar, 13, f.cymGain * p.energy * 0.8));
+    for (let k = 0; k < slots; k++) {
+      const slot = (b - fillFrom) * slots + k;
       const piece = fill[slot];
       if (!piece) continue;
       const g = (0.26 + slot * (big ? 0.035 : 0.07)) * p.fill;
@@ -1917,23 +1963,57 @@ function scheduleDrums(barStartBeat, b, absBar, isFill){
   for (let e = 0; e < 2; e++) {
     const idx = b * 2 + e;
     const t = eighthTime(barStartBeat, b, e);
+
+    /* 大鼓。爵士的底下一直有很輕的四分 feathering,cell 抽到的那顆才是重音;
+       其餘感覺就照 cell 打 */
     const kickCell = pickCell(KICK_CELLS[feelNow] || KICK_CELLS.straight, absBar, 101);
     let kick = kickCell.indexOf(idx) >= 0;
-    // 推進會多一顆「二的後半」把拍子往前推
-    if (!kick && idx === 3 && styleOn === "drive") kick = true;
-    if (!kick && idx === 7 && chance(absBar, 2, 0.2)) kick = true;
-    if (kick) playDrum("kick", t, humanize(absBar, idx, f.kickGain * p.energy * arc));
+    /* 推進的推力要照感覺換位置:流行搖滾推「二的後半」,
+       bossa 推「四的後半」(那是進下一小節的預備,推在二的後半就不是 bossa 了),
+       爵士不推——那顆重音要靠 cell 丟,一直推反而變成搖滾 */
+    if (!kick && styleOn === "drive" && !f.feather) {
+      if (idx === (f.clave ? 7 : 3)) kick = true;
+    }
+    if (!kick && idx === 7 && !f.feather && chance(absBar, 2, 0.2)) kick = true;
+    if (f.feather) {
+      if (e === 0) playDrum("kick", t, humanize(absBar, idx, f.kickGain * p.energy));
+      if (kick) playDrum("kick", t, humanize(absBar, idx + 90, 0.4 * p.energy * arc));
+    } else if (kick) {
+      playDrum("kick", t, humanize(absBar, idx, f.kickGain * p.energy * arc));
+    }
 
-    if (f.snare.indexOf(idx) >= 0) playDrum("snare", t, humanize(absBar, idx + 40, f.snareGain * p.energy * arc));
-    // 幽靈音:很輕的小鼓填在反拍上。拉丁的小鼓本來就很輕,就不再加了
-    else if (idx === 5 && f.snareGain > 0.3 && chance(absBar, 3, 0.25)) {
+    /* 小鼓這一格三種感覺完全不同:
+       拉丁是 clave(兩小節輪流)、爵士是 comping、直的是 backbeat 加幽靈音 */
+    if (f.clave) {
+      const side = f.clave[((absBar % 2) + 2) % 2];
+      if (side.indexOf(idx) >= 0) {
+        playDrum(f.snarePiece, t, humanize(absBar, idx + 40, f.snareGain * p.energy * arc));
+      }
+    } else if (f.compSnare) {
+      const cell = pickCellEven(SNARE_CELLS.swing, absBar, 102);
+      if (cell.indexOf(idx) >= 0) {
+        playDrum("snare", t, humanize(absBar, idx + 40, f.snareGain * p.energy * arc));
+      } else if (idx === 5 && chance(absBar, 3, 0.2)) {
+        playDrum("snare", t, humanize(absBar, 55, f.snareGain * 0.3));   // 幽靈音
+      }
+    } else if (f.snare.indexOf(idx) >= 0) {
+      playDrum("snare", t, humanize(absBar, idx + 40, f.snareGain * p.energy * arc));
+    } else if (idx === 5 && chance(absBar, 3, 0.25)) {
       playDrum("snare", t, humanize(absBar, 55, f.snareGain * 0.23));
     }
 
-    if (hihat.indexOf(idx) >= 0) {
-      if (idx === 7 && chance(absBar, 4, 0.18)) continue;   // 留個呼吸再進下一小節
-      const g = idx % 2 === 0 ? f.hihatGain : f.hihatGain * 0.68;
-      playDrum("hihat", t, humanize(absBar, idx + 60, g * p.energy * arc));
+    /* 鈸:流行與拉丁是 hi-hat 走八分,爵士是 ride 的經典型。
+       ride 的重音在 2 與 4,「後半拍」那兩顆(skip note)要輕 */
+    if (cymPat.indexOf(idx) >= 0 && !(idx === 7 && !f.hhped && chance(absBar, 4, 0.18))) {
+      const acc = f.cym === "ride"
+        ? (idx === 3 || idx === 7 ? 0.6 : (idx === 2 || idx === 6 ? 1.05 : 0.88))
+        : (idx % 2 === 0 ? 1 : 0.68);
+      playDrum(f.cym, t, humanize(absBar, idx + 60, f.cymGain * acc * p.energy * arc));
+    }
+
+    // hi-hat 踏鈸:爵士的 2 與 4,拍子感靠它
+    if (f.hhped && f.hhped.indexOf(idx) >= 0) {
+      playDrum("hhped", t, humanize(absBar, idx + 80, f.hhpedGain * p.energy * arc));
     }
   }
 }
@@ -1980,11 +2060,16 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord){
     return;
   }
 
-  // walk:一拍一個音走「根—三—五—接音」。jazz 模式有 30% 的機率也會走
-  const walking = mode === "walk" || (mode === "jazz" && hash01(absBar, 6) >= 0.7);
+  /* 走動低音:一拍一個音,「根 — 三/五 — 五/三 — 半音接到下一個根音」。
+     爵士的預設就是走動,不是兩拍一顆:墊底才退回 two feel(兩拍一顆),
+     打點大多在走,推進一定走。中間兩拍的上下行每小節換,不然會聽成同一句 */
+  const walkChance = styleOn === "pad" ? 0.2 : 0.75;
+  const walking = mode === "walk" || (mode === "jazz" && hash01(absBar, 16) < walkChance);
   if (walking) {
     if (b < 3) {
-      const seq = [rootPc, pcOf(chord.rootPc + third), fifthPc];
+      const up = hash01(absBar, 17) < 0.6;
+      const seq = up ? [rootPc, pcOf(chord.rootPc + third), fifthPc]
+                     : [rootPc, fifthPc, pcOf(chord.rootPc + third)];
       playBassNote(bassMidiFor(seq[b]), beatTime(barStartBeat + b), spb * 0.92,
                    humanize(absBar, 70 + b, b === 0 ? 0.5 : 0.42));
     } else {
@@ -2583,7 +2668,8 @@ const SECTIONS = {
     { text: "Cmaj7 - A7 - Dm7 - G7",     style: "comp"  },  // C 大調,I-VI7-ii-V
     { text: "Fmaj7 - E7 - Am7 - C7",     style: "comp"  },  // A 小調,IVM7-III7-i-I7,city pop
     { text: "Am7 - Dm7 - E7 - Am7",      style: "comp"  },  // A 小調,i-iv-V7-i
-    { text: "Dm9 - G13 - Cmaj9 - Cmaj9", style: "comp"  },  // C 大調,ii-V-I,smooth jazz
+    { text: "Dm7 - G7 - Cmaj7 - Cmaj7",  style: "comp"  },  // C 大調,ii-V-I,爵士最常練的那四小節
+    { text: "Dm9 - G13 - Cmaj9 - Cmaj9", style: "comp"  },  // C 大調,同一個 ii-V-I 換成九度的聲位
     { text: "Am9 - Dm9 - E7b9 - Am9",    style: "pad"   },  // A 小調,i-iv-V7-i,爵士
   ],
   /* 八小節這組是完整的一句:前四小節起,後四小節收,最後一顆要接得回開頭 */

@@ -7,11 +7,11 @@
      不然頁面變白了、上面那條還是黑的,看起來像沒對齊 -->
 <meta name="theme-color" content="#0C0A07">
 <title data-i18n="pageTitle">BackingTrack 跟著彈 — 輸入和弦就生成伴奏</title>
-<meta name="description" content="輸入和弦進行,程式就生成鋼琴伴奏,讓學生跟著彈。三種伴奏樣式、速度與移調自由調整,count-in 與循環播放。免安裝,打開瀏覽器就能用。" data-i18n-attr="content:metaDesc">
+<meta name="description" content="輸入和弦進行,程式就生成鋼琴伴奏,讓學生跟著彈。四種伴奏樣式、速度與移調自由調整,count-in 與循環播放。免安裝,打開瀏覽器就能用。" data-i18n-attr="content:metaDesc">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230C0A07'/%3E%3Cg fill='%23EFD48A'%3E%3Crect x='6' y='9' width='3.4' height='14' rx='1.2'/%3E%3Crect x='11.4' y='9' width='3.4' height='14' rx='1.2'/%3E%3Crect x='16.8' y='9' width='3.4' height='14' rx='1.2'/%3E%3Crect x='22.2' y='9' width='3.4' height='14' rx='1.2'/%3E%3C/g%3E%3Cg fill='%230C0A07'%3E%3Crect x='9' y='9' width='2.2' height='8.5' rx='.8'/%3E%3Crect x='14.4' y='9' width='2.2' height='8.5' rx='.8'/%3E%3Crect x='20.2' y='9' width='2.2' height='8.5' rx='.8'/%3E%3C/g%3E%3C/svg%3E">
 <meta property="og:type" content="website">
 <meta property="og:title" content="BackingTrack 跟著彈 — 輸入和弦就生成伴奏" data-i18n-attr="content:pageTitle">
-<meta property="og:description" content="輸入和弦進行,程式就生成鋼琴伴奏,讓學生跟著彈。三種伴奏樣式、速度與移調自由調整,count-in 與循環播放。免安裝,打開瀏覽器就能用。" data-i18n-attr="content:metaDesc">
+<meta property="og:description" content="輸入和弦進行,程式就生成鋼琴伴奏,讓學生跟著彈。四種伴奏樣式、速度與移調自由調整,count-in 與循環播放。免安裝,打開瀏覽器就能用。" data-i18n-attr="content:metaDesc">
 <meta property="og:url" content="https://stevenmusic.github.io/BackingTrack/">
 <meta property="og:site_name" content="Steven Music">
 <meta property="og:locale" content="zh_TW" data-i18n-attr="content:ogLocale">
@@ -480,9 +480,10 @@ input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px rgba(201,
 }
 .bpm-quick .btn:hover,.bpm-quick .btn:focus-visible{background:var(--gold);border-color:var(--gold);color:var(--bg)}
 
-/* 伴奏樣式:三選一 */
+/* 伴奏樣式:四選一 */
 .seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .seg-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.seg-4{grid-template-columns:repeat(4,minmax(0,1fr))}
 .seg button{
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
   padding:6px 5px;min-height:46px;
@@ -747,7 +748,7 @@ try {
       <!-- 伴奏樣式 -->
       <div class="control">
         <div class="control-head"><span class="label" data-i18n="styleLabel">伴奏樣式</span></div>
-        <div class="seg seg-3" id="styleSeg">
+        <div class="seg seg-4" id="styleSeg">
           <button type="button" data-style="pad" aria-pressed="false">
             <svg width="26" height="14" viewBox="0 0 26 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 7h20"/><circle cx="4" cy="7" r="2.2" fill="currentColor" stroke="none"/></svg>
             <span data-i18n="stylePad">墊底</span>
@@ -759,6 +760,11 @@ try {
           <button type="button" data-style="drive" aria-pressed="false">
             <svg width="26" height="14" viewBox="0 0 26 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 11V4M8 11V4M13 11V4M18 11V4M23 11V4"/></svg>
             <span data-i18n="styleDrive">推進</span>
+          </button>
+          <!-- 混合:一顆點、兩顆點、三條線,就是「疏 → 中 → 密 輪流」 -->
+          <button type="button" data-style="mix" aria-pressed="false">
+            <svg width="26" height="14" viewBox="0 0 26 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="3" cy="7" r="2" fill="currentColor" stroke="none"/><circle cx="10" cy="7" r="2" fill="currentColor" stroke="none"/><path d="M17 11V4M20.5 11V4M24 11V4"/></svg>
+            <span data-i18n="styleMix">混合</span>
           </button>
         </div>
       </div>
@@ -854,7 +860,7 @@ const SAVED_KEY = "bt_saved";   // 本工具自己的:使用者按「存這組�
 const I18N = {
   zh: {
     pageTitle: "BackingTrack 跟著彈 — 輸入和弦就生成伴奏",
-    metaDesc: "輸入和弦進行,程式就生成鋼琴伴奏,讓學生跟著彈。三種伴奏樣式、速度與移調自由調整,count-in 與循環播放。免安裝,打開瀏覽器就能用。",
+    metaDesc: "輸入和弦進行,程式就生成鋼琴伴奏,讓學生跟著彈。四種伴奏樣式、速度與移調自由調整,count-in 與循環播放。免安裝,打開瀏覽器就能用。",
     ogLocale: "zh_TW",
     homeLinkLabel: "首頁",
     themeToggleLabel: "切換淺色或深色主題",
@@ -876,6 +882,8 @@ const I18N = {
     stylePad: "墊底",
     styleComp: "打點",
     styleDrive: "推進",
+    styleMix: "混合",
+    styleMixNow: "混合({now})",
     bpmLabel: "速度",
     bpmDownLabel: "慢一點",
     bpmUpLabel: "快一點",
@@ -937,7 +945,7 @@ const I18N = {
   },
   en: {
     pageTitle: "BackingTrack — type chords, get an accompaniment",
-    metaDesc: "Type a chord progression and the tool generates a piano accompaniment to play along with. Three comping styles, free tempo and transposition, count-in and looping. No install, runs in the browser.",
+    metaDesc: "Type a chord progression and the tool generates a piano accompaniment to play along with. Four comping styles, free tempo and transposition, count-in and looping. No install, runs in the browser.",
     ogLocale: "en_US",
     homeLinkLabel: "Home",
     themeToggleLabel: "Switch between light and dark theme",
@@ -959,6 +967,8 @@ const I18N = {
     stylePad: "Sustained",
     styleComp: "Comping",
     styleDrive: "Driving",
+    styleMix: "Mixed",
+    styleMixNow: "Mixed ({now})",
     bpmLabel: "Tempo",
     bpmDownLabel: "Slower",
     bpmUpLabel: "Faster",
@@ -2018,9 +2028,27 @@ const PATTERNS = {
 };
 const PATTERN_KEYS = Object.keys(PATTERNS);
 
+/* 混合:不是第四種疏密,是「每繞一圈換一種」。單位跟力度弧線 ARC 一樣是「一圈」,
+   所以疏密跟力度是一起起伏的:墊底 0.9 → 打點 1.0 → 推進 1.1 → 打點 1.0。
+   真的樂團就是這樣編一首曲子:第一圈輕輕墊著、第二圈開始打點、第三圈推起來、
+   第四圈收回來,而不是二十分鐘都同一種疏密。
+   因為它是由那三種組出來的,`feel()` × `pat()` 的九種組合一種都沒少,
+   只是同一段進行會依序走過其中三種 */
+const MIX_CYCLE = ["pad", "comp", "drive", "comp"];
+const STYLE_KEYS = PATTERN_KEYS.concat("mix");
+
+/* 這一小節實際上要用哪一種疏密。除了混合以外都是使用者選的那個。
+   跟 arcGain 用同一個分母(進行長度),換的時機一定落在進行的開頭,
+   不會在樂句中間忽然變密 */
+function styleAt(absBar){
+  if (styleOn !== "mix") return styleOn;
+  const n = Math.max(1, voicings.length);
+  return MIX_CYCLE[Math.floor(absBar / n) % MIX_CYCLE.length];
+}
+
 let feelNow = "straight";
 function feel(){ return FEELS[feelNow] || FEELS.straight; }
-function pat(){ return PATTERNS[styleOn] || PATTERNS.comp; }
+function pat(absBar){ return PATTERNS[styleAt(absBar)] || PATTERNS.comp; }
 
 /* ── 節奏單元 ───────────────────────────────────────────────────
    之前每小節的骨架都一樣,只在上面加減一顆裝飾音,聽幾小節耳朵就鎖定骨架了。
@@ -2074,15 +2102,16 @@ function eighthTime(barStartBeat, b, e){
 
 /* 右手打在哪:墊底一小節一下、推進走滿八分、打點照感覺的位置 */
 function compPositions(absBar){
-  if (styleOn === "pad") return [0];
-  if (styleOn === "drive") return [0, 1, 2, 3, 4, 5, 6, 7];
+  const st = styleAt(absBar);
+  if (st === "pad") return [0];
+  if (st === "drive") return [0, 1, 2, 3, 4, 5, 6, 7];
   return pickCell(COMP_CELLS[feelNow] || COMP_CELLS.straight, absBar, 100);
 }
 
 /* 貝斯怎麼走。推進會把它往上推一級:直的變八分推進、搖擺的直接走動低音,
    拉丁維持 bossa 的形狀(那個切分就是它的味道,改掉就不是 bossa 了) */
-function bassMode(){
-  if (styleOn === "drive") {
+function bassMode(absBar){
+  if (styleAt(absBar) === "drive") {
     if (feelNow === "straight") return "drive";
     if (feelNow === "swing") return "walk";
   }
@@ -2104,8 +2133,8 @@ const FILLS_2BEAT = [
 ];
 
 function scheduleDrums(barStartBeat, b, absBar, isFill){
-  const f = feel(), p = pat(), arc = arcGain(absBar);
-  const cymPat = styleOn === "pad" ? [0, 2, 4, 6] : f.cymPattern;   // 墊底只打四分,不然太吵
+  const f = feel(), p = pat(absBar), arc = arcGain(absBar), st = styleAt(absBar);
+  const cymPat = st === "pad" ? [0, 2, 4, 6] : f.cymPattern;   // 墊底只打四分,不然太吵
   const big = isFill && chance(absBar, 10, 0.25 * p.fill);
   const fillFrom = big ? 2 : 3;
 
@@ -2144,7 +2173,7 @@ function scheduleDrums(barStartBeat, b, absBar, isFill){
     /* 推進的推力要照感覺換位置:流行搖滾推「二的後半」,
        bossa 推「四的後半」(那是進下一小節的預備,推在二的後半就不是 bossa 了),
        爵士不推——那顆重音要靠 cell 丟,一直推反而變成搖滾 */
-    if (!kick && styleOn === "drive" && !f.feather) {
+    if (!kick && st === "drive" && !f.feather) {
       if (idx === (f.clave ? 7 : 3)) kick = true;
     }
     if (!kick && idx === 7 && !f.feather && chance(absBar, 2, 0.2)) kick = true;
@@ -2193,7 +2222,7 @@ function scheduleDrums(barStartBeat, b, absBar, isFill){
 
 /* ── 貝斯 ───────────────────────────────────────────────────── */
 function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord){
-  const mode = bassMode();
+  const mode = bassMode(absBar);
   const pcOf = (raw) => ((((raw + transposeOn) % 12) + 12) % 12);
   const rootPc = pcOf(chord.bassPc);
   const fifthPc = pcOf(chord.rootPc + 7);
@@ -2236,7 +2265,7 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord){
   /* 走動低音:一拍一個音,「根 — 三/五 — 五/三 — 半音接到下一個根音」。
      爵士的預設就是走動,不是兩拍一顆:墊底才退回 two feel(兩拍一顆),
      打點大多在走,推進一定走。中間兩拍的上下行每小節換,不然會聽成同一句 */
-  const walkChance = styleOn === "pad" ? 0.2 : 0.75;
+  const walkChance = styleAt(absBar) === "pad" ? 0.2 : 0.75;
   const walking = mode === "walk" || (mode === "jazz" && hash01(absBar, 16) < walkChance);
   if (walking) {
     if (b < 3) {
@@ -2272,7 +2301,7 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord){
 /* ── 鋼琴 ─────────────────────────────────────────────────────
    左手低音一律留長(撐兩拍),右手照樣式與感覺決定的位置打 */
 function schedulePiano(v, barStartBeat, b, transpose, absBar, isFill){
-  const f = feel(), p = pat();
+  const f = feel(), p = pat(absBar), st = styleAt(absBar);
   const positions = compPositions(absBar);
   const arc = arcGain(absBar);
 
@@ -2282,7 +2311,7 @@ function schedulePiano(v, barStartBeat, b, transpose, absBar, isFill){
   }
 
   // 墊底:一小節一下,撐滿整個小節
-  if (styleOn === "pad") {
+  if (st === "pad") {
     if (b === 0) {
       for (const n of v.upper) playNote(n + transpose, beatTime(barStartBeat), spb * 4,
                                         humanize(absBar, 84, p.compGain));
@@ -2299,11 +2328,11 @@ function schedulePiano(v, barStartBeat, b, transpose, absBar, isFill){
     if (idx !== 0 && chance(absBar, 82 + idx, 0.15)) continue;   // 偶爾空一下
     /* 有些感覺的第二、四拍會往後挪成切分,挪過去那一下輕一點,
        聽起來才像順手帶過去的 */
-    const push = f.push && styleOn !== "drive" && (idx === 2 || idx === 6)
+    const push = f.push && st !== "drive" && (idx === 2 || idx === 6)
                  && chance(absBar, 90 + idx, 0.45);
     const t = push ? eighthTime(barStartBeat, b, 1) : eighthTime(barStartBeat, b, e);
     const peak = idx === 0 ? p.compGain * 1.15 : push ? p.compGain * 0.8 : p.compGain;
-    const dur = styleOn === "drive" ? spb * 0.45 : spb * 0.9;
+    const dur = st === "drive" ? spb * 0.45 : spb * 0.9;
     for (const n of v.upper) playNote(n + transpose, t, dur, humanize(absBar, 84 + idx, peak * arc));
   }
 
@@ -2461,8 +2490,15 @@ function setStatus(text, warn){
   el.classList.toggle("warn", !!warn);
 }
 
-const STYLE_I18N = { pad: "stylePad", comp: "styleComp", drive: "styleDrive" };
-function styleName(){ return T(STYLE_I18N[styleOn] || "styleComp"); }
+const STYLE_I18N = { pad: "stylePad", comp: "styleComp", drive: "styleDrive", mix: "styleMix" };
+/* 混合時把現在走到哪一種也寫出來:不講的話會以為是自己亂變的。
+   這跟「感覺」不一樣——感覺是和弦決定的、不顯示;疏密本來就是使用者選的那一軸 */
+function styleName(absBar){
+  if (styleOn === "mix" && typeof absBar === "number") {
+    return T("styleMixNow", { now: T(STYLE_I18N[styleAt(absBar)] || "styleComp") });
+  }
+  return T(STYLE_I18N[styleOn] || "styleComp");
+}
 
 /* 感覺是和弦決定的,和弦一改就要重算 */
 function updateFeel(){ feelNow = detectFeel(parsed.bars); }
@@ -2492,7 +2528,8 @@ function paintPlayhead(){
   } else {
     const musicBeat = beat - countInBeats;
     const nBars = voicings.length;
-    let bar = Math.floor(musicBeat / 4);
+    const absBar = Math.floor(musicBeat / 4);
+    let bar = absBar;
     if (bar >= nBars) bar = loopOn ? bar % nBars : nBars - 1;
     if (bar !== lastHighlight) {
       clearHighlight();
@@ -2502,7 +2539,7 @@ function paintPlayhead(){
     }
     setTransport(
       T("playingTitle", { bar: bar + 1, chord: parsed.bars[bar] ? chordDisplay(parsed.bars[bar].chord) || parsed.bars[bar].text : "" }),
-      T("playingSub", { bpm: bpmOn, style: styleName(), loop: loopOn ? T("loopSuffix") : "" })
+      T("playingSub", { bpm: bpmOn, style: styleName(absBar), loop: loopOn ? T("loopSuffix") : "" })
     );
   }
   rafId = requestAnimationFrame(paintPlayhead);
@@ -3265,7 +3302,7 @@ document.addEventListener("keydown", (e) => {
   const st = loadState();
   if (st) {
     if (typeof st.text === "string") chordInput.value = st.text;
-    if (st.style && PATTERNS[st.style]) styleOn = st.style;
+    if (st.style && STYLE_KEYS.indexOf(st.style) >= 0) styleOn = st.style;
     if (typeof st.countIn === "boolean") countInOn = st.countIn;
     if (typeof st.loop === "boolean") loopOn = st.loop;
     if (typeof st.bpm === "number") bpmOn = st.bpm;

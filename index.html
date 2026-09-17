@@ -808,6 +808,7 @@ const I18N = {
     chordPlaceholder: "C - Am - F - G",
     chordHint: "一個和弦一小節,4/4 拍。用空白或「-」分隔;不想打字就點下面那排。",
     barCount: "{n} 小節",
+    barCountTr: "{n} 小節 ・ 下面是移調 {t} 的和弦",
     styleLabel: "伴奏樣式",
     len4: "4 小節",
     len8: "8 小節",
@@ -876,6 +877,7 @@ const I18N = {
     chordPlaceholder: "C - Am - F - G",
     chordHint: "One chord per bar, 4/4 time. Separate with spaces or \"-\"; or just tap the pad below.",
     barCount: "{n} bars",
+    barCountTr: "{n} bars · chords below are transposed {t}",
     styleLabel: "Comping style",
     len4: "4 bars",
     len8: "8 bars",
@@ -1161,9 +1163,33 @@ function parseChord(raw){
     text: token,
     rootPc,
     bassPc,
+    // 移調後要把和弦名重組出來,所以性質(suffix)與「有沒有轉位低音」都要留著
+    suffix,
+    slash: bassPart !== null,
     // 保留 14 這種「疊到九度」的音程,voicing 時才知道它要擺高一個八度
     intervals: intervals.slice(),
   };
+}
+
+/* 畫面上要顯示真的在響的和弦:移調 +2 時 C 就顯示成 D。
+   文字框留使用者自己打的那一版不動(那是原稿),小節格與走帶列顯示移調後的名字。
+   音名用跟和弦鍵盤同一套拼法(PAL_ROOTS),不然畫面上一下 A♭ 一下 G♯ */
+function chordDisplay(chord){
+  if (!chord) return "";
+  if (!transposeOn) return chord.text;
+  const tr = (pc) => PAL_ROOTS[(((pc + transposeOn) % 12) + 12) % 12];
+  return tr(chord.rootPc) + chord.suffix + (chord.slash ? "/" + tr(chord.bassPc) : "");
+}
+
+/* 小節數。移調時順便講一句「下面那幾格是移調後的」——文字框留的是原稿,
+   小節格顯示的是實際在響的和弦,不講的話會以為文字框沒跟著改是壞掉了 */
+function updateBarCount(){
+  const el = document.getElementById("barCount");
+  if (!el || typeof parsed === "undefined" || !parsed) return;
+  const n = parsed.bars.length;
+  el.textContent = transposeOn
+    ? T("barCountTr", { n, t: (transposeOn > 0 ? "+" : "") + transposeOn })
+    : T("barCount", { n });
 }
 
 /* 整段進行:用空白 / - / | / 逗號分隔。「/」不能當分隔符,那是轉位用的 */
@@ -2328,7 +2354,7 @@ function paintPlayhead(){
       lastHighlight = bar;
     }
     setTransport(
-      T("playingTitle", { bar: bar + 1, chord: parsed.bars[bar] ? parsed.bars[bar].text : "" }),
+      T("playingTitle", { bar: bar + 1, chord: parsed.bars[bar] ? chordDisplay(parsed.bars[bar].chord) || parsed.bars[bar].text : "" }),
       T("playingSub", { bpm: bpmOn, style: styleName(), loop: loopOn ? T("loopSuffix") : "" })
     );
   }
@@ -2351,8 +2377,8 @@ function renderBars(){
     // 不然 break-all 會把 Cmaj7 斷成「Cmaj / 7」,看起來像別的和弦
     const name = document.createElement("span");
     name.className = "bar-name";
-    name.textContent = b.text;
-    chip.style.setProperty("--len", b.text.length);
+    name.textContent = b.ok ? chordDisplay(b.chord) : b.text;
+    chip.style.setProperty("--len", name.textContent.length);
     chip.appendChild(name);
     // 點一下選起來(之後點性質鈕就是改這一格),再點一次取消
     chip.addEventListener("click", () => selectBar(i === selectedBar ? -1 : i));
@@ -2380,7 +2406,7 @@ function renderBars(){
     err.classList.remove("on");
   }
 
-  $("barCount").textContent = T("barCount", { n: parsed.bars.length });
+  updateBarCount();
   playBtn.disabled = !parsed.bars.length || !!bad;
 }
 
@@ -2416,6 +2442,9 @@ function setTranspose(v){
   const sign = transposeOn > 0 ? "+" : "";
   $("transposeValue").innerHTML = sign + transposeOn +
     '<span class="unit">' + T("semitoneUnit") + "</span>";
+  // 小節格顯示的是「真的在響的和弦」,移調就要重畫。播放中也沒關係:
+  // 下一幀 paintPlayhead 會把正在響的那一格重新點亮
+  if (typeof parsed !== "undefined" && parsed) { renderBars(); updateBarCount(); }
   saveState();
 }
 
@@ -2819,7 +2848,7 @@ function applyLanguage(lang){
 /* 執行期才組出來的文字(小節數、移調數值、走帶列、存檔列)不在 data-i18n 的
    掃描範圍內,切語言時要另外重畫一次 */
 function refreshDynamicText(){
-  $("barCount").textContent = T("barCount", { n: parsed.bars.length });
+  updateBarCount();
   setTranspose(transposeOn);
   setPlayIcon(playing);
   renderSaved();

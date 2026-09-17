@@ -36,7 +36,8 @@
   搖滾、city pop、bossa、爵士，加上圓舞曲、爵士圓舞曲、6/8 抒情、doo-wop、
   慢藍調；**點一組就連拍號一起換**，另外兩個拍號變暗。
   打開清單會直接捲到你現在的拍號那一段；膠囊上只顯示和弦
-- **鼓與貝斯一直都在**，用真實爵士鼓組與指彈電貝斯，不用另外開
+- **鼓與貝斯一直都在**，用真實爵士鼓組。貝斯有兩把：流行搖滾是指彈電貝斯，
+  爵士與 bossa 自動換成**低音提琴**（撥弦），不用另外開
 - **無根音配置**：七和弦以上右手不彈根音，三度與七度才站得出來
 - **過門**：每一輪的最後一小節，預設只在最後一拍做個小句子
 - **不會整輪重播**：每小節都會有些微不同，繞第二圈跟第一圈也不一樣
@@ -321,13 +322,15 @@ RMS −11.9 ～ −13.8 dBFS，一樣零削波——三拍一小節的音符密�
 範例段落與小節格裡，一顆和弦就是一個等寬的置中格子，跟「一個和弦一小節」對得上；
 格子不夠寬時字會自己縮小，不會把 `Cmaj7` 切成 `Cm…`（那會被看成別的和弦）。
 
-三軌的音源都在 [sfzinstruments](https://github.com/sfzinstruments) 底下：
+三軌的音源都在 [sfzinstruments](https://github.com/sfzinstruments) 底下，
+**貝斯有兩把，照感覺換**：
 
 | 軌 | 音源 | 說明 |
 | --- | --- | --- |
 | 鋼琴 | [Salamander Grand Piano](https://github.com/sfzinstruments/SalamanderGrandPiano) | 跟 ScrollScore 指向同一組檔案 |
 | 鼓 | [Virtuosity Drums](https://github.com/sfzinstruments/virtuosity_drums) | Versilian Studios × Karoryfer，KVRDC'21。在波士頓 Virtuosity 樂器行實錄的**爵士鼓組**，鼓手 Austin McMahon |
-| 貝斯 | [Black And Blue Basses](https://github.com/sfzinstruments/karoryfer.black-and-blue-basses) | Karoryfer，KVRDC'23。用 darkblack 那把指彈電貝斯，mf 力度 |
+| 貝斯（直） | [Black And Blue Basses](https://github.com/sfzinstruments/karoryfer.black-and-blue-basses) | Karoryfer，KVRDC'23。darkblack 那把指彈電貝斯，mf 力度。流行搖滾用它 |
+| 貝斯（拉丁／搖擺） | [D. Smolken 低音提琴](https://github.com/sfzinstruments/dsmolken.double-bass) | 1958 Otto Rubner、五度定弦，撥弦（pizz）。爵士的走動低音本來就是低音提琴，bossa 也是——Getz/Gilberto 那個年代就是尼龍弦吉他加低音提琴 |
 
 鋼琴每個八度只錄 `C` / `D#` / `F#` / `A` 四個音，貝斯每三個半音收一顆，
 其餘的音用 `playbackRate` 變調補位——最遠只差 1.5 個半音，聽不出失真。

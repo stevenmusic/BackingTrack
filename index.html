@@ -139,12 +139,22 @@ main{
    860px 以下自動疊回一欄,原本的順序不變 */
 @media (min-width:680px){
   .stage{max-width:900px}
-  .card{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 18px;align-items:stretch}
+  /* 多出來的高度全部給上面那一列(兩欄),最底下那一行提示不要跟著被拉開 */
+  .card{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+        grid-template-rows:1fr auto;gap:0 18px;align-items:stretch}
   .card-foot{grid-column:1 / -1}
   .col > *:first-child{margin-top:0}
+  /* 卡片把視窗剩下的高度吃滿(平板直立差很多:13 吋 1366 高原本上下各空 269px),
+     兩欄的區塊再各自把多出來的高度平均分掉,看起來才像是故意的。
+     元件本身也會跟著長大(見下面 --grow),兩件事一起做才不會變成
+     「小小的元件配超大的縫」 */
+  /* 高螢幕不要硬把卡片撐滿:接縫一被拉開就散掉了(13 吋平板直立試過,
+     一個縫將近 200px)。卡片維持「內容多高就多高」、置中,
+     高度是靠元件與間距**一起**長大(見下面 --grow)——每一塊等比例變大,
+     看起來才是整齊的。剩下的邊留在上下,那本來就是留白 */
+  .col{display:flex;flex-direction:column}
   /* 左欄(輸入+編輯)本來就比右欄長,右下角會空一塊。
      讓右欄的區塊把多出來的高度平均分掉,看起來才像是故意的 */
-  .col{display:flex;flex-direction:column}
   .col + .col{justify-content:space-between}
 }
 @media (min-width:900px){
@@ -225,11 +235,21 @@ main{
 /* 八小節(與 12 小節藍調)那組一組佔一整橫排。8 顆和弦塞進半欄會擠成一團、
    字還會被切掉,兩組又貼在一起很容易點錯隔壁那組 */
 .ex-btn.long{grid-column:1 / -1}
+/* 小標是可以點的:一次只展開一個拍號,清單才不會一路長到要捲三頁。
+   收起來的那兩排各佔一行,一眼看得到還有別的拍號 */
 .ex-group{
   grid-column:1 / -1;margin-top:2px;
-  font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.06em;
+  display:flex;align-items:center;gap:6px;width:100%;
+  border:none;background:transparent;padding:4px 2px;cursor:pointer;
+  font-family:inherit;font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.06em;
+  text-align:left;
 }
 .ex-group:first-child{margin-top:0}
+.ex-group:hover,.ex-group:focus-visible{color:var(--gold-bright);outline:none}
+.ex-group[aria-expanded="true"]{color:var(--gold-bright)}
+.ex-group .caret{flex:none;transition:transform .15s}
+.ex-group[aria-expanded="true"] .caret{transform:rotate(90deg)}
+.ex-group .n{margin-left:auto;font-variant-numeric:tabular-nums;opacity:.8}
 /* 每一顆和弦各佔一個等寬格子、置中——一個和弦本來就是一小節,
    排起來跟下面的小節格對得上,長短不同的進行也不會有的字大有的字被吃掉 */
 .ex-btn{
@@ -434,6 +454,18 @@ svg[hidden]{display:none}
 
 /* 速度與移調並排。夠寬就兩欄,窄了自己疊回一欄 */
 .control-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(152px,1fr));gap:10px}
+/* B. 速度與移調那兩塊自己當容器:平板直立時一塊只有 156px 寬,
+   圓鈕跟著高螢幕長大的話滑桿會被擠成一個點、刻度會疊在一起。
+   窄的時候就不要長大——看的是自己這一塊的寬度,不是視窗寬度 */
+.control-pair > .control{container:ctl / inline-size}
+@container ctl (max-width:200px){
+  /* 選擇器要比下面 @media 那條長,不然會被後面出現的規則蓋掉 */
+  .control .step-btn{width:32px;height:32px}
+  .control .scale.inset{padding:0 42px}
+  .control #bpmInput{font-size:var(--fs-lg)}
+  /* 快捷速度那三顆也不要長高:窄的時候寬度只有 44px,長高就變成橢圓 */
+  .control .bpm-quick .btn{height:36px}
+}
 .control-pair > .control{margin-top:10px}
 .control-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:7px}
 .control-head .label{font-size:var(--fs-xs);color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
@@ -594,41 +626,51 @@ footer a:hover{color:var(--gold-bright)}
   .scale.inset{padding:0 38px}
 }
 /* ── 高螢幕:把多出來的高度用掉 ─────────────────────────────
-   13 吋平板直立(1024×1366)整頁只用得到 700px,下面空一大塊很奇怪。
-   兩欄的螢幕讓元件跟著視窗高度長大:clamp 的下限就是原本的尺寸,
-   短螢幕(720/800 高)取到下限、完全不受影響,高螢幕才會撐開。
-   手機不套用——那裡本來就要捲,元件再長大只是讓它更長 */
+   13 吋平板直立(1024×1366)整頁只用得到 780px,上下各空 293px 很奇怪。
+   一個旋鈕 `--grow` 決定「這個視窗比 720 高多少」,每個元件各自乘一個倍率:
+
+     720 高 → 0(筆電完全不受影響,12 格、32 格還是剛好塞得下)
+     1133 高(iPad mini 直)→ 約 9px
+     1366 高(13 吋平板直立)→ 約 14px,再高就封頂
+
+   用一條線性式(`Nvh − 常數`)不用 clamp 的 `Nvh`:clamp 那種寫法
+   要嘛 720 就已經超過下限(短螢幕跟著變大、放不下)、要嘛係數小到高螢幕撐不開,
+   兩件事沒辦法同時做到。手機不套用——那裡本來就要捲,元件再長大只是讓它更長 */
 @media (min-width:680px){
-  #chordInput{min-height:clamp(46px,7.6vh,130px)}
-  .ex-btn{min-height:clamp(26px,2.4vh,34px)}
-  .pal-btn{padding-top:clamp(4px,.55vh,16px);padding-bottom:clamp(4px,.55vh,16px)}
-  .bar-chip{min-height:clamp(42px,5.4vh,86px)}
+  :root{ --grow: clamp(0px, calc(5.6vh - 41.2px), 38px); }
+  #chordInput{min-height:calc(46px + var(--grow) * 2.4)}
+  .ex-btn{min-height:calc(26px + var(--grow) * 0.5)}
+  .pal-btn{padding-top:calc(4px + var(--grow) * 0.5);padding-bottom:calc(4px + var(--grow) * 0.5)}
+  .bar-chip{min-height:calc(42px + var(--grow) * 2)}
   /* 兩欄的螢幕用滑鼠點,格子可以再矮一點:12 小節三列時省下來的高度
      剛好是 720 高的筆電放不放得下的差別。手機維持 28px,那是用手指點的 */
   .bars-grid.dense{gap:6px}
-  .bars-grid.dense .bar-chip{min-height:clamp(24px,3.2vh,56px);padding:2px}
+  .bars-grid.dense .bar-chip{min-height:calc(24px + var(--grow) * 1.4);padding:2px}
   .bars-grid.denser{gap:6px}
-  .bars-grid.denser .bar-chip{min-height:clamp(22px,2.9vh,44px)}
-  .play-btn{width:clamp(48px,6.2vh,72px);height:clamp(48px,6.2vh,72px)}
-  .seg button{min-height:clamp(46px,5.6vh,92px)}
-  .toggle{padding-top:clamp(8px,1.5vh,22px);padding-bottom:clamp(8px,1.5vh,22px)}
-  .tool-btn{height:clamp(28px,3.2vh,42px)}
-  #bpmInput{height:clamp(36px,4.2vh,60px)}
-  .step-btn{width:clamp(32px,3.7vh,48px);height:clamp(32px,3.7vh,48px)}
-  .bpm-quick .btn{height:clamp(30px,3.4vh,46px)}
+  .bars-grid.denser .bar-chip{min-height:calc(22px + var(--grow) * 1)}
+  .play-btn{width:calc(48px + var(--grow) * 1.6);height:calc(48px + var(--grow) * 1.6)}
+  .seg button{min-height:calc(46px + var(--grow) * 1.6)}
+  .toggle{padding-top:calc(8px + var(--grow) * 0.9);padding-bottom:calc(8px + var(--grow) * 0.9)}
+  .tool-btn{height:calc(28px + var(--grow) * 0.9)}
+  #bpmInput{height:calc(36px + var(--grow) * 1.5)}
+  /* 圓鈕只長到 44px 就好:速度與移調那兩塊寬度有限(平板直立時一塊只有 156px),
+     兩顆 52px 的圓鈕會把滑桿擠成一個點 */
+  .step-btn{width:min(44px, calc(32px + var(--grow) * 0.6));height:min(44px, calc(32px + var(--grow) * 0.6))}
+  .bpm-quick .btn{height:calc(30px + var(--grow) * 1.2)}
+  .meter-row .seg-mini button{padding-top:calc(5px + var(--grow) * 0.5);padding-bottom:calc(5px + var(--grow) * 0.5)}
   /* 區塊之間的距離也跟著長:元件變大、間距沒變的話會擠在一起像貼紙 */
-  .ex-head{margin-top:clamp(5px,.68vh,16px)}
-  .examples{margin-top:clamp(6px,.8vh,16px)}
-  .palette{margin-top:clamp(7px,.95vh,20px)}
-  .bars-grid{margin-top:clamp(7px,.95vh,22px)}
-  .transport{margin-top:clamp(10px,1.35vh,22px)}
-  .control{margin-top:clamp(8px,1.3vh,20px)}
-  .meter-row{margin-top:clamp(10px,1.35vh,22px)}
-  .control-pair > .control{margin-top:clamp(10px,1.4vh,22px)}
-  .toggles{margin-top:clamp(8px,1.3vh,20px)}
-  .saved{margin-top:clamp(9px,1.3vh,20px)}
+  .ex-head{margin-top:calc(5px + var(--grow) * 1.1)}
+  .examples{margin-top:calc(6px + var(--grow) * 0.4)}
+  .palette{margin-top:calc(7px + var(--grow) * 1.3)}
+  .bars-grid{margin-top:calc(7px + var(--grow) * 1.3)}
+  .transport{margin-top:calc(10px + var(--grow) * 1.3)}
+  .control{margin-top:calc(8px + var(--grow) * 1.2)}
+  .meter-row{margin-top:calc(10px + var(--grow) * 1.2)}
+  .control-pair > .control{margin-top:calc(10px + var(--grow) * 1.2)}
+  .toggles{margin-top:calc(8px + var(--grow) * 1.2)}
+  .saved{margin-top:calc(9px + var(--grow) * 1.2)}
   /* 刻度的縮排要跟著 −/＋ 鈕的寬度走,不然 −12 / 0 / +12 會對不到滑桿頭尾 */
-  .scale.inset{padding:0 calc(clamp(32px,3.7vh,44px) + 10px)}
+  .scale.inset{padding:0 calc(min(44px, calc(32px + var(--grow) * 0.6)) + 10px)}
 }
 /* 就算撐開了,高螢幕還是會剩一些。剩下的平均分到卡片上下,
    用 margin auto 不用 justify-content:center——flex 裡空間不夠時
@@ -860,7 +902,7 @@ try {
 </main>
 
 <footer>
-  <span data-i18n-html="footerText">音色:<a href="https://github.com/sfzinstruments/SalamanderGrandPiano" target="_blank" rel="noopener">Salamander</a> 鋼琴、<a href="https://github.com/sfzinstruments/virtuosity_drums" target="_blank" rel="noopener">Virtuosity Drums</a>、<a href="https://github.com/sfzinstruments/karoryfer.black-and-blue-basses" target="_blank" rel="noopener">Black And Blue Basses</a>・musicsteven.com 開發</span>
+  <span data-i18n-html="footerText">音色:<a href="https://github.com/sfzinstruments/SalamanderGrandPiano" target="_blank" rel="noopener">Salamander</a> 鋼琴、<a href="https://github.com/sfzinstruments/virtuosity_drums" target="_blank" rel="noopener">Virtuosity Drums</a>、<a href="https://github.com/sfzinstruments/karoryfer.black-and-blue-basses" target="_blank" rel="noopener">Black And Blue Basses</a> 電貝斯、<a href="https://github.com/sfzinstruments/dsmolken.double-bass" target="_blank" rel="noopener">D. Smolken 低音提琴</a>・musicsteven.com 開發</span>
 </footer>
 
 <script>
@@ -923,6 +965,7 @@ const I18N = {
     len12: "12 小節",
     repLabel: "接幾次",
     secMeterGroup: "{m} 拍",
+    secGroupCount: "{n} 組",
     meterDimTip: "這組進行本來是 {m} 的",
     barsLabel: "小節數",
     secToggle: "段落庫 {n} 組",
@@ -967,7 +1010,7 @@ const I18N = {
     errUnknownChord: "看不懂「{tok}」這個和弦,先把它改掉才能播放。",
     errTooMany: "一次最多 {n} 小節,後面的先拿掉吧。",
     hintKbd: '按 <kbd>空白鍵</kbd> 播放或停止',
-    footerText: '音色:<a href="https://github.com/sfzinstruments/SalamanderGrandPiano" target="_blank" rel="noopener">Salamander</a> 鋼琴、<a href="https://github.com/sfzinstruments/virtuosity_drums" target="_blank" rel="noopener">Virtuosity Drums</a>、<a href="https://github.com/sfzinstruments/karoryfer.black-and-blue-basses" target="_blank" rel="noopener">Black And Blue Basses</a>・musicsteven.com 開發',
+    footerText: '音色:<a href="https://github.com/sfzinstruments/SalamanderGrandPiano" target="_blank" rel="noopener">Salamander</a> 鋼琴、<a href="https://github.com/sfzinstruments/virtuosity_drums" target="_blank" rel="noopener">Virtuosity Drums</a>、<a href="https://github.com/sfzinstruments/karoryfer.black-and-blue-basses" target="_blank" rel="noopener">Black And Blue Basses</a> 電貝斯、<a href="https://github.com/sfzinstruments/dsmolken.double-bass" target="_blank" rel="noopener">D. Smolken 低音提琴</a>・musicsteven.com 開發',
   },
   en: {
     pageTitle: "BackingTrack — type chords, get an accompaniment",
@@ -1012,6 +1055,7 @@ const I18N = {
     len12: "12 bars",
     repLabel: "Repeat",
     secMeterGroup: "{m}",
+    secGroupCount: "{n}",
     meterDimTip: "This progression is in {m}",
     barsLabel: "Bars",
     secToggle: "Sections ({n})",
@@ -1056,7 +1100,7 @@ const I18N = {
     errUnknownChord: "\"{tok}\" isn't a chord I recognise — fix it to play.",
     errTooMany: "{n} bars is the maximum — trim the rest.",
     hintKbd: 'Press <kbd>Space</kbd> to play or stop',
-    footerText: 'Sounds: <a href="https://github.com/sfzinstruments/SalamanderGrandPiano" target="_blank" rel="noopener">Salamander</a> piano, <a href="https://github.com/sfzinstruments/virtuosity_drums" target="_blank" rel="noopener">Virtuosity Drums</a>, <a href="https://github.com/sfzinstruments/karoryfer.black-and-blue-basses" target="_blank" rel="noopener">Black And Blue Basses</a> · built by musicsteven.com',
+    footerText: 'Sounds: <a href="https://github.com/sfzinstruments/SalamanderGrandPiano" target="_blank" rel="noopener">Salamander</a> piano, <a href="https://github.com/sfzinstruments/virtuosity_drums" target="_blank" rel="noopener">Virtuosity Drums</a>, <a href="https://github.com/sfzinstruments/karoryfer.black-and-blue-basses" target="_blank" rel="noopener">Black And Blue Basses</a> electric bass, <a href="https://github.com/sfzinstruments/dsmolken.double-bass" target="_blank" rel="noopener">D. Smolken double bass</a> · built by musicsteven.com',
   },
 };
 
@@ -1705,9 +1749,18 @@ const SRC_DRUMS = [
   "https://cdn.jsdelivr.net/gh/sfzinstruments/virtuosity_drums@master/Samples/mid/",
   "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/master/Samples/mid/",
 ];
+/* 貝斯有兩把,照感覺換:爵士與 bossa 用低音提琴(撥弦),流行搖滾用電貝斯。
+   兩把都是 D. Smolken 錄的(Karoryfer),音色調性一致。
+   低音提琴那把是 1958 Otto Rubner、五度定弦(CGDA),檔名用的是科學音名
+   (pizz_g1 = MIDI 31,sfz 裡的 pitch_keycenter 就是這個數字),
+   跟電貝斯那把「midi = 八度 × 12 + 音級」的寫法不一樣,不要混用 */
 const SRC_BASS = [
   "https://cdn.jsdelivr.net/gh/sfzinstruments/karoryfer.black-and-blue-basses@main/Samples/darkblack/reg/",
   "https://raw.githubusercontent.com/sfzinstruments/karoryfer.black-and-blue-basses/main/Samples/darkblack/reg/",
+];
+const SRC_UPRIGHT = [
+  "https://cdn.jsdelivr.net/gh/sfzinstruments/dsmolken.double-bass@master/pizz/",
+  "https://raw.githubusercontent.com/sfzinstruments/dsmolken.double-bass/master/pizz/",
 ];
 
 /* 依序試每個來源,第一個成功的就用;全部失敗才丟出去給呼叫端決定怎麼退 */
@@ -1776,29 +1829,61 @@ function ensureDrums(){
   return Promise.all(jobs);
 }
 
-/* 檔名的八度寫法是 midi = 八度 × 12 + 音級(e2 = 28 = 四弦貝斯的最低音 E) */
-const BASS_FILES = [
-  [28, "darkblack_e2_mf_rr1.wav"],  [31, "darkblack_g2_mf_rr1.wav"],
-  [34, "darkblack_bb2_mf_rr1.wav"], [37, "darkblack_db3_mf_rr1.wav"],
-  [40, "darkblack_e3_mf_rr1.wav"],  [43, "darkblack_g3_mf_rr1.wav"],
-  [46, "darkblack_bb3_mf_rr1.wav"],
-];
-const bassBuffers = new Map();   // midi -> AudioBuffer
-const bassFailed = new Set();
+/* 電貝斯的檔名是 midi = 八度 × 12 + 音級(e2 = 28 = 四弦貝斯的最低音 E);
+   低音提琴的檔名是科學音名(eb1 = 27、g1 = 31,mf 力度取 m、round robin 取 a)。
+   兩把都只收我們用得到的那一段(E1 前後一個八度),不要整組載 */
+const BASS_KITS = {
+  electric: {
+    src: SRC_BASS, gain: 1,
+    files: [
+      [28, "darkblack_e2_mf_rr1.wav"],  [31, "darkblack_g2_mf_rr1.wav"],
+      [34, "darkblack_bb2_mf_rr1.wav"], [37, "darkblack_db3_mf_rr1.wav"],
+      [40, "darkblack_e3_mf_rr1.wav"],  [43, "darkblack_g3_mf_rr1.wav"],
+      [46, "darkblack_bb3_mf_rr1.wav"],
+    ],
+  },
+  upright: {
+    src: SRC_UPRIGHT, gain: 1,
+    files: [
+      [27, "pizz_eb1_ma.wav"], [31, "pizz_g1_ma.wav"], [34, "pizz_bb1_ma.wav"],
+      [38, "pizz_d2_ma.wav"],  [41, "pizz_f2_ma.wav"],
+    ],
+  },
+};
+/* 哪一種感覺用哪一把:爵士的走動低音當然是低音提琴,bossa 也是——
+   Getz/Gilberto 那個年代的 bossa 就是尼龍弦吉他加低音提琴。
+   流行搖滾維持電貝斯 */
+function bassKit(){ return feelNow === "straight" ? "electric" : "upright"; }
+const bassBuffers = { electric: new Map(), upright: new Map() };   // midi -> AudioBuffer
+const bassFailed  = { electric: new Set(), upright: new Set() };
 
 function ensureBass(midis){
+  const kit = bassKit(), K = BASS_KITS[kit];
   const want = new Set();
   for (const m of midis) {
-    let best = BASS_FILES[0];
-    for (const e of BASS_FILES) if (Math.abs(e[0] - m) < Math.abs(best[0] - m)) best = e;
+    let best = K.files[0];
+    for (const e of K.files) if (Math.abs(e[0] - m) < Math.abs(best[0] - m)) best = e;
     want.add(best);
   }
   const jobs = [...want]
-    .filter(e => !bassBuffers.has(e[0]) && !bassFailed.has(e[0]))
-    .map(e => fetchDecode(SRC_BASS, e[1])
-      .then(b => { bassBuffers.set(e[0], b); })
-      .catch(() => { bassFailed.add(e[0]); }));
+    .filter(e => !bassBuffers[kit].has(e[0]) && !bassFailed[kit].has(e[0]))
+    .map(e => fetchDecode(K.src, e[1])
+      .then(b => { bassBuffers[kit].set(e[0], b); })
+      .catch(() => { bassFailed[kit].add(e[0]); }));
   return Promise.all(jobs);
+}
+
+/* 這段進行的貝斯會用到哪幾個音(根音與五音,移調之後的) */
+function bassMidisOf(){
+  const out = [];
+  if (typeof parsed === "undefined" || !parsed) return out;
+  for (const b of parsed.bars) {
+    if (!b.ok) continue;
+    for (const raw of [b.chord.bassPc, b.chord.rootPc + 7]) {
+      out.push(bassMidiFor((((raw + transposeOn) % 12) + 12) % 12));
+    }
+  }
+  return out;
 }
 
 /* 貝斯一律待在 E1–D#2 這個八度裡:移調時跟著換音級,但不跟著跑到別的音域去,
@@ -1874,11 +1959,12 @@ function playBassNote(midi, when, dur, peak){
   const g = ctx.createGain();
   g.connect(bassBus);
   let src;
-  const keys = [...bassBuffers.keys()];
+  const bank = bassBuffers[bassKit()];
+  const keys = [...bank.keys()];
   if (keys.length) {
     let best = keys[0];
     for (const k of keys) if (Math.abs(k - midi) < Math.abs(best - midi)) best = k;
-    const buf = bassBuffers.get(best);
+    const buf = bank.get(best);
     src = ctx.createBufferSource();
     src.buffer = buf;
     src.playbackRate.value = Math.pow(2, (midi - best) / 12);
@@ -2567,15 +2653,7 @@ function startPlayback(){
   }
 
   // 貝斯用的音(含移調)跟鋼琴不同,要另外算
-  const bassMidis = [];
-  {
-    for (const b of parsed.bars) {
-      if (!b.ok) continue;
-      for (const raw of [b.chord.bassPc, b.chord.rootPc + 7]) {
-        bassMidis.push(bassMidiFor((((raw + transposeOn) % 12) + 12) % 12));
-      }
-    }
-  }
+  const bassMidis = bassMidisOf();
 
   setTransport(T("loadingSamples"), T("loadingSamplesSub"));
   playBtn.disabled = true;
@@ -2700,6 +2778,8 @@ function setMeter(m, quiet){
   }
   renderTempoQuick();
   updateMeterDim();
+  /* 清單跟著跳到這個拍號那一段:換成三拍就是要練三拍的東西 */
+  if (secMeter !== meterOn) { secMeter = meterOn; if (typeof renderExamples === "function") renderExamples(); }
   if (playing && !loopOn) endBeat = countInBeats + voicings.length * beatsInBar();
   if (!quiet) saveState();
 }
@@ -2735,8 +2815,12 @@ function styleName(absBar){
 
 /* 感覺是和弦決定的,和弦一改就要重算 */
 function updateFeel(){
+  const before = typeof feelNow !== "undefined" ? bassKit() : "";
   feelNow = detectFeel(parsed.bars);
   renderTempoQuick();   // 換了和弦語彙,建議速度也不一樣了
+  /* 播放中把和弦改成爵士的語彙,貝斯就從電貝斯換成低音提琴——
+     那一把還沒載,先在背景抓(不要 await,擋住的話下一拍就沒聲音了) */
+  if (playing && before && before !== bassKit()) ensureBass(bassMidisOf());
 }
 
 function updateTransportIdle(){
@@ -3243,6 +3327,7 @@ const SECTIONS = [
    點兩次第一組、再點兩次第二組,就是 A A B B。
    formParts 記的是「接了哪些段落」,文字框永遠從它重新組出來;
    使用者自己動手打字就把它清掉,回到自由輸入模式,兩邊不會打架。 */
+let secMeter = "4/4";  // 段落庫現在展開的是哪一個拍號(一次只開一個)
 let secRepeat = 1;     // 下一次點段落要接幾次
 let formParts = [];    // [{ text }]
 /* 這串進行「原本是幾拍子的」。從段落庫點來的才有,自己打字是 null。
@@ -3277,61 +3362,76 @@ function updateExFade(){
 function renderExamples(){
   const box = $("examples");
   box.innerHTML = "";
-  /* 照拍號分組,同一個拍號裡短的在前面。
-     以前用一顆「4 小節 / 8 小節」切換,但那個標籤跟上面的「小節數」撞在一起
-     (一個是改進行的長度、一個是換清單),兩個一起出現一定會按錯。
-     分組的依據改成拍號,是因為點下去真的會換掉拍號——標題先講清楚,
-     不會點完才發現整首歌變成三拍 */
-  const list = SECTIONS;
+  /* 照拍號分組,而且**一次只展開一個**。36 組全部攤開有三十幾排,
+     要捲兩三頁才看得完;分成三段之後常用的那個拍號就在眼前。
+     分組的依據是拍號(不是長度),因為點下去真的會換掉拍號——
+     標題先講清楚,不會點完才發現整首歌變成三拍 */
   // 格子太窄時 CSS 會照最長的和弦縮字。同樣長度的進行共用同一個「最長字數」,
   // 整組才會是同一個字級——同一排字忽大忽小比小一點還難看
   const widest = {};
-  for (const ex of list) {
+  for (const ex of SECTIONS) {
     const cs = ex.text.split(" - ");
     widest[cs.length] = Math.max(widest[cs.length] || 0, ...cs.map(c => c.length));
   }
-  let group = "";
-  for (const ex of list) {
-    const chordsN = ex.text.split(" - ").length;
-    if (ex.meter !== group) {
-      group = ex.meter;
-      const h = document.createElement("div");
-      h.className = "ex-group";
-      h.textContent = T("secMeterGroup", { m: ex.meter });
-      box.appendChild(h);
-    }
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "ex-btn" + (chordsN > 4 ? " long" : "");
-    // 一顆和弦一個等寬格子。整串丟進 textContent 只會得到一條擠在一起的字,
-    // 長的那幾組還會被 ellipsis 吃掉尾巴
-    const chords = ex.text.split(" - ");
-    // --n 是幾顆和弦、--len 是最長那顆的字數,CSS 拿這兩個算字級,寬度不夠就自己縮
-    b.style.setProperty("--n", chords.length);
-    b.style.setProperty("--len", widest[chords.length]);
-    for (const c of chords) {
-      const cell = document.createElement("span");
-      cell.className = "ex-ch";
-      cell.textContent = c;
-      b.appendChild(cell);
-    }
-    // 拆成格子之後讀屏會一格一格念,補一個完整的進行當標籤
-    b.setAttribute("aria-label", ex.text);
-    b.title = T("secAdd", { n: secRepeat });
-    b.addEventListener("click", () => {
-      /* 接上去的那一段如果是別的拍號,就當作重開一首:A 段三拍、B 段六八拍
-         的曲子基本上不存在,硬接只會得到一串要自己清掉的東西 */
-      if (formMeter && formMeter !== ex.meter) formParts = [];
-      for (let i = 0; i < secRepeat; i++) formParts.push({ text: ex.text });
-      setStyle(ex.style);
-      /* 這句歌本來是幾拍子的,點下去就一起換過去。formMeter 記著它,
-         另外兩個拍號會變暗——使用者不必自己想「這組是不是三拍的」 */
-      formMeter = ex.meter;
-      setMeter(ex.meter);
-      applyForm();
-    });
-    box.appendChild(b);
+  for (const m of METER_KEYS) {
+    const items = SECTIONS.filter(e => e.meter === m);
+    if (!items.length) continue;
+    const h = document.createElement("button");
+    h.type = "button";
+    h.className = "ex-group";
+    h.setAttribute("aria-expanded", m === secMeter ? "true" : "false");
+    h.innerHTML = '<svg class="caret" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>';
+    const label = document.createElement("span");
+    label.textContent = T("secMeterGroup", { m });
+    h.appendChild(label);
+    const n = document.createElement("span");
+    n.className = "n";
+    n.textContent = T("secGroupCount", { n: items.length });
+    h.appendChild(n);
+    h.addEventListener("click", () => { secMeter = m; renderExamples(); fitSecPanel(); });
+    box.appendChild(h);
+    if (m !== secMeter) continue;
+    for (const ex of items) renderExampleChip(box, ex, widest);
   }
+  refreshSecChrome();
+}
+
+/* 一顆膠囊。點下去:接到形式後面 + 換伴奏樣式 + 換拍號 */
+function renderExampleChip(box, ex, widest){
+  const chords = ex.text.split(" - ");
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "ex-btn" + (chords.length > 4 ? " long" : "");
+  // --n 是幾顆和弦、--len 是最長那顆的字數,CSS 拿這兩個算字級,寬度不夠就自己縮
+  b.style.setProperty("--n", chords.length);
+  b.style.setProperty("--len", widest[chords.length]);
+  // 一顆和弦一個等寬格子。整串丟進 textContent 只會得到一條擠在一起的字,
+  // 長的那幾組還會被 ellipsis 吃掉尾巴
+  for (const c of chords) {
+    const cell = document.createElement("span");
+    cell.className = "ex-ch";
+    cell.textContent = c;
+    b.appendChild(cell);
+  }
+  // 拆成格子之後讀屏會一格一格念,補一個完整的進行當標籤
+  b.setAttribute("aria-label", ex.text);
+  b.title = T("secAdd", { n: secRepeat });
+  b.addEventListener("click", () => {
+    /* 接上去的那一段如果是別的拍號,就當作重開一首:A 段三拍、B 段六八拍
+       的曲子基本上不存在,硬接只會得到一串要自己清掉的東西 */
+    if (formMeter && formMeter !== ex.meter) formParts = [];
+    for (let i = 0; i < secRepeat; i++) formParts.push({ text: ex.text });
+    setStyle(ex.style);
+    /* 這句歌本來是幾拍子的,點下去就一起換過去。formMeter 記著它,
+       另外兩個拍號會變暗——使用者不必自己想「這組是不是三拍的」 */
+    formMeter = ex.meter;
+    setMeter(ex.meter);
+    applyForm();
+  });
+  box.appendChild(b);
+}
+
+function refreshSecChrome(){
   updateLenSeg();
   for (const btn of $("repSeg").children) {
     btn.setAttribute("aria-pressed", +btn.dataset.rep === secRepeat ? "true" : "false");
@@ -3486,19 +3586,7 @@ function fitSecPanel(){
   const top = box.getBoundingClientRect().top;
   const room = Math.floor(window.innerHeight - top - 18);
   box.style.maxHeight = Math.max(120, Math.min(430, room)) + "px";
-  scrollToMeterGroup();
   updateExFade();
-}
-
-/* 打開清單時直接捲到現在這個拍號那一段。36 組排下來,三拍的在第十九排以後,
-   已經在做三拍的曲子還要自己捲下去找很煩 */
-function scrollToMeterGroup(){
-  const box = $("examples");
-  if (!box) return;
-  const heads = [...box.querySelectorAll(".ex-group")];
-  const want = T("secMeterGroup", { m: meterOn });
-  const h = heads.find(x => x.textContent === want);
-  box.scrollTop = (h && h !== heads[0]) ? Math.max(0, h.offsetTop - box.offsetTop - 4) : 0;
 }
 
 function updateSecToggleText(){

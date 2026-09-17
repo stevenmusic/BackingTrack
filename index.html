@@ -1147,25 +1147,30 @@ function parseChord(raw){
 
   const m = /^([A-Ga-g])([#b]?)(.*)$/.exec(body);
   if (!m) return null;
-  const rootPc = (NOTE_PC[m[1].toUpperCase()] + (m[2] === "#" ? 1 : m[2] === "b" ? -1 : 0) + 12) % 12;
+  const rootLetter = m[1].toUpperCase();
+  const rootPc = (NOTE_PC[rootLetter] + (m[2] === "#" ? 1 : m[2] === "b" ? -1 : 0) + 12) % 12;
   const suffix = m[3];
   if (!Object.prototype.hasOwnProperty.call(QUALITY, suffix)) return null;
   const intervals = QUALITY[suffix];
 
-  let bassPc = rootPc;
+  let bassPc = rootPc, bassLetter = rootLetter;
   if (bassPart !== null) {
     const bm = /^([A-Ga-g])([#b]?)$/.exec(bassPart);
     if (!bm) return null;
-    bassPc = (NOTE_PC[bm[1].toUpperCase()] + (bm[2] === "#" ? 1 : bm[2] === "b" ? -1 : 0) + 12) % 12;
+    bassLetter = bm[1].toUpperCase();
+    bassPc = (NOTE_PC[bassLetter] + (bm[2] === "#" ? 1 : bm[2] === "b" ? -1 : 0) + 12) % 12;
   }
 
   return {
     text: token,
     rootPc,
     bassPc,
-    // 移調後要把和弦名重組出來,所以性質(suffix)與「有沒有轉位低音」都要留著
+    // 移調後要把和弦名重組出來:性質(suffix)、有沒有轉位低音、
+    // 還有原本寫的是哪個字母(移調要照級數走字母,C 上小二度是 D♭ 不是 C♯)
     suffix,
     slash: bassPart !== null,
+    rootLetter,
+    bassLetter,
     // 保留 14 這種「疊到九度」的音程,voicing 時才知道它要擺高一個八度
     intervals: intervals.slice(),
   };
@@ -1173,12 +1178,58 @@ function parseChord(raw){
 
 /* 畫面上要顯示真的在響的和弦:移調 +2 時 C 就顯示成 D。
    文字框留使用者自己打的那一版不動(那是原稿),小節格與走帶列顯示移調後的名字。
-   音名用跟和弦鍵盤同一套拼法(PAL_ROOTS),不然畫面上一下 A♭ 一下 G♯ */
-function chordDisplay(chord){
+
+   拼法要照樂理走,不能拿「pc → 固定音名表」硬換:+1 是「上小二度」,
+   字母要往上走一格,C 變 D♭ 而不是 C♯。照表換的話 Dm7-G7-Cmaj7-Fmaj7 會變成
+   E♭m7 - A♭7 - C♯maj7 - F♯maj7——同一段裡升降混用、四度的字母鏈也斷了,
+   正確的是 E♭m7 - A♭7 - D♭maj7 - G♭maj7(D♭ 大調) */
+const LETTERS = ["C", "D", "E", "F", "G", "A", "B"];
+const LETTER_PC = [0, 2, 4, 5, 7, 9, 11];
+// 半音數 → 字母要走幾格:小二度與大二度都走一格、小三大三走兩格,以此類推
+const TR_STEPS = [0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6];
+
+function spellNote(letter, pc, steps){
+  const li = (((LETTERS.indexOf(letter) + steps) % 7) + 7) % 7;
+  const want = (((pc + transposeOn) % 12) + 12) % 12;
+  let diff = (((want - LETTER_PC[li]) % 12) + 12) % 12;
+  if (diff > 6) diff -= 12;
+  if (Math.abs(diff) > 1) return null;   // 要重升重降就放棄這個走法
+  return LETTERS[li] + (diff === 1 ? "♯" : diff === -1 ? "♭" : "");
+}
+
+/* 字母走幾格是「整段一起決定」的,不能一顆一顆各自算,不然同一段裡會出現
+   C♯maj7 跟 E♭m7 並排。本位的走法之外也試同音異名的兩個(B♭ 上小二度照算是 C♭,
+   但整段通常寫成 B 大調比較順),挑最不彆扭的那個 */
+function transposeSteps(bars){
+  if (!transposeOn) return 0;
+  const dir = transposeOn < 0 ? -1 : 1;
+  const base = TR_STEPS[Math.abs(transposeOn) % 12] * dir;
+  let best = base, bestCost = Infinity;
+  for (const cand of [base, base + dir, base - dir]) {
+    let cost = 0;
+    for (const b of (bars || [])) {
+      if (!b.ok) continue;
+      for (const pair of [[b.chord.rootLetter, b.chord.rootPc],
+                          [b.chord.bassLetter, b.chord.bassPc]]) {
+        const name = spellNote(pair[0], pair[1], cand);
+        if (!name) cost += 10;                                  // 重升重降
+        else if (/^(C♭|F♭|B♯|E♯)$/.test(name)) cost += 1;       // 讀得懂但彆扭
+      }
+    }
+    if (cost < bestCost) { bestCost = cost; best = cand; }
+  }
+  return best;
+}
+
+function chordDisplay(chord, steps){
   if (!chord) return "";
   if (!transposeOn) return chord.text;
-  const tr = (pc) => PAL_ROOTS[(((pc + transposeOn) % 12) + 12) % 12];
-  return tr(chord.rootPc) + chord.suffix + (chord.slash ? "/" + tr(chord.bassPc) : "");
+  const st = (typeof steps === "number") ? steps
+           : transposeSteps(typeof parsed !== "undefined" && parsed ? parsed.bars : []);
+  const tr = (letter, pc) => spellNote(letter, pc, st) ||
+                             PAL_ROOTS[(((pc + transposeOn) % 12) + 12) % 12];
+  return tr(chord.rootLetter, chord.rootPc) + chord.suffix +
+         (chord.slash ? "/" + tr(chord.bassLetter, chord.bassPc) : "");
 }
 
 /* 小節數。移調時順便講一句「下面那幾格是移調後的」——文字框留的是原稿,
@@ -2363,6 +2414,8 @@ function paintPlayhead(){
 
 function renderBars(){
   barsGrid.innerHTML = "";
+  // 整段用同一個字母走法,才不會一格 D♭maj7 一格 F♯maj7
+  const trSteps = transposeSteps(parsed.bars);
   if (selectedBar >= parsed.bars.length) selectedBar = -1;
   for (let i = 0; i < parsed.bars.length; i++) {
     const b = parsed.bars[i];
@@ -2377,7 +2430,7 @@ function renderBars(){
     // 不然 break-all 會把 Cmaj7 斷成「Cmaj / 7」,看起來像別的和弦
     const name = document.createElement("span");
     name.className = "bar-name";
-    name.textContent = b.ok ? chordDisplay(b.chord) : b.text;
+    name.textContent = b.ok ? chordDisplay(b.chord, trSteps) : b.text;
     chip.style.setProperty("--len", name.textContent.length);
     chip.appendChild(name);
     // 點一下選起來(之後點性質鈕就是改這一格),再點一次取消

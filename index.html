@@ -202,6 +202,16 @@ main{
   box-shadow:var(--shadow-md);
 }
 .ex-panel[hidden]{display:none}
+/* 面板最上面那一排:左邊是拍號分頁、右邊是接幾次 */
+.ex-top{display:flex;align-items:center;justify-content:space-between;gap:8px 12px;flex-wrap:wrap;margin-bottom:2px}
+#secMeterSeg button{padding:5px 14px;font-size:var(--fs-xs)}
+/* 同一個拍號裡再按長度分開:4 小節一區、8 小節一區、12 小節一區,
+   不要全部混在一起(混在一起找不到自己要的那種長度) */
+.ex-group{
+  grid-column:1 / -1;margin-top:6px;
+  font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.06em;
+}
+.ex-group:first-of-type{margin-top:2px}
 /* 清單自己捲,高度由 fitSecPanel() 量出來鎖住(這裡是還沒量到之前的保險值)。
    手機也要套:36 組全部展開有一千四百多 px,不捲的話整頁會被拉得很長 */
 .examples{
@@ -235,21 +245,8 @@ main{
 /* 八小節(與 12 小節藍調)那組一組佔一整橫排。8 顆和弦塞進半欄會擠成一團、
    字還會被切掉,兩組又貼在一起很容易點錯隔壁那組 */
 .ex-btn.long{grid-column:1 / -1}
-/* 小標是可以點的:一次只展開一個拍號,清單才不會一路長到要捲三頁。
-   收起來的那兩排各佔一行,一眼看得到還有別的拍號 */
-.ex-group{
-  grid-column:1 / -1;margin-top:2px;
-  display:flex;align-items:center;gap:6px;width:100%;
-  border:none;background:transparent;padding:4px 2px;cursor:pointer;
-  font-family:inherit;font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.06em;
-  text-align:left;
-}
-.ex-group:first-child{margin-top:0}
-.ex-group:hover,.ex-group:focus-visible{color:var(--gold-bright);outline:none}
-.ex-group[aria-expanded="true"]{color:var(--gold-bright)}
-.ex-group .caret{flex:none;transition:transform .15s}
-.ex-group[aria-expanded="true"] .caret{transform:rotate(90deg)}
-.ex-group .n{margin-left:auto;font-variant-numeric:tabular-nums;opacity:.8}
+/* 現在正在練的那一組亮起來:清單一直開著的時候要看得出來自己在哪 */
+.ex-btn.on{border-color:var(--gold);color:var(--ivory);background:var(--surface-inset-hi)}
 /* 每一顆和弦各佔一個等寬格子、置中——一個和弦本來就是一小節,
    排起來跟下面的小節格對得上,長短不同的進行也不會有的字大有的字被吃掉 */
 .ex-btn{
@@ -637,7 +634,7 @@ footer a:hover{color:var(--gold-bright)}
    要嘛 720 就已經超過下限(短螢幕跟著變大、放不下)、要嘛係數小到高螢幕撐不開,
    兩件事沒辦法同時做到。手機不套用——那裡本來就要捲,元件再長大只是讓它更長 */
 @media (min-width:680px){
-  :root{ --grow: clamp(0px, calc(5.6vh - 41.2px), 38px); }
+  :root{ --grow: clamp(0px, calc(2.2vh - 16.1px), 16px); }
   #chordInput{min-height:calc(46px + var(--grow) * 2.4)}
   .ex-btn{min-height:calc(26px + var(--grow) * 0.5)}
   .pal-btn{padding-top:calc(4px + var(--grow) * 0.5);padding-bottom:calc(4px + var(--grow) * 0.5)}
@@ -672,6 +669,32 @@ footer a:hover{color:var(--gold-bright)}
   /* 刻度的縮排要跟著 −/＋ 鈕的寬度走,不然 −12 / 0 / +12 會對不到滑桿頭尾 */
   .scale.inset{padding:0 calc(min(44px, calc(32px + var(--grow) * 0.6)) + 10px)}
 }
+/* ── 段落庫內嵌:螢幕夠大就不要藏在按鈕後面 ─────────────────
+   平板打開就是一張桌子:上面兩欄是這首曲子與伴奏設定,下面整排是曲庫。
+   卡片撐滿視窗、多出來的高度**全部給曲庫**(它是清單,長多少都合理),
+   所以按鈕不用被放大、版面也不會空著 */
+@media (min-width:720px) and (min-height:900px){
+  /* 卡片給**定高**(不是 min-height):格線的 1fr 要有確定的高度才收得住,
+     不然曲庫會照自然高度長出去、整頁被撐破 */
+  .stage{flex:1;display:flex;align-items:center}
+  .card{height:calc(100vh - 148px);grid-template-rows:auto 1fr auto}
+  .ex-inline{grid-column:1 / -1;display:flex;flex-direction:column;min-height:110px;margin-top:14px}
+  .sec-inline #secToggle{display:none}
+  .sec-inline .ex-panel{
+    position:static;flex:1;display:flex;flex-direction:column;min-height:0;
+    margin-top:0;box-shadow:none;
+  }
+  /* 整排的時候一排排得下四五組,比兩欄多看到一倍 */
+  .sec-inline .examples{
+    flex:1;min-height:0;max-height:none;
+    grid-template-columns:repeat(auto-fill,minmax(176px,1fr));
+  }
+  /* 八小節的佔兩格、12 小節的佔三格:一顆和弦還是一個等寬格子,
+     但不用一組就霸佔整排(整排 1000px 放 8 顆和弦太浪費) */
+  .sec-inline .ex-btn.long{grid-column:span 2}
+  .sec-inline .ex-btn.xlong{grid-column:span 3}
+}
+
 /* 就算撐開了,高螢幕還是會剩一些。剩下的平均分到卡片上下,
    用 margin auto 不用 justify-content:center——flex 裡空間不夠時
    justify-content:center 會把上緣頂出捲動範圍,margin auto 不會 */
@@ -748,12 +771,21 @@ try {
         <button class="btn ghost" id="formClear" type="button" data-i18n="formClear">清空</button>
       </div>
       <div class="ex-panel" id="exPanel" hidden>
-        <div class="ex-segs">
-          <span class="ex-segs-label" data-i18n="repLabel">接幾次</span>
-          <div class="seg-mini" id="repSeg">
-            <button type="button" data-rep="1" aria-pressed="true">×1</button>
-            <button type="button" data-rep="2" aria-pressed="false">×2</button>
-            <button type="button" data-rep="4" aria-pressed="false">×4</button>
+        <!-- 拍號分頁放最上面:一眼看得出現在在看哪一種拍子的進行。
+             這裡只是換清單,不會動到曲子的拍號——點下面的進行才會換 -->
+        <div class="ex-top">
+          <div class="seg-mini" id="secMeterSeg">
+            <button type="button" data-secmeter="4/4" aria-pressed="true">4/4</button>
+            <button type="button" data-secmeter="3/4" aria-pressed="false">3/4</button>
+            <button type="button" data-secmeter="6/8" aria-pressed="false">6/8</button>
+          </div>
+          <div class="ex-segs">
+            <span class="ex-segs-label" data-i18n="repLabel">接幾次</span>
+            <div class="seg-mini" id="repSeg">
+              <button type="button" data-rep="1" aria-pressed="true">×1</button>
+              <button type="button" data-rep="2" aria-pressed="false">×2</button>
+              <button type="button" data-rep="4" aria-pressed="false">×4</button>
+            </div>
           </div>
         </div>
         <div class="examples" id="examples"></div>
@@ -892,6 +924,10 @@ try {
 
       </div>
 
+      <!-- 螢幕夠大的時候段落庫搬到這裡:整排、把卡片剩下的高度吃滿。
+           空著的版面拿來多顯示幾組進行,比把按鈕放大有用 -->
+      <div class="ex-inline" id="exInline"></div>
+
       <div class="card-foot">
         <span class="hint-kbd" data-i18n-html="hintKbd">按 <kbd>空白鍵</kbd> 播放或停止</span>
         <span class="status-line" id="statusLine"></span>
@@ -965,6 +1001,7 @@ const I18N = {
     len12: "12 小節",
     repLabel: "接幾次",
     secMeterGroup: "{m} 拍",
+    secLenGroup: "{n} 小節",
     secGroupCount: "{n} 組",
     meterDimTip: "這組進行本來是 {m} 的",
     barsLabel: "小節數",
@@ -1055,6 +1092,7 @@ const I18N = {
     len12: "12 bars",
     repLabel: "Repeat",
     secMeterGroup: "{m}",
+    secLenGroup: "{n} bars",
     secGroupCount: "{n}",
     meterDimTip: "This progression is in {m}",
     barsLabel: "Bars",
@@ -3362,10 +3400,13 @@ function updateExFade(){
 function renderExamples(){
   const box = $("examples");
   box.innerHTML = "";
-  /* 照拍號分組,而且**一次只展開一個**。36 組全部攤開有三十幾排,
-     要捲兩三頁才看得完;分成三段之後常用的那個拍號就在眼前。
-     分組的依據是拍號(不是長度),因為點下去真的會換掉拍號——
-     標題先講清楚,不會點完才發現整首歌變成三拍 */
+  /* 上面的分頁決定看哪一個拍號,清單裡再按長度分成 4 / 8 / 12 小節三區。
+     以前全部混在一起(36 組一路排下來)找不到自己要的那種長度;
+     分頁放在最上面是因為點下去的進行真的會換掉曲子的拍號,
+     先講清楚現在在看哪一種拍子 */
+  for (const b of $("secMeterSeg").children) {
+    b.setAttribute("aria-pressed", b.dataset.secmeter === secMeter ? "true" : "false");
+  }
   // 格子太窄時 CSS 會照最長的和弦縮字。同樣長度的進行共用同一個「最長字數」,
   // 整組才會是同一個字級——同一排字忽大忽小比小一點還難看
   const widest = {};
@@ -3373,24 +3414,17 @@ function renderExamples(){
     const cs = ex.text.split(" - ");
     widest[cs.length] = Math.max(widest[cs.length] || 0, ...cs.map(c => c.length));
   }
-  for (const m of METER_KEYS) {
-    const items = SECTIONS.filter(e => e.meter === m);
+  const mine = SECTIONS.filter(e => e.meter === secMeter);
+  for (const len of [4, 8, 12]) {
+    const items = mine.filter(e => {
+      const n = e.text.split(" - ").length;
+      return len === 4 ? n <= 4 : (len === 8 ? (n > 4 && n <= 8) : n > 8);
+    });
     if (!items.length) continue;
-    const h = document.createElement("button");
-    h.type = "button";
+    const h = document.createElement("div");
     h.className = "ex-group";
-    h.setAttribute("aria-expanded", m === secMeter ? "true" : "false");
-    h.innerHTML = '<svg class="caret" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>';
-    const label = document.createElement("span");
-    label.textContent = T("secMeterGroup", { m });
-    h.appendChild(label);
-    const n = document.createElement("span");
-    n.className = "n";
-    n.textContent = T("secGroupCount", { n: items.length });
-    h.appendChild(n);
-    h.addEventListener("click", () => { secMeter = m; renderExamples(); fitSecPanel(); });
+    h.textContent = T("secLenGroup", { n: len });
     box.appendChild(h);
-    if (m !== secMeter) continue;
     for (const ex of items) renderExampleChip(box, ex, widest);
   }
   refreshSecChrome();
@@ -3401,7 +3435,8 @@ function renderExampleChip(box, ex, widest){
   const chords = ex.text.split(" - ");
   const b = document.createElement("button");
   b.type = "button";
-  b.className = "ex-btn" + (chords.length > 4 ? " long" : "");
+  b.className = "ex-btn" + (chords.length > 4 ? " long" : "") + (chords.length > 8 ? " xlong" : "")
+              + (formParts.some(p => p.text === ex.text) ? " on" : "");
   // --n 是幾顆和弦、--len 是最長那顆的字數,CSS 拿這兩個算字級,寬度不夠就自己縮
   b.style.setProperty("--n", chords.length);
   b.style.setProperty("--len", widest[chords.length]);
@@ -3567,7 +3602,30 @@ $("barUndo").addEventListener("click", undoEdit);
 /* 段落庫的開關。收起來是預設:清單佔掉左邊將近一半的版面,
    但多數時候使用者只是要看自己那一段 */
 let secOpen = false;
+/* 螢幕夠大(兩欄而且夠高)段落庫就直接排在卡片下面,不用開關;
+   小螢幕維持浮動面板 */
+const secInlineMQ = window.matchMedia("(min-width:720px) and (min-height:900px)");
+function secInline(){ return secInlineMQ.matches; }
+function placeSecPanel(){
+  const panel = $("exPanel"), inline = $("exInline");
+  const wrap = document.querySelector(".ex-wrap");
+  if (!panel || !inline || !wrap) return;
+  const on = secInline();
+  document.body.classList.toggle("sec-inline", on);
+  const host = on ? inline : wrap;
+  if (panel.parentElement !== host) host.appendChild(panel);
+  if (on) {
+    panel.hidden = false;
+    $("examples").style.maxHeight = "";   // 高度交給 flex,不要用量出來的 px 鎖死
+  } else {
+    panel.hidden = !secOpen;
+    if (secOpen) fitSecPanel();
+  }
+  updateExFade();
+  if (typeof updateSecToggleText === "function") updateSecToggleText();
+}
 function setSecOpen(open){
+  if (secInline()) return;   // 內嵌時一直開著
   secOpen = !!open;
   const panel = $("exPanel"), btn = $("secToggle");
   if (open) panel.removeAttribute("hidden"); else panel.setAttribute("hidden", "");
@@ -3581,7 +3639,7 @@ function setSecOpen(open){
    打開時量一次「從清單上緣到視窗底」還有多少,直接鎖住清單的高度 */
 function fitSecPanel(){
   const box = $("examples");
-  if (!box || !secOpen) return;
+  if (!box || secInline() || !secOpen) return;
   box.style.maxHeight = "";
   const top = box.getBoundingClientRect().top;
   const room = Math.floor(window.innerHeight - top - 18);
@@ -3595,6 +3653,10 @@ function updateSecToggleText(){
   const label = secOpen ? T("secToggleOpen") : T("secToggle", { n });
   $("secToggle").setAttribute("title", label);
   $("secToggle").setAttribute("aria-label", label);
+}
+for (const b of $("secMeterSeg").children) {
+  // 分頁只換清單,不動曲子的拍號——真的要換是點下面的進行
+  b.addEventListener("click", () => { secMeter = b.dataset.secmeter; renderExamples(); fitSecPanel(); });
 }
 $("secToggle").addEventListener("click", () => setSecOpen(!secOpen));
 /* 面板是浮的,點到外面或按 Esc 就收起來。點面板裡面(挑段落)不關,
@@ -3690,6 +3752,7 @@ document.addEventListener("keydown", (e) => {
   let secWant = false;
   try { secWant = localStorage.getItem(SEC_KEY) === "1"; } catch (e) {}
   setSecOpen(secWant);
+  placeSecPanel();          // 螢幕夠大就直接把段落庫排在卡片下面
   applyLanguage(currentLang);
   setPlayIcon(false);
   updateTransportIdle();
@@ -3697,7 +3760,8 @@ document.addEventListener("keydown", (e) => {
   updateBarTools();
   // 清單捲動或視窗高度改變時,上下的漸層要跟著換(高度是 vh 算的,轉向也會變)
   $("examples").addEventListener("scroll", updateExFade, { passive: true });
-  window.addEventListener("resize", () => { fitSecPanel(); updateExFade(); });
+  window.addEventListener("resize", () => { placeSecPanel(); fitSecPanel(); updateExFade(); });
+  secInlineMQ.addEventListener("change", placeSecPanel);
 })();
 </script>
 </body>

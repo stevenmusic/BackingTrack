@@ -139,9 +139,13 @@ main{
    860px 以下自動疊回一欄,原本的順序不變 */
 @media (min-width:680px){
   .stage{max-width:900px}
-  .card{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 18px;align-items:start}
+  .card{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 18px;align-items:stretch}
   .card-foot{grid-column:1 / -1}
   .col > *:first-child{margin-top:0}
+  /* 左欄(輸入+編輯)本來就比右欄長,右下角會空一塊。
+     讓右欄的區塊把多出來的高度平均分掉,看起來才像是故意的 */
+  .col{display:flex;flex-direction:column}
+  .col + .col{justify-content:space-between}
 }
 @media (min-width:900px){
   .stage{max-width:1040px}
@@ -170,6 +174,22 @@ main{
 /* 範例進行:一排安靜的小膠囊,點一下就填進去 */
 /* 段落庫的那一排小控制:長度、重複次數、清空 */
 .ex-head{display:flex;align-items:center;gap:6px;margin-top:5px;flex-wrap:wrap}
+/* 段落庫的開關。收起來時整塊清單不佔版面,展開才推開 */
+.ex-toggle{height:26px;font-size:var(--fs-2xs);padding:0 11px;gap:6px}
+.ex-toggle .caret{flex:none;transition:transform .15s}
+.ex-toggle[aria-expanded="true"] .caret{transform:rotate(90deg)}
+.ex-head #formClear{margin-left:auto}
+.ex-segs{display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap}
+/* 面板用浮的,不要把下面的東西推開:一推開整頁就爆掉,而且看完就收起來了,
+   本來就不該佔位置 */
+.ex-wrap{position:relative}
+.ex-panel{
+  position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:30;
+  padding:9px 10px;
+  background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-md);
+  box-shadow:var(--shadow-md);
+}
+.ex-panel[hidden]{display:none}
 .seg-mini{display:flex;border:1px solid var(--line);border-radius:var(--radius-pill);overflow:hidden}
 .seg-mini button{
   border:none;background:transparent;color:var(--muted-bright);
@@ -178,7 +198,7 @@ main{
 }
 .seg-mini button + button{border-left:1px solid var(--line)}
 .seg-mini button[aria-pressed="true"]{background:var(--gold);color:var(--bg);font-weight:700}
-#formClear{height:24px;font-size:var(--fs-2xs);padding:0 10px;margin-left:auto}
+#formClear{height:26px;font-size:var(--fs-2xs);padding:0 11px}
 .form-line{
   margin-top:4px;font-size:var(--fs-2xs);color:var(--muted);line-height:1.6;
   font-variant-numeric:tabular-nums;
@@ -294,14 +314,13 @@ main{
   #palQuals{grid-template-columns:repeat(5,minmax(0,1fr))}
   .pal-qual .pal-btn{font-size:min(var(--fs-xs), calc(((100cqi - 16px) / 5 - 6px) / 3.4))}
 }
-.pal-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:5px}
+.pal-foot{display:flex;align-items:center;justify-content:space-between;gap:7px 10px;margin-top:5px;flex-wrap:wrap}
 .pal-hint{font-size:var(--fs-2xs);color:var(--muted);line-height:1.6;text-wrap:pretty}
-#palDel{height:30px;font-size:var(--fs-xs);padding:0 12px;flex:none}
 
 /* ── 小節格:每格一個和弦,播到哪一格就亮哪一格 ───────────── */
 .bars-grid{
   display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;
-  margin-top:9px;
+  margin-top:7px;
 }
 @media (max-width:600px){.bars-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 /* 兩欄時右欄一行放四格會太擠,改成兩格一行 */
@@ -342,6 +361,23 @@ main{
 }
 .bar-chip.on .num{color:var(--bg);opacity:.65}
 .bar-chip.bad .num{color:var(--danger)}
+
+/* 小節工具列:搬移、插入、刪掉、復原。按鈕一直都在(沒選取時是停用的),
+   不然一選取就多一排、整個版面會跳一下 */
+.bar-tools-btns{display:flex;gap:5px;flex:none}
+.tool-btn{
+  min-width:32px;height:28px;padding:0 8px;
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--line);background:var(--surface-inset);color:var(--muted-bright);
+  border-radius:var(--radius-sm);cursor:pointer;
+  font-family:inherit;font-size:var(--fs-sm);line-height:1;
+  transition:background .15s,color .15s,border-color .15s;
+}
+.tool-btn.wide{min-width:38px}
+.tool-btn:hover:not(:disabled),.tool-btn:focus-visible:not(:disabled){
+  background:var(--gold);border-color:var(--gold);color:var(--bg);outline:none;
+}
+.tool-btn:disabled{opacity:.3;cursor:not-allowed}
 
 .parse-error{
   display:none;align-items:center;gap:7px;
@@ -542,11 +578,9 @@ footer a:hover{color:var(--gold-bright)}
 @media (min-width:680px){
   #chordInput{min-height:clamp(46px,7.6vh,130px)}
   .ex-btn{min-height:clamp(26px,2.4vh,34px)}
-  /* 段落清單愈來愈長(12 組四小節、11 組八小節),短螢幕塞不下。
-     整頁維持一個畫面,清單自己捲:高度給「視窗高扣掉其餘版面」與 34vh 的小的那個。
-     1024 高以上的平板全部看得到,不會出現捲軸 */
+  /* 面板是浮的,所以清單的高度只要不超過視窗就好,跟其他版面無關 */
   .examples{
-    max-height:min(calc(100vh - 607px), 31vh);
+    max-height:min(52vh, 430px);
     overflow-y:auto;overscroll-behavior:contain;
     scrollbar-width:thin;scrollbar-color:var(--muted) transparent;
   }
@@ -554,13 +588,13 @@ footer a:hover{color:var(--gold-bright)}
   .examples::-webkit-scrollbar-thumb{background:var(--muted);border-radius:4px}
   .examples::-webkit-scrollbar-thumb:hover{background:var(--gold)}
   .pal-btn{padding-top:clamp(4px,1vh,16px);padding-bottom:clamp(4px,1vh,16px)}
-  #palDel{height:clamp(30px,3.4vh,48px)}
   .bar-chip{min-height:clamp(42px,5.4vh,86px)}
   .bars-grid.dense .bar-chip{min-height:clamp(28px,3.6vh,56px)}
   .bars-grid.denser .bar-chip{min-height:clamp(24px,3vh,44px)}
   .play-btn{width:clamp(48px,6.2vh,72px);height:clamp(48px,6.2vh,72px)}
   .seg button{min-height:clamp(46px,5.6vh,92px)}
   .toggle{padding-top:clamp(8px,1.5vh,22px);padding-bottom:clamp(8px,1.5vh,22px)}
+  .tool-btn{height:clamp(28px,3.2vh,42px)}
   #bpmInput{height:clamp(36px,4.2vh,60px)}
   .step-btn{width:clamp(32px,3.7vh,48px);height:clamp(32px,3.7vh,48px)}
   .bpm-quick .btn{height:clamp(30px,3.4vh,46px)}
@@ -568,7 +602,7 @@ footer a:hover{color:var(--gold-bright)}
   .ex-head{margin-top:clamp(5px,1.1vh,16px)}
   .examples{margin-top:clamp(6px,1.1vh,16px)}
   .palette{margin-top:clamp(7px,1.2vh,20px)}
-  .bars-grid{margin-top:clamp(9px,1.4vh,22px)}
+  .bars-grid{margin-top:clamp(7px,1.4vh,22px)}
   .transport{margin-top:clamp(10px,1.4vh,22px)}
   .control{margin-top:clamp(8px,1.3vh,20px)}
   .control-pair > .control{margin-top:clamp(10px,1.4vh,22px)}
@@ -637,34 +671,49 @@ try {
         placeholder="C - Am - F - G">C - Am - F - G</textarea>
       <p class="field-hint" data-i18n="chordHint">一個和弦一小節,4/4 拍。用空白或「-」分隔;不想打字就點下面那排。</p>
 
-      <!-- 段落庫:挑長度、挑要接幾次,點一下就接到形式後面 -->
+      <!-- 段落庫:預設收起來,點開才佔版面。挑長度、挑要接幾次,點一下就接到形式後面 -->
+      <div class="ex-wrap">
       <div class="ex-head">
-        <div class="seg-mini" id="lenSeg">
-          <button type="button" data-len="4" aria-pressed="true" data-i18n="len4">4 小節</button>
-          <button type="button" data-len="8" aria-pressed="false" data-i18n="len8">8 小節</button>
-        </div>
-        <div class="seg-mini" id="repSeg">
-          <button type="button" data-rep="1" aria-pressed="true">×1</button>
-          <button type="button" data-rep="2" aria-pressed="false">×2</button>
-          <button type="button" data-rep="4" aria-pressed="false">×4</button>
-        </div>
+        <button class="btn ghost ex-toggle" id="secToggle" type="button" aria-expanded="false" aria-controls="exPanel">
+          <svg class="caret" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+          <span id="secToggleText">段落庫</span>
+        </button>
         <button class="btn ghost" id="formClear" type="button" data-i18n="formClear">清空</button>
       </div>
-      <div class="examples" id="examples"></div>
+      <div class="ex-panel" id="exPanel" hidden>
+        <div class="ex-segs">
+          <div class="seg-mini" id="lenSeg">
+            <button type="button" data-len="4" aria-pressed="true" data-i18n="len4">4 小節</button>
+            <button type="button" data-len="8" aria-pressed="false" data-i18n="len8">8 小節</button>
+          </div>
+          <div class="seg-mini" id="repSeg">
+            <button type="button" data-rep="1" aria-pressed="true">×1</button>
+            <button type="button" data-rep="2" aria-pressed="false">×2</button>
+            <button type="button" data-rep="4" aria-pressed="false">×4</button>
+          </div>
+        </div>
+        <div class="examples" id="examples"></div>
+      </div>
+      </div>
       <p class="form-line" id="formLine"></p>
 
       <!-- 和弦鍵盤:點就好,不用打字 -->
       <div class="palette">
         <div class="pal-row" id="palRoots"></div>
         <div class="pal-row pal-qual" id="palQuals"></div>
+        <!-- 底列就是「這一格要怎麼改」:左邊講選了哪一格,右邊是搬移、插入、刪掉、復原。
+             跟調色盤擺在一起,因為它們動到的是同一格 -->
         <div class="pal-foot">
           <span class="pal-hint" id="palHint"></span>
-          <button class="btn ghost" id="palDel" type="button" data-i18n="palDel">刪一格</button>
+          <div class="bar-tools-btns">
+            <button class="tool-btn" id="barLeft" type="button">◀</button>
+            <button class="tool-btn" id="barRight" type="button">▶</button>
+            <button class="tool-btn wide" id="barDup" type="button">＋</button>
+            <button class="tool-btn wide" id="barDel" type="button">✕</button>
+            <button class="tool-btn wide" id="barUndo" type="button">↺</button>
+          </div>
         </div>
       </div>
-
-      </div>
-      <div class="col">
 
       <!-- 小節格 -->
       <div class="bars-grid" id="barsGrid"></div>
@@ -674,6 +723,9 @@ try {
         </svg>
         <span id="parseErrorText"></span>
       </div>
+
+      </div>
+      <div class="col">
 
       <!-- 走帶 -->
       <div class="transport">
@@ -829,6 +881,14 @@ const I18N = {
     countInLabel: "先數兩小節",
     loopLabel: "循環播放",
     palDel: "刪一格",
+    secToggle: "段落庫 {n} 組",
+    secToggleOpen: "收起段落庫",
+    barLeftLabel: "往前搬一格",
+    barRightLabel: "往後搬一格",
+    barDupLabel: "在後面插一格(複製這一格)",
+    barDelLabel: "刪掉這一格",
+    barUndoLabel: "復原上一步",
+    barUndoNone: "沒有可以復原的了",
     palHintIdle: "點音名加一格,再點性質改一格。",
     palHintSel: "正在改第 {n} 格({chord}):點音名換根音、點性質換和弦種類。再點一次取消。",
     palRootLabel: "加一格 {root}",
@@ -898,6 +958,14 @@ const I18N = {
     countInLabel: "Two-bar count-in",
     loopLabel: "Loop",
     palDel: "Delete bar",
+    secToggle: "Sections ({n})",
+    secToggleOpen: "Hide sections",
+    barLeftLabel: "Move earlier",
+    barRightLabel: "Move later",
+    barDupLabel: "Insert a copy after this bar",
+    barDelLabel: "Delete this bar",
+    barUndoLabel: "Undo",
+    barUndoNone: "Nothing to undo",
     palHintIdle: "Tap a note name to add a bar, then a quality.",
     palHintSel: "Editing bar {n} ({chord}): tap a note name to change the root, a quality to change the chord type. Tap it again to deselect.",
     palRootLabel: "Add a bar of {root}",
@@ -2444,10 +2512,10 @@ function renderBars(){
     barsGrid.appendChild(chip);
   }
   lastHighlight = -1;
-  // 四小節以內兩欄看起來大方,再多就換小格:16 格以內四欄、32 格以內六欄,再多八欄。
+  // 四小節以內兩欄看起來大方,再多就換小格:8 格以內四欄、24 格以內六欄,再多八欄。
   // 一直維持在四列以內,整頁高度才不會跟著進行長度跑掉
   const n = parsed.bars.length;
-  const cols = n <= 4 ? 2 : n <= 16 ? 4 : n <= 32 ? 6 : 8;
+  const cols = n <= 4 ? 2 : n <= 8 ? 4 : n <= 24 ? 6 : 8;
   barsGrid.style.gridTemplateColumns = "repeat(" + cols + ",minmax(0,1fr))";
   barsGrid.classList.toggle("dense", cols >= 4);
   barsGrid.classList.toggle("denser", cols >= 6);
@@ -2520,6 +2588,8 @@ function setToggle(el, on){
 }
 
 /* ══ 儲存 ══════════════════════════════════════════════════════ */
+const SEC_KEY = "backingtrack.sections.open";
+
 function saveState(){
   try {
     localStorage.setItem(STATE_KEY, JSON.stringify({
@@ -2660,20 +2730,18 @@ function updatePalHint(){
   const el = $("palHint");
   const i = selectedBar;
   if (i >= 0 && i < parsed.bars.length) {
-    el.textContent = T("palHintSel", { n: i + 1, chord: parsed.bars[i].text });
+    el.textContent = T("palHintSel", {
+      n: i + 1, chord: chordDisplay(parsed.bars[i].chord) || parsed.bars[i].text });
   } else {
     el.textContent = T("palHintIdle");
   }
-  const del = $("palDel");
-  const dl = (i >= 0 && i < parsed.bars.length) ? T("palDelSel", { n: i + 1 }) : T("palDelLast");
-  del.setAttribute("title", dl);
-  del.setAttribute("aria-label", dl);
-  del.disabled = !parsed.bars.length;
+  updateBarTools();
 }
 
 /* 點音名:沒選取就加一格(大三和弦),有選取就換那一格的根音、性質留著 */
 function palRoot(root){
   const t = barTokens();
+  pushUndo();
   const i = selectedBar;
   if (i >= 0 && i < t.length) {
     const p = splitToken(t[i]);
@@ -2690,6 +2758,7 @@ function palRoot(root){
 /* 點性質:換掉目標那一格的性質,根音與轉位低音都留著 */
 function palQual(suffix){
   const t = barTokens();
+  pushUndo();
   if (!t.length) { setTokens(["C" + suffix]); selectBar(-1); return; }
   const i = targetBar();
   const p = splitToken(t[i]);
@@ -2702,9 +2771,70 @@ function palDelete(){
   const t = barTokens();
   if (!t.length) return;
   const i = targetBar();
+  pushUndo();
   t.splice(i, 1);
   setTokens(t);
-  selectBar(-1);
+  selectBar(Math.min(i, t.length - 1));
+}
+
+/* ── 復原 ────────────────────────────────────────────────────
+   調色盤、段落庫、工具列改到的都是整串文字,所以只要把改之前那一串存起來
+   就能退回去。文字框自己打字有瀏覽器內建的復原,不用經過這裡 */
+const undoStack = [];
+function pushUndo(){
+  undoStack.push(chordInput.value);
+  if (undoStack.length > 30) undoStack.shift();
+  updateBarTools();
+}
+function undoEdit(){
+  if (!undoStack.length) return;
+  chordInput.value = undoStack.pop();
+  formParts = [];          // 退回去之後就當自由輸入,不然形式那行會對不上
+  selectedBar = -1;
+  reparse();
+  updateBarTools();
+}
+
+/* ── 小節工具列 ──────────────────────────────────────────────
+   選一格就能搬移、在後面插一格(複製)、刪掉。插入用複製的,因為
+   「同一個和弦撐兩小節」跟「先插一格再改」都是這一顆按鈕 */
+function moveBar(dir){
+  const t = barTokens();
+  const i = targetBar();
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= t.length) return;
+  pushUndo();
+  const tmp = t[i]; t[i] = t[j]; t[j] = tmp;
+  setTokens(t);
+  selectBar(j);
+}
+
+function dupBar(){
+  const t = barTokens();
+  if (!t.length) return;
+  const i = targetBar();
+  pushUndo();
+  t.splice(i + 1, 0, t[i]);
+  setTokens(t);
+  selectBar(i + 1);
+}
+
+function updateBarTools(){
+  if (!$("barLeft")) return;
+  const n = parsed.bars.length;
+  const i = (selectedBar >= 0 && selectedBar < n) ? selectedBar : -1;
+  const set = (id, disabled, label) => {
+    const el = $(id);
+    if (!el) return;
+    el.disabled = disabled;
+    el.setAttribute("title", label);
+    el.setAttribute("aria-label", label);
+  };
+  set("barLeft",  i <= 0,               T("barLeftLabel"));
+  set("barRight", i < 0 || i >= n - 1,  T("barRightLabel"));
+  set("barDup",   !n,                   T("barDupLabel"));
+  set("barDel",   !n,                   T("barDelLabel"));
+  set("barUndo",  !undoStack.length,    undoStack.length ? T("barUndoLabel") : T("barUndoNone"));
 }
 
 function qualLabel(q){ return q.k ? T(q.k) : q.s; }
@@ -2868,6 +2998,7 @@ function renderExamples(){
     btn.setAttribute("aria-pressed", +btn.dataset.rep === secRepeat ? "true" : "false");
   }
   updateExFade();
+  if (typeof updateSecToggleText === "function") updateSecToggleText();
 }
 
 /* ══ 語言與主題 ══════════════════════════════════════════════════ */
@@ -2908,6 +3039,8 @@ function applyLanguage(lang){
    掃描範圍內,切語言時要另外重畫一次 */
 function refreshDynamicText(){
   updateBarCount();
+  updateBarTools();
+  if (typeof updateSecToggleText === "function") updateSecToggleText();
   setTranspose(transposeOn);
   setPlayIcon(playing);
   renderSaved();
@@ -2977,12 +3110,54 @@ for (const btn of $("repSeg").children) {
   btn.addEventListener("click", () => { secRepeat = +btn.dataset.rep; renderExamples(); });
 }
 $("formClear").addEventListener("click", () => {
+  pushUndo();
   formParts = [];
   chordInput.value = "";
+  selectedBar = -1;
   reparse();
 });
 
-$("palDel").addEventListener("click", palDelete);
+/* 小節工具列 */
+$("barLeft").addEventListener("click", () => moveBar(-1));
+$("barRight").addEventListener("click", () => moveBar(1));
+$("barDup").addEventListener("click", dupBar);
+$("barDel").addEventListener("click", palDelete);
+$("barUndo").addEventListener("click", undoEdit);
+
+/* 段落庫的開關。收起來是預設:清單佔掉左邊將近一半的版面,
+   但多數時候使用者只是要看自己那一段 */
+let secOpen = false;
+function setSecOpen(open){
+  secOpen = !!open;
+  const panel = $("exPanel"), btn = $("secToggle");
+  if (open) panel.removeAttribute("hidden"); else panel.setAttribute("hidden", "");
+  btn.setAttribute("aria-expanded", open ? "true" : "false");
+  updateSecToggleText();
+  updateExFade();
+  try { localStorage.setItem(SEC_KEY, open ? "1" : "0"); } catch (e) {}
+}
+function updateSecToggleText(){
+  const n = (SECTIONS[secLen] || SECTIONS[4]).length;
+  $("secToggleText").textContent = T("secToggle", { n });
+  const label = secOpen ? T("secToggleOpen") : T("secToggle", { n });
+  $("secToggle").setAttribute("title", label);
+  $("secToggle").setAttribute("aria-label", label);
+}
+$("secToggle").addEventListener("click", () => setSecOpen(!secOpen));
+/* 面板是浮的,點到外面或按 Esc 就收起來。點面板裡面(挑段落)不關,
+   才接得出 A A B B */
+document.addEventListener("pointerdown", (e) => {
+  if (!secOpen) return;
+  // 整個 .ex-wrap(開關那一排 + 面板)都算「裡面」:
+  // 按「清空」想重新接一次形式時,面板不該跟著關掉
+  const wrap = document.querySelector(".ex-wrap");
+  if (wrap && wrap.contains(e.target)) return;
+  setSecOpen(false);
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && secOpen) setSecOpen(false);
+});
+
 
 $("saveBtn").addEventListener("click", () => {
   const text = chordInput.value.trim();
@@ -2997,6 +3172,16 @@ $("saveBtn").addEventListener("click", () => {
 
 /* 空白鍵播放/停止。焦點在輸入框或按鈕上的時候不要搶——
    使用者正在打和弦,空白鍵必須是空白鍵 */
+/* ⌘Z / Ctrl+Z 復原。焦點在文字框時不攔,那裡有瀏覽器自己的復原 */
+document.addEventListener("keydown", (e) => {
+  if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "z") return;
+  const t = e.target;
+  if (t && (t.tagName === "TEXTAREA" || t.tagName === "INPUT")) return;
+  if (!undoStack.length) return;
+  e.preventDefault();
+  undoEdit();
+});
+
 document.addEventListener("keydown", (e) => {
   if (e.code !== "Space" && e.key !== " ") return;
   const t = e.target;
@@ -3026,9 +3211,13 @@ document.addEventListener("keydown", (e) => {
   parsed = parseProgression(chordInput.value);
   updateFeel();
   renderBars();
+  let secWant = false;
+  try { secWant = localStorage.getItem(SEC_KEY) === "1"; } catch (e) {}
+  setSecOpen(secWant);
   applyLanguage(currentLang);
   setPlayIcon(false);
   updateTransportIdle();
+  updateBarTools();
   // 清單捲動或視窗高度改變時,上下的漸層要跟著換(高度是 vh 算的,轉向也會變)
   $("examples").addEventListener("scroll", updateExFade, { passive: true });
   window.addEventListener("resize", updateExFade);

@@ -6,6 +6,13 @@
 <!-- 手機瀏覽器的網址列會吃這個顏色。切換淺色主題時 applyTheme() 會一起改,
      不然頁面變白了、上面那條還是黑的,看起來像沒對齊 -->
 <meta name="theme-color" content="#0C0A07">
+<!-- 加到主畫面之後用全螢幕開(平板架在譜架上就不會被網址列吃掉一條)。
+     沒有 service worker,所以不是離線可用的 PWA——取樣本來就在 CDN 上,
+     要離線得連取樣一起快取,那是另一件事 -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="BackingTrack">
 <title data-i18n="pageTitle">BackingTrack 跟著彈 — 輸入和弦就生成伴奏</title>
 <meta name="description" content="輸入和弦進行,程式就生成鋼琴伴奏,讓學生跟著彈。四種伴奏樣式、4/4 3/4 6/8 三種拍號、速度與移調自由調整,count-in 與循環播放。免安裝,打開瀏覽器就能用。" data-i18n-attr="content:metaDesc">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230C0A07'/%3E%3Cg fill='%23EFD48A'%3E%3Crect x='6' y='9' width='3.4' height='14' rx='1.2'/%3E%3Crect x='11.4' y='9' width='3.4' height='14' rx='1.2'/%3E%3Crect x='16.8' y='9' width='3.4' height='14' rx='1.2'/%3E%3Crect x='22.2' y='9' width='3.4' height='14' rx='1.2'/%3E%3C/g%3E%3Cg fill='%230C0A07'%3E%3Crect x='9' y='9' width='2.2' height='8.5' rx='.8'/%3E%3Crect x='14.4' y='9' width='2.2' height='8.5' rx='.8'/%3E%3Crect x='20.2' y='9' width='2.2' height='8.5' rx='.8'/%3E%3C/g%3E%3C/svg%3E">
@@ -547,12 +554,18 @@ input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px rgba(201,
 .seg button[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--bg);font-weight:700}
 .seg button[aria-pressed="true"] svg{opacity:1}
 
-/* 開關列:count-in 與循環 */
-/* 四個開關用 grid 排:flex-wrap 會讓落單的那個獨佔一整行、寬度跟別人差一截。
-   auto-fit 會依寬度自己決定一行放幾個,每一行都填得滿 */
+/* 開關列:count-in、循環、愈練愈快 */
+/* 用 grid 不用 flex-wrap:flex 會讓落單的那個獨佔一整行、寬度跟別人差一截。
+   窄的時候兩欄,第三顆自己佔整排(不要變成半格的孤兒);
+   夠寬就三欄一排 */
 .toggles{
   display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
   gap:7px;margin-top:8px;
+}
+.toggles > :last-child{grid-column:1 / -1}
+@media (min-width:900px){
+  .toggles{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .toggles > :last-child{grid-column:auto}
 }
 .toggle{
   min-width:0;
@@ -573,7 +586,9 @@ input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px rgba(201,
 
 /* ── 儲存的進行 ───────────────────── */
 .saved{margin-top:9px}
-.saved-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:5px}
+.saved-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px;flex-wrap:wrap}
+.saved-acts{display:flex;gap:6px}
+.saved-acts .btn{height:30px;font-size:var(--fs-xs);padding:0 13px}
 .saved-head .label{font-size:var(--fs-xs);color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
 .saved-list{display:flex;flex-wrap:wrap;gap:6px}
 .saved-empty{font-size:var(--fs-2xs);color:var(--muted);line-height:1.7}
@@ -911,13 +926,24 @@ try {
           <span class="box"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5.5 5.5L20 7"/></svg></span>
           <span data-i18n="loopLabel">循環播放</span>
         </button>
+        <!-- 練速度用的:每繞兩圈自己快 5 BPM。慢慢推上去比一次跳到底有用 -->
+        <button class="toggle" id="rampToggle" type="button" aria-pressed="false"
+          data-i18n-attr="title:rampTip" title="每繞兩圈自動加快 5 BPM,到 240 為止">
+          <span class="box"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5.5 5.5L20 7"/></svg></span>
+          <span data-i18n="rampLabel">愈練愈快</span>
+        </button>
       </div>
 
       <!-- 存下來的進行 -->
       <div class="saved">
         <div class="saved-head">
           <span class="label" data-i18n="savedLabel">存下來的進行</span>
-          <button class="btn ghost" id="saveBtn" type="button" style="height:30px;font-size:var(--fs-xs);padding:0 13px" data-i18n="saveBtn">存這組</button>
+          <div class="saved-acts">
+            <!-- 老師把整組設定變成一條網址傳給學生,對方打開就是同一題 -->
+            <button class="btn ghost" id="linkBtn" type="button" data-i18n="linkBtn"
+              data-i18n-attr="title:linkTip" title="複製一條網址,對方打開就是這個進行與設定">複製連結</button>
+            <button class="btn ghost" id="saveBtn" type="button" data-i18n="saveBtn">存這組</button>
+          </div>
         </div>
         <div class="saved-list" id="savedList"></div>
       </div>
@@ -1023,6 +1049,11 @@ const I18N = {
     qualMaj: "大三",
     qualMin: "小三",
     savedLabel: "存下來的進行",
+    rampLabel: "愈練愈快",
+    rampTip: "每繞兩圈自動加快 5 BPM,到 240 為止",
+    linkBtn: "複製連結",
+    linkTip: "複製一條網址,對方打開就是這個進行與設定",
+    linkCopied: "已複製",
     saveBtn: "存這組",
     savedEmpty: "還沒存過。按「存這組」留在這台裝置上。",
     savedNamePrompt: "幫這組進行取個名字",
@@ -1114,6 +1145,11 @@ const I18N = {
     qualMaj: "maj",
     qualMin: "min",
     savedLabel: "Saved progressions",
+    rampLabel: "Speed up",
+    rampTip: "Adds 5 BPM every two times round, up to 240",
+    linkBtn: "Copy link",
+    linkTip: "Copies a link that opens this progression and these settings",
+    linkCopied: "Copied",
     saveBtn: "Save this",
     savedEmpty: "Nothing saved yet. Hit \"Save this\" to keep one on this device.",
     savedNamePrompt: "Name this progression",
@@ -1463,7 +1499,12 @@ function updateBarCount(){
 
 /* 整段進行:用空白 / - / | / 逗號分隔。「/」不能當分隔符,那是轉位用的 */
 function parseProgression(text){
-  const tokens = text.split(/[\s,|\-－]+/).filter(Boolean);
+  /* 爵士的和弦表把小三和弦寫成 C-7。但這裡的「-」同時是小節分隔符
+     (C - Am - F - G),所以只認「根音後面緊接著 -,再接數字或結尾」那一種:
+     C-7 / F#-9 / Bb- 是小調,C-Am(後面接音名)跟 C - Am(有空白)還是分隔符。
+     U+2212 的「−」沒有這個問題,normalizeSymbol 已經處理掉了 */
+  const tokens = text.replace(/([A-Ga-g][#b♯♭]?)-(?=\d|\s|$)/g, "$1m")
+    .split(/[\s,|\-－]+/).filter(Boolean);
   const bars = [];
   for (const tok of tokens) {
     const ch = parseChord(tok);
@@ -2651,6 +2692,17 @@ function scheduleBeat(i, when){
   // 一格的進行沒有「最後一格」可言,每小節都過門會很吵,所以兩格以上才給
   const isFill = nBars >= 2 && bar === nBars - 1;
 
+  /* 愈練愈快:每繞兩圈往上推 5 BPM。在「圈的第一小節第一拍」推,
+     走 setBpm → reanchorTempo,已經排進去的音不會被改到一半。
+     排程提前 0.2 秒,所以聽起來就是新的一圈從頭開始變快 */
+  if (rampOn && loopOn && b === 0 && bar === 0 && absBar > 0) {
+    const cycle = Math.floor(absBar / nBars);
+    if (cycle !== rampedCycle && cycle % 2 === 0 && bpmOn < 240) {
+      rampedCycle = cycle;
+      setBpm(Math.min(240, bpmOn + 5));
+    }
+  }
+
   schedulePiano(v, barStartBeat, b, transposeOn, absBar, isFill);
   scheduleDrums(barStartBeat, b, absBar, isFill);
   {
@@ -2707,6 +2759,7 @@ function startPlayback(){
     else setStatus(T("statusSamples", { n: loadedSamples.size }), false);
 
     playing = true;
+    rampedCycle = -1;
     spb = 60 / bpmOn;
     countInBeats = countInOn ? beatsInBar() * 2 : 0;
     endBeat = loopOn ? Infinity : countInBeats + voicings.length * beatsInBar();
@@ -2742,6 +2795,8 @@ const barsGrid = $("barsGrid");
 const playBtn = $("playBtn");
 
 let bpmOn = 100, transposeOn = 0, styleOn = "comp", countInOn = true, loopOn = true;
+let rampOn = false;        // 愈練愈快:每兩圈 +5 BPM
+let rampedCycle = -1;      // 已經加速過的那一圈,同一圈不會加兩次
 let lastHighlight = -1;
 
 /* SVGElement 沒有 hidden 這個 IDL 屬性,el.hidden = true 只會掛上一個沒人看的 JS 屬性,
@@ -3012,11 +3067,43 @@ function setToggle(el, on){
 /* ══ 儲存 ══════════════════════════════════════════════════════ */
 const SEC_KEY = "backingtrack.sections.open";
 
+/* ══ 一條網址就是一題 ═══════════════════════════════════════════
+   老師把和弦、速度、拍號、樣式、移調編進網址,傳給學生;學生打開就是同一題。
+   參數名用短的(c / bpm / m / s / t),網址看得懂也改得動 */
+function shareURL(){
+  const u = new URL(location.href);
+  u.search = "";
+  u.searchParams.set("c", chordInput.value.trim());
+  u.searchParams.set("bpm", bpmOn);
+  if (meterOn !== "4/4") u.searchParams.set("m", meterOn);
+  if (styleOn !== "comp") u.searchParams.set("s", styleOn);
+  if (transposeOn) u.searchParams.set("t", transposeOn);
+  return u.toString();
+}
+/* 網址帶了參數就以網址為準(蓋過上次留在這台裝置上的設定)——
+   傳連結的人要的就是「對方看到的跟我一樣」 */
+function applyURLParams(){
+  let q;
+  try { q = new URL(location.href).searchParams; } catch (e) { return false; }
+  const c = q.get("c");
+  if (!c) return false;
+  chordInput.value = c;
+  const bpm = parseInt(q.get("bpm"), 10);
+  if (!isNaN(bpm)) bpmOn = Math.min(240, Math.max(40, bpm));
+  const m = q.get("m");
+  if (m && METERS[m]) meterOn = m;
+  const st = q.get("s");
+  if (st && STYLE_KEYS.indexOf(st) >= 0) styleOn = st;
+  const t = parseInt(q.get("t"), 10);
+  if (!isNaN(t)) transposeOn = Math.min(12, Math.max(-12, t));
+  return true;
+}
+
 function saveState(){
   try {
     localStorage.setItem(STATE_KEY, JSON.stringify({
       text: chordInput.value, bpm: bpmOn, transpose: transposeOn,
-      style: styleOn, meter: meterOn, countIn: countInOn, loop: loopOn,
+      style: styleOn, meter: meterOn, countIn: countInOn, loop: loopOn, ramp: rampOn,
     }));
   } catch (e) {}
 }
@@ -3570,6 +3657,12 @@ $("countInToggle").addEventListener("click", () => {
   setToggle($("countInToggle"), countInOn);
   saveState();
 });
+$("rampToggle").addEventListener("click", () => {
+  rampOn = !rampOn;
+  setToggle($("rampToggle"), rampOn);
+  rampedCycle = -1;
+  saveState();
+});
 $("loopToggle").addEventListener("click", () => {
   loopOn = !loopOn;
   setToggle($("loopToggle"), loopOn);
@@ -3674,6 +3767,24 @@ document.addEventListener("keydown", (e) => {
 });
 
 
+$("linkBtn").addEventListener("click", async () => {
+  const url = shareURL();
+  const btn = $("linkBtn");
+  try {
+    await navigator.clipboard.writeText(url);
+  } catch (e) {
+    // 舊瀏覽器或沒給權限:退回選取一個暫時的輸入框再 execCommand
+    const ta = document.createElement("textarea");
+    ta.value = url; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); } catch (e2) {}
+    document.body.removeChild(ta);
+  }
+  const old = btn.textContent;
+  btn.textContent = T("linkCopied");
+  setTimeout(() => { btn.textContent = old; }, 1500);
+});
+
 $("saveBtn").addEventListener("click", () => {
   const text = chordInput.value.trim();
   if (!text) return;
@@ -3735,13 +3846,16 @@ document.addEventListener("keydown", (e) => {
     if (st.meter && METERS[st.meter]) meterOn = st.meter;
     if (typeof st.countIn === "boolean") countInOn = st.countIn;
     if (typeof st.loop === "boolean") loopOn = st.loop;
+    if (typeof st.ramp === "boolean") rampOn = st.ramp;
     if (typeof st.bpm === "number") bpmOn = st.bpm;
     if (typeof st.transpose === "number") transposeOn = st.transpose;
   }
+  applyURLParams();   // 網址帶題目就以網址為準
   setStyle(styleOn);
   setMeter(meterOn, true);
   setToggle($("countInToggle"), countInOn);
   setToggle($("loopToggle"), loopOn);
+  setToggle($("rampToggle"), rampOn);
   setBpm(bpmOn);
   setTranspose(transposeOn);
   renderExamples();

@@ -192,6 +192,16 @@ main{
   box-shadow:var(--shadow-md);
 }
 .ex-panel[hidden]{display:none}
+/* 清單自己捲,高度由 fitSecPanel() 量出來鎖住(這裡是還沒量到之前的保險值)。
+   手機也要套:36 組全部展開有一千四百多 px,不捲的話整頁會被拉得很長 */
+.examples{
+  max-height:min(52vh, 430px);
+  overflow-y:auto;overscroll-behavior:contain;
+  scrollbar-width:thin;scrollbar-color:var(--muted) transparent;
+}
+.examples::-webkit-scrollbar{width:8px}
+.examples::-webkit-scrollbar-thumb{background:var(--muted);border-radius:4px}
+.examples::-webkit-scrollbar-thumb:hover{background:var(--gold)}
 .seg-mini{display:flex;border:1px solid var(--line);border-radius:var(--radius-pill);overflow:hidden}
 .seg-mini button{
   border:none;background:transparent;color:var(--muted-bright);
@@ -200,6 +210,9 @@ main{
 }
 .seg-mini button + button{border-left:1px solid var(--line)}
 .seg-mini button[aria-pressed="true"]{background:var(--gold);color:var(--bg);font-weight:700}
+/* 變暗 = 這組進行本來不是這個拍號。還是點得下去,只是先講一聲 */
+.seg-mini button.dim{opacity:.35}
+.seg-mini button.dim:hover,.seg-mini button.dim:focus-visible{opacity:1}
 #formClear{height:26px;font-size:var(--fs-2xs);padding:0 11px}
 /* 範例用格線不用 flex:進行長短差很多,flex 排出來每顆寬度都不一樣、
    最後一行還會落單。auto-fill 讓每一格等寬,空格子也保留寬度。
@@ -588,15 +601,6 @@ footer a:hover{color:var(--gold-bright)}
 @media (min-width:680px){
   #chordInput{min-height:clamp(46px,7.6vh,130px)}
   .ex-btn{min-height:clamp(26px,2.4vh,34px)}
-  /* 面板是浮的,清單高度由 fitSecPanel() 量出來鎖住(這裡是還沒量到之前的保險值) */
-  .examples{
-    max-height:min(52vh, 430px);
-    overflow-y:auto;overscroll-behavior:contain;
-    scrollbar-width:thin;scrollbar-color:var(--muted) transparent;
-  }
-  .examples::-webkit-scrollbar{width:8px}
-  .examples::-webkit-scrollbar-thumb{background:var(--muted);border-radius:4px}
-  .examples::-webkit-scrollbar-thumb:hover{background:var(--gold)}
   .pal-btn{padding-top:clamp(4px,.55vh,16px);padding-bottom:clamp(4px,.55vh,16px)}
   .bar-chip{min-height:clamp(42px,5.4vh,86px)}
   /* 兩欄的螢幕用滑鼠點,格子可以再矮一點:12 小節三列時省下來的高度
@@ -918,8 +922,8 @@ const I18N = {
     palDel: "刪一格",
     len12: "12 小節",
     repLabel: "接幾次",
-    secGroup4: "4 小節",
-    secGroup8: "8 小節(最後一組是 12 小節藍調)",
+    secMeterGroup: "{m} 拍",
+    meterDimTip: "這組進行本來是 {m} 的",
     barsLabel: "小節數",
     secToggle: "段落庫 {n} 組",
     secToggleOpen: "收起段落庫",
@@ -1007,8 +1011,8 @@ const I18N = {
     palDel: "Delete bar",
     len12: "12 bars",
     repLabel: "Repeat",
-    secGroup4: "4 bars",
-    secGroup8: "8 bars (last one is a 12-bar blues)",
+    secMeterGroup: "{m}",
+    meterDimTip: "This progression is in {m}",
     barsLabel: "Bars",
     secToggle: "Sections ({n})",
     secToggleOpen: "Hide sections",
@@ -2695,8 +2699,28 @@ function setMeter(m, quiet){
     if (bpmOn < q[0] || bpmOn > q[2]) setBpm(q[1]);
   }
   renderTempoQuick();
+  updateMeterDim();
   if (playing && !loopOn) endBeat = countInBeats + voicings.length * beatsInBar();
   if (!quiet) saveState();
+}
+
+/* 從段落庫點來的進行有「本來的拍號」,另外兩顆就變暗。
+   變暗是提示不是鎖:還是點得下去(有人就是想把丸サ進行彈成圓舞曲),
+   點下去就當作使用者自己要換,提示收起來 */
+function updateMeterDim(){
+  const seg = $("meterSeg");
+  if (!seg) return;
+  for (const b of seg.children) {
+    const dim = !!formMeter && b.dataset.meter !== formMeter;
+    b.classList.toggle("dim", dim);
+    if (dim) b.setAttribute("title", T("meterDimTip", { m: formMeter }));
+    else b.setAttribute("title", T("meterTip" + b.dataset.meter.replace("/", "")));
+  }
+}
+function clearFormMeter(){
+  if (formMeter === null) return;
+  formMeter = null;
+  updateMeterDim();
 }
 
 const STYLE_I18N = { pad: "stylePad", comp: "styleComp", drive: "styleDrive", mix: "styleMix" };
@@ -3051,10 +3075,9 @@ function setBarCount(n){
   const out = [];
   for (let i = 0; i < n; i++) out.push(t.length ? t[i % t.length] : "C");
   formParts = [];          // 手動改長度就回自由輸入,形式那行才不會對不上
+  clearFormMeter();
   setTokens(out);
   selectBar(0);            // 直接停在第 1 格,接著就能改
-  secLen = n === 4 ? 4 : 8;  // 段落庫跟著看同一組(12 小節藍調收在 8 小節那組)
-  renderExamples();
 }
 
 function palDelete(){
@@ -3080,6 +3103,7 @@ function undoEdit(){
   if (!undoStack.length) return;
   chordInput.value = undoStack.pop();
   formParts = [];          // 退回去之後就當自由輸入,不然形式那行會對不上
+  clearFormMeter();
   selectedBar = -1;
   reparse();
   updateBarTools();
@@ -3159,49 +3183,71 @@ function renderPalette(){
    要換調用移調滑桿。變化靠和聲手法,不靠轉調。
    分成 4 小節與 8 小節兩組,可以挑幾個段落接成 A A B B 這種形式。
    膠囊上只顯示和弦;感覺由和弦自己決定,style 只是順手把疏密調到合適的那一個 */
-const SECTIONS = {
-  /* 四小節那組全部是「自己循環得起來」的進行:繞回第一小節要接得順,
-     不能是某個八小節進行切一半(F - G - Em - Am 就是這樣被退掉的) */
-  4: [
-    { text: "C - G - Am - F",            style: "comp"  },  // C 大調,I-V-vi-IV,流行的萬用循環
-    { text: "C - Am - F - G",            style: "comp"  },  // C 大調,I-vi-IV-V,五〇年代
-    { text: "C - Am - Dm - G",           style: "comp"  },  // C 大調,I-vi-ii-V,turnaround
-    { text: "C - F - G - C",             style: "comp"  },  // C 大調,I-IV-V-I,最基本的終止
-    { text: "Am - F - G - C",            style: "comp"  },  // A 小調→C,vi-IV-V-I,小室進行
-    { text: "Am - F - G - Am",           style: "drive" },  // A 小調,i-VI-VII-i,搖滾
-    { text: "Am - G - F - E7",           style: "drive" },  // A 小調,安達魯西亞終止
-    { text: "Cmaj7 - A7 - Dm7 - G7",     style: "comp"  },  // C 大調,I-VI7-ii-V
-    { text: "Fmaj7 - E7 - Am7 - C7",     style: "comp"  },  // A 小調,IVM7-III7-i-I7,city pop
-    { text: "Am7 - Dm7 - E7 - Am7",      style: "comp"  },  // A 小調,i-iv-V7-i
-    { text: "Dm7 - G7 - Cmaj7 - Cmaj7",  style: "comp"  },  // C 大調,ii-V-I,爵士最常練的那四小節
-    { text: "Dm9 - G13 - Cmaj9 - Cmaj9", style: "comp"  },  // C 大調,同一個 ii-V-I 換成九度的聲位
-    { text: "Am9 - Dm9 - E7b9 - Am9",    style: "pad"   },  // A 小調,i-iv-V7-i,爵士
-  ],
-  /* 八小節這組是完整的一句:前四小節起,後四小節收,最後一顆要接得回開頭 */
-  8: [
-    { text: "C - G - Am - F - C - G - F - G",                        style: "comp"  },  // I-V-vi-IV,後半收在 V
-    { text: "C - Am - F - G - C - Am - Dm - G",                      style: "comp"  },  // 五〇年代,收在 ii-V
-    { text: "C - G - Am - Em - F - C - F - G",                       style: "comp"  },  // 卡農進行
-    { text: "F - G - Em - Am - Dm - G - C - C7",                     style: "comp"  },  // 王道進行 4536251,C7 接回 F
-    { text: "Am - F - C - G - Am - F - Dm - E7",                     style: "drive" },  // 小調流行,收在 V7
-    { text: "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",       style: "comp"  },  // 王道進行 4536251 的七和弦聲位(city pop 常用),C7 接回 Fmaj7
-    { text: "Dm7 - G7 - Cmaj7 - Cmaj7 - Dm7 - G7 - Cmaj7 - A7",      style: "comp"  },  // ii-V-I 兩次,收在 VI7
-    { text: "Dm7 - G7 - Cmaj7 - Fmaj7 - Bm7b5 - E7 - Am7 - A7",      style: "comp"  },  // 大調 ii-V-I 接小調 ii-V-i(落葉型),最後一顆 A7 是 V7/ii,推回開頭的 Dm7
-    { text: "Cmaj9 - Cmaj9 - Dm9 - G13 - Cmaj9 - A7b9 - Dm9 - G13",  style: "comp"  },  // smooth jazz
-    { text: "Am9 - Am9 - Dm9 - Dm9 - Am9 - Am9 - Bm7b5 - E7b9",     style: "pad"   },  // 爵士小調:i 兩小節、iv 兩小節、i 兩小節,最後 ii°-V 推回開頭
-    // 12 小節藍調。即興練習最重要的形式,全屬七和弦所以 detectFeel 判成「直」
-    { text: "C7 - F7 - C7 - C7 - F7 - F7 - C7 - C7 - G7 - F7 - C7 - G7", style: "comp" },
-  ],
-};
+/* ══ 現成的進行:每一組都帶自己的拍號 ═══════════════════════════
+   同一串和弦在別的拍號也彈得出來,但「這句歌本來是幾拍子的」是有答案的:
+   丸サ進行沒有人用圓舞曲彈、Amazing Grace 不是 4/4。所以每一組都寫死拍號,
+   點下去就一起換過去,另外兩個拍號變暗——不要再讓使用者自己猜。
+
+   全部維持 C 大調 / A 小調(要換調有移調滑桿)。
+   四小節那組要「自己循環得起來」,八小節那組要是完整的一句、最後一顆接得回開頭。
+   `style` 是建議的疏密,`meter` 是這句歌的拍號。
+   排的順序就是畫面上的順序:同一個拍號放一起,短的在前面 */
+const SECTIONS = [
+  /* ── 4/4:流行、搖滾、bossa、爵士 ───────────────────────── */
+  { text: "C - G - Am - F",            style: "comp",  meter: "4/4" },  // I-V-vi-IV,流行的萬用循環
+  { text: "C - Am - F - G",            style: "comp",  meter: "4/4" },  // I-vi-IV-V,五〇年代
+  { text: "C - Am - Dm - G",           style: "comp",  meter: "4/4" },  // I-vi-ii-V,turnaround
+  { text: "C - F - G - C",             style: "comp",  meter: "4/4" },  // I-IV-V-I,最基本的終止
+  { text: "Am - F - G - C",            style: "comp",  meter: "4/4" },  // vi-IV-V-I,小室進行
+  { text: "Am - F - G - Am",           style: "drive", meter: "4/4" },  // i-VI-VII-i,搖滾
+  { text: "Am - G - F - E7",           style: "drive", meter: "4/4" },  // 安達魯西亞終止
+  { text: "Cmaj7 - A7 - Dm7 - G7",     style: "comp",  meter: "4/4" },  // I-VI7-ii-V,bossa
+  { text: "Fmaj7 - E7 - Am7 - C7",     style: "comp",  meter: "4/4" },  // 丸サ進行,city pop
+  { text: "Am7 - Dm7 - E7 - Am7",      style: "comp",  meter: "4/4" },  // i-iv-V7-i
+  { text: "Dm7 - G7 - Cmaj7 - Cmaj7",  style: "comp",  meter: "4/4" },  // ii-V-I,爵士最常練的四小節
+  { text: "Dm9 - G13 - Cmaj9 - Cmaj9", style: "comp",  meter: "4/4" },  // 同一個 ii-V-I 換九度聲位
+  { text: "Am9 - Dm9 - E7b9 - Am9",    style: "pad",   meter: "4/4" },  // 爵士小調
+  { text: "C - G - Am - F - C - G - F - G",                        style: "comp",  meter: "4/4" },  // I-V-vi-IV,後半收在 V
+  { text: "C - Am - F - G - C - Am - Dm - G",                      style: "comp",  meter: "4/4" },  // 五〇年代,收在 ii-V
+  { text: "C - G - Am - Em - F - C - F - G",                       style: "comp",  meter: "4/4" },  // 卡農進行
+  { text: "F - G - Em - Am - Dm - G - C - C7",                     style: "comp",  meter: "4/4" },  // 王道進行 4536251
+  { text: "Am - F - C - G - Am - F - Dm - E7",                     style: "drive", meter: "4/4" },  // 小調流行,收在 V7
+  { text: "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",        style: "comp",  meter: "4/4" },  // 王道的七和弦聲位,city pop
+  { text: "Dm7 - G7 - Cmaj7 - Cmaj7 - Dm7 - G7 - Cmaj7 - A7",      style: "comp",  meter: "4/4" },  // ii-V-I 兩次,收在 VI7
+  { text: "Dm7 - G7 - Cmaj7 - Fmaj7 - Bm7b5 - E7 - Am7 - A7",      style: "comp",  meter: "4/4" },  // 大調 ii-V-I 接小調 ii-V-i(落葉型)
+  { text: "Cmaj9 - Cmaj9 - Dm9 - G13 - Cmaj9 - A7b9 - Dm9 - G13",  style: "comp",  meter: "4/4" },  // smooth jazz
+  { text: "Am9 - Am9 - Dm9 - Dm9 - Am9 - Am9 - Bm7b5 - E7b9",      style: "pad",   meter: "4/4" },  // 爵士小調,ii°-V 推回開頭
+  { text: "C7 - F7 - C7 - C7 - F7 - F7 - C7 - C7 - G7 - F7 - C7 - G7", style: "comp", meter: "4/4" },  // 12 小節藍調
+
+  /* ── 3/4:圓舞曲。大鼓踩一、小鼓打二三,右手是 pah-pah ────────
+     爵士圓舞曲那兩組要用九度聲位,detectFeel 才會判成搖擺——
+     寫成 Cmaj7 - Am7 - Dm7 - G7 的話四顆裡有三顆是六七度,會被判成拉丁 */
+  { text: "C - F - G7 - C",            style: "comp",  meter: "3/4" },  // I-IV-V7-I,圓舞曲最基本的終止
+  { text: "C - Am - Dm - G7",          style: "comp",  meter: "3/4" },  // I-vi-ii-V7,turnaround 圓舞曲
+  { text: "Am - Dm - E7 - Am",         style: "comp",  meter: "3/4" },  // i-iv-V7-i,小調圓舞曲
+  { text: "Cmaj9 - Am9 - Dm9 - G13",   style: "comp",  meter: "3/4" },  // I-vi-ii-V,爵士圓舞曲
+  { text: "C - C - C7 - F - C - Am - G7 - C",                      style: "pad",   meter: "3/4" },  // I-I7-IV-I…,聖歌/民謠圓舞曲的八小節一句
+  { text: "Cmaj9 - Cmaj9 - Dm9 - G13 - Em9 - A7b9 - Dm9 - G13",    style: "comp",  meter: "3/4" },  // 爵士圓舞曲一句,收在 ii-V 推回開頭
+
+  /* ── 6/8:一小節兩大拍、每拍三個八分。抒情歌與慢藍調 ──────── */
+  { text: "C - Am - F - G7",           style: "comp",  meter: "6/8" },  // I-vi-IV-V7,五〇年代的 12/8 抒情
+  { text: "Am - F - C - G",            style: "comp",  meter: "6/8" },  // 小調 6/8 抒情
+  { text: "C - F - C - G7",            style: "comp",  meter: "6/8" },  // I-IV-I-V7,民謠 jig
+  { text: "C - Am - F - Fm - C - Am - Dm7 - G7",                   style: "comp",  meter: "6/8" },  // doo-wop 抒情,IV 之後借用 iv
+  { text: "C7 - F7 - C7 - C7 - F7 - F7 - C7 - C7 - G7 - F7 - C7 - G7", style: "comp", meter: "6/8" },  // 12 小節慢藍調
+  { text: "C9 - F9 - C9 - C9 - F9 - F9 - C9 - C9 - G13 - F9 - C9 - G13", style: "comp", meter: "6/8" },  // 爵士的慢藍調:九度聲位,ride 走 12/8 的 shuffle
+];
 
 /* ── 形式 ──────────────────────────────────────────────────────
    一個 4 小節的循環聽再久都會膩,所以可以把段落接起來:
    點兩次第一組、再點兩次第二組,就是 A A B B。
    formParts 記的是「接了哪些段落」,文字框永遠從它重新組出來;
    使用者自己動手打字就把它清掉,回到自由輸入模式,兩邊不會打架。 */
-let secLen = 4;        // 現在在看 4 小節還是 8 小節那組
 let secRepeat = 1;     // 下一次點段落要接幾次
 let formParts = [];    // [{ text }]
+/* 這串進行「原本是幾拍子的」。從段落庫點來的才有,自己打字是 null。
+   有值的時候另外兩個拍號會變暗:那是提示不是鎖,還是點得下去 */
+let formMeter = null;
 
 function formLetters(){
   const seen = [], out = [];
@@ -3231,10 +3277,12 @@ function updateExFade(){
 function renderExamples(){
   const box = $("examples");
   box.innerHTML = "";
-  /* 四小節與八小節兩組一起列出來,中間插一條小標。
+  /* 照拍號分組,同一個拍號裡短的在前面。
      以前用一顆「4 小節 / 8 小節」切換,但那個標籤跟上面的「小節數」撞在一起
-     (一個是改進行的長度、一個是換清單),兩個一起出現一定會按錯 */
-  const list = SECTIONS[4].concat(SECTIONS[8]);
+     (一個是改進行的長度、一個是換清單),兩個一起出現一定會按錯。
+     分組的依據改成拍號,是因為點下去真的會換掉拍號——標題先講清楚,
+     不會點完才發現整首歌變成三拍 */
+  const list = SECTIONS;
   // 格子太窄時 CSS 會照最長的和弦縮字。同樣長度的進行共用同一個「最長字數」,
   // 整組才會是同一個字級——同一排字忽大忽小比小一點還難看
   const widest = {};
@@ -3242,21 +3290,14 @@ function renderExamples(){
     const cs = ex.text.split(" - ");
     widest[cs.length] = Math.max(widest[cs.length] || 0, ...cs.map(c => c.length));
   }
-  let group = 0;
+  let group = "";
   for (const ex of list) {
     const chordsN = ex.text.split(" - ").length;
-    // 換到八小節那一組時插一條小標
-    if (chordsN > 4 && group !== 8) {
-      group = 8;
+    if (ex.meter !== group) {
+      group = ex.meter;
       const h = document.createElement("div");
       h.className = "ex-group";
-      h.textContent = T("secGroup8");
-      box.appendChild(h);
-    } else if (chordsN <= 4 && group !== 4) {
-      group = 4;
-      const h = document.createElement("div");
-      h.className = "ex-group";
-      h.textContent = T("secGroup4");
+      h.textContent = T("secMeterGroup", { m: ex.meter });
       box.appendChild(h);
     }
     const b = document.createElement("button");
@@ -3278,8 +3319,15 @@ function renderExamples(){
     b.setAttribute("aria-label", ex.text);
     b.title = T("secAdd", { n: secRepeat });
     b.addEventListener("click", () => {
+      /* 接上去的那一段如果是別的拍號,就當作重開一首:A 段三拍、B 段六八拍
+         的曲子基本上不存在,硬接只會得到一串要自己清掉的東西 */
+      if (formMeter && formMeter !== ex.meter) formParts = [];
       for (let i = 0; i < secRepeat; i++) formParts.push({ text: ex.text });
       setStyle(ex.style);
+      /* 這句歌本來是幾拍子的,點下去就一起換過去。formMeter 記著它,
+         另外兩個拍號會變暗——使用者不必自己想「這組是不是三拍的」 */
+      formMeter = ex.meter;
+      setMeter(ex.meter);
       applyForm();
     });
     box.appendChild(b);
@@ -3332,6 +3380,7 @@ function refreshDynamicText(){
   updateBarCount();
   updateBarTools();
   if (typeof updateSecToggleText === "function") updateSecToggleText();
+  if (typeof updateMeterDim === "function") updateMeterDim();
   setTranspose(transposeOn);
   setPlayIcon(playing);
   renderSaved();
@@ -3357,7 +3406,7 @@ $("themeToggle").setAttribute("aria-pressed", document.body.classList.contains("
 $("themeToggle").addEventListener("click", () => applyTheme(!document.body.classList.contains("light")));
 
 /* ══ 綁定 ══════════════════════════════════════════════════════ */
-chordInput.addEventListener("input", () => { formParts = []; reparse(); });
+chordInput.addEventListener("input", () => { formParts = []; clearFormMeter(); reparse(); });
 
 playBtn.addEventListener("click", togglePlay);
 
@@ -3369,7 +3418,8 @@ $("bpmInput").addEventListener("blur", () => setBpm(bpmOn));
 $("bpmDown").addEventListener("click", () => setBpm(bpmOn - 1));
 $("bpmUp").addEventListener("click", () => setBpm(bpmOn + 1));
 for (const b of $("meterSeg").children) {
-  b.addEventListener("click", () => setMeter(b.dataset.meter));
+  // 自己動手換 = 我知道我在做什麼,那個「本來是幾拍」的提示就收起來
+  b.addEventListener("click", () => { formMeter = null; setMeter(b.dataset.meter); });
 }
 
 $("transpose").addEventListener("input", (e) => setTranspose(parseInt(e.target.value, 10)));
@@ -3403,6 +3453,7 @@ for (const btn of $("repSeg").children) {
 $("formClear").addEventListener("click", () => {
   pushUndo();
   formParts = [];
+  clearFormMeter();
   chordInput.value = "";
   selectedBar = -1;
   reparse();
@@ -3435,11 +3486,23 @@ function fitSecPanel(){
   const top = box.getBoundingClientRect().top;
   const room = Math.floor(window.innerHeight - top - 18);
   box.style.maxHeight = Math.max(120, Math.min(430, room)) + "px";
+  scrollToMeterGroup();
   updateExFade();
 }
 
+/* 打開清單時直接捲到現在這個拍號那一段。36 組排下來,三拍的在第十九排以後,
+   已經在做三拍的曲子還要自己捲下去找很煩 */
+function scrollToMeterGroup(){
+  const box = $("examples");
+  if (!box) return;
+  const heads = [...box.querySelectorAll(".ex-group")];
+  const want = T("secMeterGroup", { m: meterOn });
+  const h = heads.find(x => x.textContent === want);
+  box.scrollTop = (h && h !== heads[0]) ? Math.max(0, h.offsetTop - box.offsetTop - 4) : 0;
+}
+
 function updateSecToggleText(){
-  const n = SECTIONS[4].length + SECTIONS[8].length;
+  const n = SECTIONS.length;
   $("secToggleText").textContent = T("secToggle", { n });
   const label = secOpen ? T("secToggleOpen") : T("secToggle", { n });
   $("secToggle").setAttribute("title", label);

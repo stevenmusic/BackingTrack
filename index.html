@@ -180,6 +180,7 @@ main{
 .ex-toggle[aria-expanded="true"] .caret{transform:rotate(90deg)}
 .ex-head #formClear{margin-left:auto}
 .ex-segs{display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap}
+.ex-segs-label{font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.06em}
 /* 面板用浮的,不要把下面的東西推開:一推開整頁就爆掉,而且看完就收起來了,
    本來就不該佔位置 */
 .ex-wrap{position:relative}
@@ -214,7 +215,12 @@ main{
 }
 /* 八小節(與 12 小節藍調)那組一組佔一整橫排。8 顆和弦塞進半欄會擠成一團、
    字還會被切掉,兩組又貼在一起很容易點錯隔壁那組 */
-.examples.one-per-row{grid-template-columns:minmax(0,1fr)}
+.ex-btn.long{grid-column:1 / -1}
+.ex-group{
+  grid-column:1 / -1;margin-top:2px;
+  font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.06em;
+}
+.ex-group:first-child{margin-top:0}
 /* 每一顆和弦各佔一個等寬格子、置中——一個和弦本來就是一小節,
    排起來跟下面的小節格對得上,長短不同的進行也不會有的字大有的字被吃掉 */
 .ex-btn{
@@ -245,14 +251,15 @@ main{
   @container exbox (max-width:419px){
     .examples .ex-btn{grid-column:1 / -1}
   }
+  .ex-segs-label{display:none}
   /* 手機是用手指點的,膠囊高一點才不會點到隔壁那組 */
   .ex-btn{min-height:34px}
 }
 /* 一格剩不到 40px 就排不下 8 顆了,改成四顆一行、兩行一組——
    八小節本來就是兩句四小節,斷在這裡最自然。換行後一行只剩 4 顆,字級跟著重算 */
 @container exbox (max-width:340px){
-  .examples.one-per-row .ex-btn{grid-template-columns:repeat(4,minmax(0,1fr));row-gap:1px}
-  .examples.one-per-row .ex-ch{
+  .ex-btn.long{grid-template-columns:repeat(4,minmax(0,1fr));row-gap:1px}
+  .ex-btn.long .ex-ch{
     font-size:min(var(--fs-xs), calc((100cqi - 6px) / (4 * 0.76 * var(--len,5))));
   }
 }
@@ -322,9 +329,8 @@ main{
   display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;
   margin-top:7px;
 }
-@media (max-width:600px){.bars-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-/* 兩欄時右欄一行放四格會太擠,改成兩格一行 */
-@media (min-width:680px){.bars-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* 一排八格時,第 4 與第 5 格之間開一點縫,兩句才分得開 */
+.bars-grid.eight .bar-chip:nth-child(8n+5){margin-left:7px}
 .bar-chip{
   position:relative;
   display:flex;align-items:center;justify-content:center;
@@ -366,14 +372,13 @@ main{
    不然一選取就多一排、整個版面會跳一下 */
 .bar-tools-btns{display:flex;gap:5px;flex:none}
 .tool-btn{
-  min-width:32px;height:28px;padding:0 8px;
+  min-width:34px;height:28px;padding:0 10px;
   display:flex;align-items:center;justify-content:center;
   border:1px solid var(--line);background:var(--surface-inset);color:var(--muted-bright);
   border-radius:var(--radius-sm);cursor:pointer;
-  font-family:inherit;font-size:var(--fs-sm);line-height:1;
+  font-family:inherit;font-size:var(--fs-xs);line-height:1;
   transition:background .15s,color .15s,border-color .15s;
 }
-.tool-btn.wide{min-width:38px}
 .tool-btn:hover:not(:disabled),.tool-btn:focus-visible:not(:disabled){
   background:var(--gold);border-color:var(--gold);color:var(--bg);outline:none;
 }
@@ -578,7 +583,7 @@ footer a:hover{color:var(--gold-bright)}
 @media (min-width:680px){
   #chordInput{min-height:clamp(46px,7.6vh,130px)}
   .ex-btn{min-height:clamp(26px,2.4vh,34px)}
-  /* 面板是浮的,所以清單的高度只要不超過視窗就好,跟其他版面無關 */
+  /* 面板是浮的,清單高度由 fitSecPanel() 量出來鎖住(這裡是還沒量到之前的保險值) */
   .examples{
     max-height:min(52vh, 430px);
     overflow-y:auto;overscroll-behavior:contain;
@@ -674,6 +679,12 @@ try {
       <!-- 段落庫:預設收起來,點開才佔版面。挑長度、挑要接幾次,點一下就接到形式後面 -->
       <div class="ex-wrap">
       <div class="ex-head">
+        <!-- 先決定幾小節,再一格一格填。這一排也順手決定段落庫要看哪一組 -->
+        <div class="seg-mini" id="lenSeg">
+          <button type="button" data-len="4" aria-pressed="false" data-i18n="len4">4 小節</button>
+          <button type="button" data-len="8" aria-pressed="false" data-i18n="len8">8 小節</button>
+          <button type="button" data-len="12" aria-pressed="false" data-i18n="len12">12 小節</button>
+        </div>
         <button class="btn ghost ex-toggle" id="secToggle" type="button" aria-expanded="false" aria-controls="exPanel">
           <svg class="caret" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
           <span id="secToggleText">段落庫</span>
@@ -682,10 +693,7 @@ try {
       </div>
       <div class="ex-panel" id="exPanel" hidden>
         <div class="ex-segs">
-          <div class="seg-mini" id="lenSeg">
-            <button type="button" data-len="4" aria-pressed="true" data-i18n="len4">4 小節</button>
-            <button type="button" data-len="8" aria-pressed="false" data-i18n="len8">8 小節</button>
-          </div>
+          <span class="ex-segs-label" data-i18n="repLabel">接幾次</span>
           <div class="seg-mini" id="repSeg">
             <button type="button" data-rep="1" aria-pressed="true">×1</button>
             <button type="button" data-rep="2" aria-pressed="false">×2</button>
@@ -706,11 +714,9 @@ try {
         <div class="pal-foot">
           <span class="pal-hint" id="palHint"></span>
           <div class="bar-tools-btns">
-            <button class="tool-btn" id="barLeft" type="button">◀</button>
-            <button class="tool-btn" id="barRight" type="button">▶</button>
-            <button class="tool-btn wide" id="barDup" type="button">＋</button>
-            <button class="tool-btn wide" id="barDel" type="button">✕</button>
-            <button class="tool-btn wide" id="barUndo" type="button">↺</button>
+            <button class="tool-btn" id="barDup" type="button" data-i18n="barDupBtn">插一格</button>
+            <button class="tool-btn" id="barDel" type="button" data-i18n="barDelBtn">刪一格</button>
+            <button class="tool-btn" id="barUndo" type="button" data-i18n="barUndoBtn">復原</button>
           </div>
         </div>
       </div>
@@ -881,16 +887,22 @@ const I18N = {
     countInLabel: "先數兩小節",
     loopLabel: "循環播放",
     palDel: "刪一格",
+    len12: "12 小節",
+    repLabel: "接幾次",
+    secGroup4: "4 小節",
+    secGroup8: "8 小節(最後一組是 12 小節藍調)",
+    barsLabel: "小節數",
     secToggle: "段落庫 {n} 組",
     secToggleOpen: "收起段落庫",
-    barLeftLabel: "往前搬一格",
-    barRightLabel: "往後搬一格",
-    barDupLabel: "在後面插一格(複製這一格)",
+    barDupBtn: "插一格",
+    barDelBtn: "刪一格",
+    barUndoBtn: "復原",
+    barDupLabel: "在選取的那一格後面插一格(複製它)",
     barDelLabel: "刪掉這一格",
     barUndoLabel: "復原上一步",
     barUndoNone: "沒有可以復原的了",
-    palHintIdle: "點音名加一格,再點性質改一格。",
-    palHintSel: "正在改第 {n} 格({chord}):點音名換根音、點性質換和弦種類。再點一次取消。",
+    palHintIdle: "先選 4 / 8 / 12 小節,再點格子一格一格改。",
+    palHintSel: "正在改第 {n} 格({chord}):點音名換根音、點性質換和弦種類。",
     palRootLabel: "加一格 {root}",
     palQualLabel: "改成 {q}",
     palDelLast: "刪掉最後一格",
@@ -958,16 +970,22 @@ const I18N = {
     countInLabel: "Two-bar count-in",
     loopLabel: "Loop",
     palDel: "Delete bar",
+    len12: "12 bars",
+    repLabel: "Repeat",
+    secGroup4: "4 bars",
+    secGroup8: "8 bars (last one is a 12-bar blues)",
+    barsLabel: "Bars",
     secToggle: "Sections ({n})",
     secToggleOpen: "Hide sections",
-    barLeftLabel: "Move earlier",
-    barRightLabel: "Move later",
-    barDupLabel: "Insert a copy after this bar",
+    barDupBtn: "Insert",
+    barDelBtn: "Delete",
+    barUndoBtn: "Undo",
+    barDupLabel: "Insert a copy after the selected bar",
     barDelLabel: "Delete this bar",
     barUndoLabel: "Undo",
     barUndoNone: "Nothing to undo",
-    palHintIdle: "Tap a note name to add a bar, then a quality.",
-    palHintSel: "Editing bar {n} ({chord}): tap a note name to change the root, a quality to change the chord type. Tap it again to deselect.",
+    palHintIdle: "Pick 4 / 8 / 12 bars, then tap a bar to edit it.",
+    palHintSel: "Editing bar {n} ({chord}): tap a note name for the root, a quality for the chord type.",
     palRootLabel: "Add a bar of {root}",
     palQualLabel: "Change to {q}",
     palDelLast: "Delete the last bar",
@@ -2508,17 +2526,21 @@ function renderBars(){
     chip.style.setProperty("--len", name.textContent.length);
     chip.appendChild(name);
     // 點一下選起來(之後點性質鈕就是改這一格),再點一次取消
-    chip.addEventListener("click", () => selectBar(i === selectedBar ? -1 : i));
+    // 一直有一格在編輯,點同一格不取消:取消了鍵盤就不知道要改誰
+    chip.addEventListener("click", () => selectBar(i));
     barsGrid.appendChild(chip);
   }
   lastHighlight = -1;
-  // 四小節以內兩欄看起來大方,再多就換小格:8 格以內四欄、24 格以內六欄,再多八欄。
-  // 一直維持在四列以內,整頁高度才不會跟著進行長度跑掉
+  /* 一排四格,因為樂句就是四小節一句:第 5 格一定在第二排的開頭,
+     12 小節藍調剛好三排。超過 12 格才改成一排八格(等於一排兩句),
+     不然排數太多會把整頁撐開。**不要用六欄**:第 5 格會跑到第一排中間,
+     看的人就數不出樂句了 */
   const n = parsed.bars.length;
-  const cols = n <= 4 ? 2 : n <= 8 ? 4 : n <= 24 ? 6 : 8;
+  const cols = n <= 12 ? 4 : 8;
   barsGrid.style.gridTemplateColumns = "repeat(" + cols + ",minmax(0,1fr))";
-  barsGrid.classList.toggle("dense", cols >= 4);
-  barsGrid.classList.toggle("denser", cols >= 6);
+  barsGrid.classList.toggle("dense", n > 4);
+  barsGrid.classList.toggle("denser", n > 12);
+  barsGrid.classList.toggle("eight", cols === 8);
   updatePalHint();
 
   const bad = parsed.bars.find(b => !b.ok);
@@ -2534,6 +2556,7 @@ function renderBars(){
   }
 
   updateBarCount();
+  updateLenSeg();
   playBtn.disabled = !parsed.bars.length || !!bad;
 }
 
@@ -2720,10 +2743,11 @@ function selectBar(i){
   updatePalHint();
 }
 
-/* 性質鈕作用的目標:有選取就是那一格,沒選取就是最後一格 */
+/* 鍵盤與工具列作用的目標:一直是「正在編輯的那一格」。
+   沒選到的時候當第 1 格——這樣點下去一定改得到東西,不會默默加到最後面 */
 function targetBar(){
   if (selectedBar >= 0 && selectedBar < parsed.bars.length) return selectedBar;
-  return parsed.bars.length - 1;
+  return parsed.bars.length ? 0 : -1;
 }
 
 function updatePalHint(){
@@ -2738,33 +2762,45 @@ function updatePalHint(){
   updateBarTools();
 }
 
-/* 點音名:沒選取就加一格(大三和弦),有選取就換那一格的根音、性質留著 */
+/* 點音名:換掉正在編輯那一格的根音,性質與轉位低音都留著。
+   **不會自己往後跳一格**——改完第 3 格還是停在第 3 格,要改下一格就點下一格。
+   一格都沒有的時候才開一格出來 */
 function palRoot(root){
   const t = barTokens();
   pushUndo();
-  const i = selectedBar;
-  if (i >= 0 && i < t.length) {
-    const p = splitToken(t[i]);
-    t[i] = p ? joinToken(root, p.suffix, p.bass) : root;
-    setTokens(t);
-    selectBar(i);
-  } else {
-    t.push(root);
-    setTokens(t);
-    selectBar(-1);
-  }
+  if (!t.length) { setTokens([root]); selectBar(0); return; }
+  const i = targetBar();
+  const p = splitToken(t[i]);
+  t[i] = p ? joinToken(root, p.suffix, p.bass) : root;
+  setTokens(t);
+  selectBar(i);
 }
 
-/* 點性質:換掉目標那一格的性質,根音與轉位低音都留著 */
+/* 點性質:換掉正在編輯那一格的性質,根音與轉位低音都留著 */
 function palQual(suffix){
   const t = barTokens();
   pushUndo();
-  if (!t.length) { setTokens(["C" + suffix]); selectBar(-1); return; }
+  if (!t.length) { setTokens(["C" + suffix]); selectBar(0); return; }
   const i = targetBar();
   const p = splitToken(t[i]);
   t[i] = p ? joinToken(p.root, suffix, p.bass) : "C" + suffix;
   setTokens(t);
-  selectBar(selectedBar >= 0 ? i : -1);
+  selectBar(i);
+}
+
+/* 小節數:先決定 4 / 8 / 12 格,再一格一格填。
+   變多就把現有的進行重複貼滿(4 → 8 就是同一句唱兩次),變少就截掉;
+   一格都沒有的話開一排 C 出來讓人改 */
+function setBarCount(n){
+  const t = barTokens();
+  pushUndo();
+  const out = [];
+  for (let i = 0; i < n; i++) out.push(t.length ? t[i % t.length] : "C");
+  formParts = [];          // 手動改長度就回自由輸入,形式那行才不會對不上
+  setTokens(out);
+  selectBar(0);            // 直接停在第 1 格,接著就能改
+  secLen = n === 4 ? 4 : 8;  // 段落庫跟著看同一組(12 小節藍調收在 8 小節那組)
+  renderExamples();
 }
 
 function palDelete(){
@@ -2798,17 +2834,6 @@ function undoEdit(){
 /* ── 小節工具列 ──────────────────────────────────────────────
    選一格就能搬移、在後面插一格(複製)、刪掉。插入用複製的,因為
    「同一個和弦撐兩小節」跟「先插一格再改」都是這一顆按鈕 */
-function moveBar(dir){
-  const t = barTokens();
-  const i = targetBar();
-  const j = i + dir;
-  if (i < 0 || j < 0 || j >= t.length) return;
-  pushUndo();
-  const tmp = t[i]; t[i] = t[j]; t[j] = tmp;
-  setTokens(t);
-  selectBar(j);
-}
-
 function dupBar(){
   const t = barTokens();
   if (!t.length) return;
@@ -2819,8 +2844,18 @@ function dupBar(){
   selectBar(i + 1);
 }
 
+/* 小節數那一排亮的是「現在幾小節」,不是「要看哪一組段落」 */
+function updateLenSeg(){
+  const seg = document.getElementById("lenSeg");
+  if (!seg) return;
+  const n = parsed.bars.length;
+  for (const btn of seg.children) {
+    btn.setAttribute("aria-pressed", +btn.dataset.len === n ? "true" : "false");
+  }
+}
+
 function updateBarTools(){
-  if (!$("barLeft")) return;
+  if (!$("barDup")) return;
   const n = parsed.bars.length;
   const i = (selectedBar >= 0 && selectedBar < n) ? selectedBar : -1;
   const set = (id, disabled, label) => {
@@ -2830,8 +2865,6 @@ function updateBarTools(){
     el.setAttribute("title", label);
     el.setAttribute("aria-label", label);
   };
-  set("barLeft",  i <= 0,               T("barLeftLabel"));
-  set("barRight", i < 0 || i >= n - 1,  T("barRightLabel"));
   set("barDup",   !n,                   T("barDupLabel"));
   set("barDel",   !n,                   T("barDelLabel"));
   set("barUndo",  !undoStack.length,    undoStack.length ? T("barUndoLabel") : T("barUndoNone"));
@@ -2955,9 +2988,10 @@ function updateExFade(){
 function renderExamples(){
   const box = $("examples");
   box.innerHTML = "";
-  // 四小節那組一排兩個剛好;八小節那組一組佔一整排
-  box.classList.toggle("one-per-row", secLen !== 4);
-  const list = SECTIONS[secLen] || SECTIONS[4];
+  /* 四小節與八小節兩組一起列出來,中間插一條小標。
+     以前用一顆「4 小節 / 8 小節」切換,但那個標籤跟上面的「小節數」撞在一起
+     (一個是改進行的長度、一個是換清單),兩個一起出現一定會按錯 */
+  const list = SECTIONS[4].concat(SECTIONS[8]);
   // 格子太窄時 CSS 會照最長的和弦縮字。同樣長度的進行共用同一個「最長字數」,
   // 整組才會是同一個字級——同一排字忽大忽小比小一點還難看
   const widest = {};
@@ -2965,10 +2999,26 @@ function renderExamples(){
     const cs = ex.text.split(" - ");
     widest[cs.length] = Math.max(widest[cs.length] || 0, ...cs.map(c => c.length));
   }
+  let group = 0;
   for (const ex of list) {
+    const chordsN = ex.text.split(" - ").length;
+    // 換到八小節那一組時插一條小標
+    if (chordsN > 4 && group !== 8) {
+      group = 8;
+      const h = document.createElement("div");
+      h.className = "ex-group";
+      h.textContent = T("secGroup8");
+      box.appendChild(h);
+    } else if (chordsN <= 4 && group !== 4) {
+      group = 4;
+      const h = document.createElement("div");
+      h.className = "ex-group";
+      h.textContent = T("secGroup4");
+      box.appendChild(h);
+    }
     const b = document.createElement("button");
     b.type = "button";
-    b.className = "ex-btn";
+    b.className = "ex-btn" + (chordsN > 4 ? " long" : "");
     // 一顆和弦一個等寬格子。整串丟進 textContent 只會得到一條擠在一起的字,
     // 長的那幾組還會被 ellipsis 吃掉尾巴
     const chords = ex.text.split(" - ");
@@ -2991,9 +3041,7 @@ function renderExamples(){
     });
     box.appendChild(b);
   }
-  for (const btn of $("lenSeg").children) {
-    btn.setAttribute("aria-pressed", +btn.dataset.len === secLen ? "true" : "false");
-  }
+  updateLenSeg();
   for (const btn of $("repSeg").children) {
     btn.setAttribute("aria-pressed", +btn.dataset.rep === secRepeat ? "true" : "false");
   }
@@ -3104,7 +3152,7 @@ $("loopToggle").addEventListener("click", () => {
 });
 
 for (const btn of $("lenSeg").children) {
-  btn.addEventListener("click", () => { secLen = +btn.dataset.len; renderExamples(); });
+  btn.addEventListener("click", () => setBarCount(+btn.dataset.len));
 }
 for (const btn of $("repSeg").children) {
   btn.addEventListener("click", () => { secRepeat = +btn.dataset.rep; renderExamples(); });
@@ -3118,8 +3166,6 @@ $("formClear").addEventListener("click", () => {
 });
 
 /* 小節工具列 */
-$("barLeft").addEventListener("click", () => moveBar(-1));
-$("barRight").addEventListener("click", () => moveBar(1));
 $("barDup").addEventListener("click", dupBar);
 $("barDel").addEventListener("click", palDelete);
 $("barUndo").addEventListener("click", undoEdit);
@@ -3131,13 +3177,26 @@ function setSecOpen(open){
   secOpen = !!open;
   const panel = $("exPanel"), btn = $("secToggle");
   if (open) panel.removeAttribute("hidden"); else panel.setAttribute("hidden", "");
+  if (open) fitSecPanel();
   btn.setAttribute("aria-expanded", open ? "true" : "false");
   updateSecToggleText();
   updateExFade();
   try { localStorage.setItem(SEC_KEY, open ? "1" : "0"); } catch (e) {}
 }
+/* 面板是浮的,但它如果比視窗剩下的高度還長,整頁還是會被撐出捲軸。
+   打開時量一次「從清單上緣到視窗底」還有多少,直接鎖住清單的高度 */
+function fitSecPanel(){
+  const box = $("examples");
+  if (!box || !secOpen) return;
+  box.style.maxHeight = "";
+  const top = box.getBoundingClientRect().top;
+  const room = Math.floor(window.innerHeight - top - 18);
+  box.style.maxHeight = Math.max(120, Math.min(430, room)) + "px";
+  updateExFade();
+}
+
 function updateSecToggleText(){
-  const n = (SECTIONS[secLen] || SECTIONS[4]).length;
+  const n = SECTIONS[4].length + SECTIONS[8].length;
   $("secToggleText").textContent = T("secToggle", { n });
   const label = secOpen ? T("secToggleOpen") : T("secToggle", { n });
   $("secToggle").setAttribute("title", label);
@@ -3172,6 +3231,26 @@ $("saveBtn").addEventListener("click", () => {
 
 /* 空白鍵播放/停止。焦點在輸入框或按鈕上的時候不要搶——
    使用者正在打和弦,空白鍵必須是空白鍵 */
+/* ← → 換到上一格/下一格,數字鍵 1–9 直接跳到那一格。
+   焦點在輸入框裡時完全不攔 */
+document.addEventListener("keydown", (e) => {
+  const t = e.target;
+  if (t && (t.tagName === "TEXTAREA" || t.tagName === "INPUT")) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const n = parsed.bars.length;
+  if (!n) return;
+  if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+    e.preventDefault();
+    const cur = targetBar();
+    selectBar(Math.max(0, Math.min(n - 1, cur + (e.key === "ArrowRight" ? 1 : -1))));
+    return;
+  }
+  if (/^[1-9]$/.test(e.key)) {
+    const i = +e.key - 1;
+    if (i < n) { e.preventDefault(); selectBar(i); }
+  }
+});
+
 /* ⌘Z / Ctrl+Z 復原。焦點在文字框時不攔,那裡有瀏覽器自己的復原 */
 document.addEventListener("keydown", (e) => {
   if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "z") return;
@@ -3217,10 +3296,11 @@ document.addEventListener("keydown", (e) => {
   applyLanguage(currentLang);
   setPlayIcon(false);
   updateTransportIdle();
+  selectBar(parsed.bars.length ? 0 : -1);
   updateBarTools();
   // 清單捲動或視窗高度改變時,上下的漸層要跟著換(高度是 vh 算的,轉向也會變)
   $("examples").addEventListener("scroll", updateExFade, { passive: true });
-  window.addEventListener("resize", updateExFade);
+  window.addEventListener("resize", () => { fitSecPanel(); updateExFade(); });
 })();
 </script>
 </body>

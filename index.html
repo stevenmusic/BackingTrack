@@ -1221,14 +1221,20 @@ function transposeSteps(bars){
   return best;
 }
 
+/* 性質裡的升降也排成正式記號:m7b5 → m7♭5、7#11 → 7♯11。
+   只換「記號後面接數字」的那幾個,add9 / sus4 / alt / It+6 都不會被動到。
+   文字框裡使用者打的那一版不變,這只是小節格的排版 */
+function prettySuffix(suffix){
+  return suffix.replace(/#(?=\d)/g, "♯").replace(/b(?=\d)/g, "♭");
+}
+
 function chordDisplay(chord, steps){
   if (!chord) return "";
-  if (!transposeOn) return chord.text;
   const st = (typeof steps === "number") ? steps
            : transposeSteps(typeof parsed !== "undefined" && parsed ? parsed.bars : []);
   const tr = (letter, pc) => spellNote(letter, pc, st) ||
                              PAL_ROOTS[(((pc + transposeOn) % 12) + 12) % 12];
-  return tr(chord.rootLetter, chord.rootPc) + chord.suffix +
+  return tr(chord.rootLetter, chord.rootPc) + prettySuffix(chord.suffix) +
          (chord.slash ? "/" + tr(chord.bassLetter, chord.bassPc) : "");
 }
 

@@ -160,7 +160,8 @@ main{
 /* ── 和弦輸入 ─────────────────────── */
 .field-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:9px}
 .field-head .label{font-size:var(--fs-xs);color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
-.field-head .bars{font-size:var(--fs-xs);color:var(--muted);font-variant-numeric:tabular-nums}
+.field-head .bars{font-size:var(--fs-xs);color:var(--muted);font-variant-numeric:tabular-nums;
+  text-align:right;line-height:1.5;text-wrap:pretty}
 #chordInput{
   width:100%;min-height:46px;resize:vertical;
   background:var(--surface-inset);border:1px solid var(--line);border-radius:var(--radius-md);
@@ -200,11 +201,6 @@ main{
 .seg-mini button + button{border-left:1px solid var(--line)}
 .seg-mini button[aria-pressed="true"]{background:var(--gold);color:var(--bg);font-weight:700}
 #formClear{height:26px;font-size:var(--fs-2xs);padding:0 11px}
-.form-line{
-  margin-top:4px;font-size:var(--fs-2xs);color:var(--muted);line-height:1.6;
-  font-variant-numeric:tabular-nums;
-}
-
 /* 範例用格線不用 flex:進行長短差很多,flex 排出來每顆寬度都不一樣、
    最後一行還會落單。auto-fill 讓每一格等寬,空格子也保留寬度。
    min 取「164px 或半盒寬的大的那個」是為了封住第三欄:600px 視窗下這一塊有 518px 寬,
@@ -349,11 +345,11 @@ main{
 .bar-chip.bad{border-color:var(--danger);color:var(--danger);background:var(--danger-bg)}
 /* 小節一多就換四欄小格:12 小節的進行也只佔三列,跟四小節的兩列差不多高,
    整頁高度不會跟著進行長度跑掉 */
-.bars-grid.dense .bar-chip{min-height:28px;font-size:var(--fs-sm);padding:3px 2px}
+.bars-grid.dense .bar-chip{min-height:28px;font-size:var(--fs-sm);padding:3px 2px;line-height:1.25}
 .bars-grid.dense .bar-chip .num{top:1px;left:4px;font-size:9px}
 /* 接成 A A B B 之後動不動就 24、32 小節(八小節的段落接四次就 32 格)。
    四欄的話 32 格要排八列,整頁就被撐開了,所以再密一階:六欄或八欄、字再小一號 */
-.bars-grid.denser .bar-chip{min-height:24px;font-size:var(--fs-xs);padding:2px 1px;container-type:inline-size}
+.bars-grid.denser .bar-chip{min-height:24px;font-size:var(--fs-xs);padding:2px 1px;line-height:1.25;container-type:inline-size}
 .bars-grid.denser .bar-chip .num{top:0;left:3px;font-size:8px}
 /* 六欄、八欄時一格只剩三、四十 px,Cmaj7 放不下。跟範例膠囊同一招:
    字級 = 格子寬 ÷ 字數,再跟原本的字級取小的,寧可小一號也不要斷字 */
@@ -592,10 +588,14 @@ footer a:hover{color:var(--gold-bright)}
   .examples::-webkit-scrollbar{width:8px}
   .examples::-webkit-scrollbar-thumb{background:var(--muted);border-radius:4px}
   .examples::-webkit-scrollbar-thumb:hover{background:var(--gold)}
-  .pal-btn{padding-top:clamp(4px,1vh,16px);padding-bottom:clamp(4px,1vh,16px)}
+  .pal-btn{padding-top:clamp(4px,.55vh,16px);padding-bottom:clamp(4px,.55vh,16px)}
   .bar-chip{min-height:clamp(42px,5.4vh,86px)}
-  .bars-grid.dense .bar-chip{min-height:clamp(28px,3.6vh,56px)}
-  .bars-grid.denser .bar-chip{min-height:clamp(24px,3vh,44px)}
+  /* 兩欄的螢幕用滑鼠點,格子可以再矮一點:12 小節三列時省下來的高度
+     剛好是 720 高的筆電放不放得下的差別。手機維持 28px,那是用手指點的 */
+  .bars-grid.dense{gap:6px}
+  .bars-grid.dense .bar-chip{min-height:clamp(24px,3.2vh,56px);padding:2px}
+  .bars-grid.denser{gap:6px}
+  .bars-grid.denser .bar-chip{min-height:clamp(22px,2.9vh,44px)}
   .play-btn{width:clamp(48px,6.2vh,72px);height:clamp(48px,6.2vh,72px)}
   .seg button{min-height:clamp(46px,5.6vh,92px)}
   .toggle{padding-top:clamp(8px,1.5vh,22px);padding-bottom:clamp(8px,1.5vh,22px)}
@@ -604,11 +604,11 @@ footer a:hover{color:var(--gold-bright)}
   .step-btn{width:clamp(32px,3.7vh,48px);height:clamp(32px,3.7vh,48px)}
   .bpm-quick .btn{height:clamp(30px,3.4vh,46px)}
   /* 區塊之間的距離也跟著長:元件變大、間距沒變的話會擠在一起像貼紙 */
-  .ex-head{margin-top:clamp(5px,1.1vh,16px)}
-  .examples{margin-top:clamp(6px,1.1vh,16px)}
-  .palette{margin-top:clamp(7px,1.2vh,20px)}
-  .bars-grid{margin-top:clamp(7px,1.4vh,22px)}
-  .transport{margin-top:clamp(10px,1.4vh,22px)}
+  .ex-head{margin-top:clamp(5px,.68vh,16px)}
+  .examples{margin-top:clamp(6px,.8vh,16px)}
+  .palette{margin-top:clamp(7px,.95vh,20px)}
+  .bars-grid{margin-top:clamp(7px,.95vh,22px)}
+  .transport{margin-top:clamp(10px,1.35vh,22px)}
   .control{margin-top:clamp(8px,1.3vh,20px)}
   .control-pair > .control{margin-top:clamp(10px,1.4vh,22px)}
   .toggles{margin-top:clamp(8px,1.3vh,20px)}
@@ -703,7 +703,27 @@ try {
         <div class="examples" id="examples"></div>
       </div>
       </div>
-      <p class="form-line" id="formLine"></p>
+
+      <!-- 小節格 -->
+      <div class="bars-grid" id="barsGrid"></div>
+      <div class="parse-error" id="parseError">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/>
+        </svg>
+        <span id="parseErrorText"></span>
+      </div>
+
+      <!-- 走帶 -->
+      <div class="transport">
+        <button class="play-btn" id="playBtn" type="button" data-i18n-attr="aria-label:playLabel,title:playLabel" aria-label="播放" title="播放">
+          <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          <svg id="iconStop" viewBox="0 0 24 24" fill="currentColor" hidden><path d="M6 6h12v12H6z"/></svg>
+        </button>
+        <div class="transport-txt">
+          <div class="line1" id="transportLine1">準備好了</div>
+          <div class="line2" id="transportLine2">按下播放就開始</div>
+        </div>
+      </div>
 
       <!-- 和弦鍵盤:點就好,不用打字 -->
       <div class="palette">
@@ -721,29 +741,8 @@ try {
         </div>
       </div>
 
-      <!-- 小節格 -->
-      <div class="bars-grid" id="barsGrid"></div>
-      <div class="parse-error" id="parseError">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/>
-        </svg>
-        <span id="parseErrorText"></span>
-      </div>
-
       </div>
       <div class="col">
-
-      <!-- 走帶 -->
-      <div class="transport">
-        <button class="play-btn" id="playBtn" type="button" data-i18n-attr="aria-label:playLabel,title:playLabel" aria-label="播放" title="播放">
-          <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-          <svg id="iconStop" viewBox="0 0 24 24" fill="currentColor" hidden><path d="M6 6h12v12H6z"/></svg>
-        </button>
-        <div class="transport-txt">
-          <div class="line1" id="transportLine1">準備好了</div>
-          <div class="line2" id="transportLine2">按下播放就開始</div>
-        </div>
-      </div>
 
       <!-- 伴奏樣式 -->
       <div class="control">
@@ -866,14 +865,14 @@ const I18N = {
     chordPlaceholder: "C - Am - F - G",
     chordHint: "一個和弦一小節,4/4 拍。用空白或「-」分隔;不想打字就點下面那排。",
     barCount: "{n} 小節",
-    barCountTr: "{n} 小節 ・ 下面是移調 {t} 的和弦",
+    barCountForm: "形式 {form}",
+    barCountSep: " ・ ",
+    barCountTr: "下面是移調 {t} 的和弦",
     styleLabel: "伴奏樣式",
     len4: "4 小節",
     len8: "8 小節",
     formClear: "清空",
     secAdd: "接上去 ×{n}",
-    formLine: "形式 {form} ・ 共 {n} 小節",
-    formFree: "自由輸入 ・ {n} 小節",
     stylePad: "墊底",
     styleComp: "打點",
     styleDrive: "推進",
@@ -949,14 +948,14 @@ const I18N = {
     chordPlaceholder: "C - Am - F - G",
     chordHint: "One chord per bar, 4/4 time. Separate with spaces or \"-\"; or just tap the pad below.",
     barCount: "{n} bars",
-    barCountTr: "{n} bars · chords below are transposed {t}",
+    barCountForm: "Form {form}",
+    barCountSep: " \u00b7 ",
+    barCountTr: "chords below are transposed {t}",
     styleLabel: "Comping style",
     len4: "4 bars",
     len8: "8 bars",
     formClear: "Clear",
     secAdd: "Append ×{n}",
-    formLine: "Form {form} \u00b7 {n} bars",
-    formFree: "Free input \u00b7 {n} bars",
     stylePad: "Sustained",
     styleComp: "Comping",
     styleDrive: "Driving",
@@ -1324,15 +1323,20 @@ function chordDisplay(chord, steps){
          (chord.slash ? "/" + tr(chord.bassLetter, chord.bassPc) : "");
 }
 
-/* 小節數。移調時順便講一句「下面那幾格是移調後的」——文字框留的是原稿,
-   小節格顯示的是實際在響的和弦,不講的話會以為文字框沒跟著改是壞掉了 */
+/* 標題右邊那一行把三件事講完:接了哪個形式、幾小節、有沒有移調。
+   曾經另外開一行 form-line 寫「自由輸入 ・ 12 小節」,但小節數這裡本來就有,
+   等於同一句話講兩次還多佔一排,併回來 */
 function updateBarCount(){
   const el = document.getElementById("barCount");
   if (!el || typeof parsed === "undefined" || !parsed) return;
   const n = parsed.bars.length;
-  el.textContent = transposeOn
-    ? T("barCountTr", { n, t: (transposeOn > 0 ? "+" : "") + transposeOn })
-    : T("barCount", { n });
+  const parts = [];
+  if (typeof formParts !== "undefined" && formParts.length)
+    parts.push(T("barCountForm", { form: formLetters().join(" ") }));
+  if (n) parts.push(T("barCount", { n }));
+  if (transposeOn)
+    parts.push(T("barCountTr", { t: (transposeOn > 0 ? "+" : "") + transposeOn }));
+  el.textContent = parts.join(T("barCountSep"));
 }
 
 /* 整段進行:用空白 / - / | / 逗號分隔。「/」不能當分隔符,那是轉位用的 */
@@ -2564,7 +2568,6 @@ function reparse(){
   parsed = parseProgression(chordInput.value);
   updateFeel();
   renderBars();
-  updateFormLine();
   if (playing) {
     // 播放中改了和弦:重算配置,下一拍開始就吃新的進行
     voicings = buildVoicings(parsed.bars);
@@ -2964,17 +2967,6 @@ function applyForm(){
   reparse();
 }
 
-function updateFormLine(){
-  const el = $("formLine");
-  if (!el) return;
-  const n = parsed.bars.length;
-  if (!formParts.length) {
-    el.textContent = n ? T("formFree", { n }) : "";
-    return;
-  }
-  el.textContent = T("formLine", { form: formLetters().join(" "), n });
-}
-
 /* 段落清單放不下時會自己捲。上下各掛一層漸層,讓「還有更多」看得出來,
    被切一半的那一排也不會硬生生斷在那裡 */
 function updateExFade(){
@@ -3094,7 +3086,6 @@ function refreshDynamicText(){
   renderSaved();
   renderPalette();
   renderExamples();
-  updateFormLine();
   if (!playing) updateTransportIdle();
   const bad = parsed.bars.find(b => !b.ok);
   if (bad) $("parseErrorText").textContent = T("errUnknownChord", { tok: bad.text });

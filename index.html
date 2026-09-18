@@ -586,7 +586,7 @@ input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px rgba(201,
 .seg button[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--bg);font-weight:700}
 .seg button[aria-pressed="true"] svg{opacity:1}
 
-/* 開關列:count-in、循環、愈練愈快 */
+/* 開關列:count-in、循環、和弦變化 */
 /* 用 grid 不用 flex-wrap:flex 會讓落單的那個獨佔一整行、寬度跟別人差一截。
    窄的時候兩欄,第三顆自己佔整排(不要變成半格的孤兒);
    夠寬就三欄一排 */
@@ -987,12 +987,6 @@ try {
           <span class="box"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5.5 5.5L20 7"/></svg></span>
           <span data-i18n="loopLabel">循環播放</span>
         </button>
-        <!-- 練速度用的:每繞兩圈自己快 5 BPM。慢慢推上去比一次跳到底有用 -->
-        <button class="toggle" id="rampToggle" type="button" aria-pressed="false"
-          data-i18n-attr="title:rampTip" title="每繞兩圈自動加快 5 BPM,到 240 為止">
-          <span class="box"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5.5 5.5L20 7"/></svg></span>
-          <span data-i18n="rampLabel">愈練愈快</span>
-        </button>
         <!-- 繞第二圈開始換一兩顆和弦的聲位:C → Cmaj7、G → G/F 這種很常用的。
              第一圈一定照原譜,小節格會跟著顯示真的在響的那幾顆 -->
         <button class="toggle" id="reharmToggle" type="button" aria-pressed="true"
@@ -1132,10 +1126,8 @@ const I18N = {
     qualMaj: "大三",
     qualMin: "小三",
     savedLabel: "存下來的進行",
-    rampLabel: "愈練愈快",
     reharmLabel: "和弦變化",
     reharmTip: "每繞一圈換一兩顆和弦的聲位(C → Cmaj7、G → G/F),只加色彩音不改功能;第一圈照原譜",
-    rampTip: "每繞兩圈自動加快 5 BPM,到 240 為止",
     linkBtn: "複製連結",
     linkTip: "複製一條網址,對方打開就是這個進行與設定",
     linkCopied: "已複製",
@@ -1245,8 +1237,6 @@ const I18N = {
     qualMaj: "maj",
     qualMin: "min",
     savedLabel: "Saved progressions",
-    rampLabel: "Speed up",
-    rampTip: "Adds 5 BPM every two times round, up to 240",
     linkBtn: "Copy link",
     linkTip: "Copies a link that opens this progression and these settings",
     linkCopied: "Copied",
@@ -1651,10 +1641,17 @@ function trimTones(intervals, rootInBass){
 function buildVoicing(chord, prevUpper){
   const bass = BASS_LOW + chord.bassPc;               // 轉位低音也吃同一個八度
   // 上方聲部用的音級:去掉重複的,但九度(14)要保留它「高一個八度」的身分
-  const pcs = [];
+  const pcs = [], tension = new Set();
   for (const iv of trimTones(chord.intervals, chord.bassPc === chord.rootPc)) {
     const pc = (chord.rootPc + iv) % 12;
-    if (!pcs.includes(pc)) pcs.push(pc);
+    if (!pcs.includes(pc)) {
+      pcs.push(pc);
+      /* 九度以上(14 / 17 / 21)是色彩音,不是和弦的骨架。
+         擺在**最上面**很容易變成「怪怪的那一顆」——聽的人會把最高音當旋律,
+         旋律停在 9 或 11 上就像唱到一半斷掉(被回報過)。
+         六度(9)不算:那本來就是很好聽的頂音 */
+      if (iv > 12) tension.add(pc);
+    }
   }
 
   const target = prevUpper && prevUpper.length ? mean(prevUpper) : UPPER_TARGET;
@@ -1674,8 +1671,13 @@ function buildVoicing(chord, prevUpper){
         last = n;
       }
       if (v[v.length - 1] > 84) continue;   // 別疊到太高,鋼琴伴奏不會跑到那上面
-      // 成本 =「離上一組多遠」+「離舒服音域多遠」,前者權重高,優先顧聲部連接
-      const cost = Math.abs(mean(v) - target) * 2 + Math.abs(mean(v) - UPPER_TARGET) * 0.5;
+      /* 成本 =「離上一組多遠」+「離舒服音域多遠」+「頂音是不是色彩音」。
+         前者權重最高(聲部連接優先),色彩音在頂上罰 7 分——
+         那大約是「差三個半音的聲部移動」,所以有更順的轉位時一定會避開它,
+         但真的只剩這個選擇時還是彈得出來(不是硬禁止) */
+      const top = v[v.length - 1] % 12;
+      const cost = Math.abs(mean(v) - target) * 2 + Math.abs(mean(v) - UPPER_TARGET) * 0.5
+                 + (tension.has(top) ? 7 : 0);
       if (cost < bestCost) { bestCost = cost; best = v; }
     }
   }
@@ -1683,18 +1685,63 @@ function buildVoicing(chord, prevUpper){
   return { bass, upper: best };
 }
 
-/* ══ 繞第二圈就換一兩顆和弦的聲位 ══════════════════════════════
-   同一個四小節繞二十次,和弦一模一樣會很悶。真的伴奏會加色彩音:
-   第二次的 C 彈成 Cmaj7、G 彈成 G/F。這裡做的就是這件事——
-   **只加色彩音,不改功能**(C 不會變成 Am、屬七不會變成大七),
-   所以聽起來還是同一首,只是「換了個彈法」。
+/* ══ 繞第二圈就換和弦 ═════════════════════════════════════════
+   同一個四小節繞二十次,和弦一模一樣會很悶。這裡做的是**代理和弦**:
+   I 用 vi 代、IV 前面放它的屬七、IV 借小調的 iv、V7 用三全音代理……
+   都是真的會寫在譜上的那種,不是把 7 改成 9 再改成 13(那只是加色彩音,
+   聽起來還是同一顆和弦)。加色彩音只留一條規則墊底。
 
-   查的是原本寫的性質(suffix),查不到就不動:`m7b5`、`7b9`、`It+6` 這種
-   本來就有指定聲位的和弦碰都不碰,亂加音只會壞掉 */
-const SUB_TABLE = {
-  "":     ["maj7", "6", "add9"],   // 大三:加大七、六、九
-  "m":    ["m7", "m9"],            // 小三:加小七
-  "7":    ["9", "13"],             // 屬七:往上堆,還是屬七
+   代理是講**級數**的事,所以要先知道調:`keyOf()` 拿音級集合去比十二個大調音階,
+   中最多的那個就是它。知道調之後每一格都能說成「第幾級」,規則才寫得出來。 */
+const MAJOR_SCALE = [0, 2, 4, 5, 7, 9, 11];
+/* 判調時只看和弦的骨架音,降七度(10)與延伸音都不算 */
+const KEY_CORE = [0, 3, 4, 6, 7, 8, 11];
+function keyOf(bars){
+  /* 主和弦通常是「出現最多次的那顆大三/屬七」,小調就是關係小調的 vi。
+     用次數不用「第一顆」:ii-V-I 的第一顆是 ii,拿它當主音會整組錯位 */
+  const tonicHits = new Array(12).fill(0);
+  for (const b of bars) {
+    if (!b.ok) continue;
+    const q = qualOf(b.chord), r = b.chord.rootPc;
+    if (q === "maj" || q === "dom") tonicHits[r]++;
+    else if (q === "min") tonicHits[(r + 3) % 12]++;   // Am 是 C 大調的 vi
+  }
+  let best = 0, bestHit = -1;
+  for (let k = 0; k < 12; k++) {
+    const scale = new Set(MAJOR_SCALE.map(x => (x + k) % 12));
+    let hit = 0;
+    for (const b of bars) {
+      if (!b.ok) continue;
+      hit += scale.has(b.chord.rootPc) ? 2 : -2;
+      for (const iv of b.chord.intervals) {
+        /* **只看和弦的骨架**(根音、三度、五度、大七),降七度與延伸音一律不算。
+           屬七的 B♭ 不代表這首歌在 F 大調——藍調的 C7 F7 G7 全帶降七度,
+           把它算進去的話 F 大調會贏,F7 變成 I 級,整組代理規則跟著錯位 */
+        if (KEY_CORE.indexOf(iv) < 0) continue;
+        hit += scale.has((b.chord.rootPc + iv) % 12) ? 1 : -2;
+      }
+    }
+    hit += tonicHits[k] * 3;
+    if (hit > bestHit) { bestHit = hit; best = k; }
+  }
+  return best;
+}
+
+/* 和弦的種類:大、小、屬七、減。代理規則只問這個,不問它寫成 7 還是 13 */
+function qualOf(c){
+  const iv = c.intervals;
+  if (iv.indexOf(3) >= 0 && iv.indexOf(6) >= 0) return "dim";
+  if (iv.indexOf(3) >= 0) return "min";
+  if (iv.indexOf(4) >= 0) return iv.indexOf(10) >= 0 ? "dom" : "maj";
+  return "other";                                // sus 之類的不動
+}
+function nameOf(pc, suffix){ return PAL_ROOTS[((pc % 12) + 12) % 12] + (suffix || ""); }
+
+/* 加色彩音那一條(墊底用的)。查的是原本寫的性質,查不到就不動 */
+const EXT_TABLE = {
+  "":     ["maj7", "6", "add9"],
+  "m":    ["m7", "m9"],
+  "7":    ["9", "13"],
   "maj7": ["maj9", "6"],
   "m7":   ["m9"],
   "6":    ["maj7"],
@@ -1703,6 +1750,130 @@ const SUB_TABLE = {
   "m9":   ["m7"],
   "sus4": ["7sus4"],
 };
+
+/* 這段進行用到的所有音級。**只有「加色彩音」那條規則**拿它當守門員:
+   加音是不該加出調外音的(`C - G - Am - F` 的 G 套「大三 → 大七」會變成
+   Gmaj7 帶 F♯,整個調就歪了)。
+   真正的代理和弦相反——副屬、借用、三全音代理本來就是要帶進調外音,
+   那是它們的用處,不能拿同一把尺去量 */
+function progPcs(bars){
+  const set = new Set();
+  for (const b of bars) {
+    if (!b.ok) continue;
+    for (const iv of b.chord.intervals) set.add((b.chord.rootPc + iv) % 12);
+    set.add(b.chord.bassPc % 12);
+  }
+  return set;
+}
+function extFits(tok, pcs){
+  const c = parseChord(normalizeSymbol(tok));
+  if (!c) return false;
+  for (const iv of c.intervals) if (!pcs.has((c.rootPc + iv) % 12)) return false;
+  return pcs.has(c.bassPc % 12);
+}
+
+/* 代理和弦的規則表。每一條:哪些曲風會用、什麼情況下成立、換成什麼。
+   `d` 是這一格的級數(離主音幾個半音),`nd` 是下一格的。
+   曲風要分:pop 不會用三全音代理,爵士不會用「借用 iv」那種流行的手法 */
+const ALL_FEELS = ["straight", "citypop", "latin", "blues", "swing", "funk"];
+const SUB_RULES = [
+  /* I → vi / iii:最基本的三度代理,同一個功能換一個顏色 */
+  { id: "I→vi",  feels: ["straight", "citypop", "latin", "swing"],
+    ok: x => x.d === 0 && x.q === "maj", to: x => nameOf(x.key + 9, "m7") },
+  { id: "I→iii", feels: ["straight", "citypop", "latin", "swing"],
+    ok: x => x.d === 0 && x.q === "maj" && x.nd !== 4, to: x => nameOf(x.key + 4, "m7") },
+  /* IV ↔ ii:也是三度代理,下屬功能的兩張臉 */
+  { id: "IV→ii", feels: ["straight", "citypop", "latin", "swing"],
+    ok: x => x.d === 5 && x.q === "maj" && x.nd !== 2, to: x => nameOf(x.key + 2, "m7") },
+  { id: "ii→IV", feels: ["straight", "citypop", "latin"],
+    ok: x => x.d === 2 && x.q === "min" && x.nd !== 5, to: x => nameOf(x.key + 5, "maj7") },
+  { id: "vi→I",  feels: ["straight", "citypop"],
+    ok: x => x.d === 9 && x.q === "min" && x.nd !== 0, to: x => nameOf(x.key, "maj7") },
+  /* 借用小調的 iv:F → Fm,流行歌最愛的那一下(「借來的憂傷」) */
+  { id: "IV→iv", feels: ["straight", "citypop"],
+    ok: x => x.d === 5 && x.q === "maj", to: x => nameOf(x.key + 5, "m") },
+  /* I7:要去 IV 之前先變成它的屬七(C → C7 → F) */
+  { id: "I→I7",  feels: ["straight", "citypop", "blues"],
+    ok: x => x.d === 0 && x.q === "maj" && x.nd === 5, to: x => nameOf(x.key, "7") },
+  /* 副屬和弦:下一格的 V7 放在這裡。ii 前面放 VI7、V 前面放 II7…… */
+  { id: "V7/next", feels: ["straight", "citypop", "latin", "swing"],
+    ok: x => x.next && x.q !== "dom" && x.nq !== "dom" && x.nq !== "dim" &&
+             ((x.rootPc + 5) % 12) !== x.nextRootPc &&      // 本來就是它的 V 就不用換
+             x.nextRootPc !== x.rootPc,
+    to: x => nameOf(x.nextRootPc + 7, "7") },
+  /* V7 的三全音代理:G7 → D♭7,低音半音走下去接到 I */
+  { id: "tritone", feels: ["latin", "swing", "citypop"],
+    ok: x => x.q === "dom" && x.next && ((x.rootPc + 5) % 12) === x.nextRootPc,
+    to: x => nameOf(x.rootPc + 6, "7") },
+  /* ♯IV 減七:兩格同一顆屬七、下一格在五度上(F7 F7 C7 → F7 F♯dim7 C7)。
+     藍調與爵士藍調第六小節的那顆經過和弦,幾乎是固定寫法 */
+  { id: "♯IV°", feels: ["blues", "swing", "citypop"],
+    // 一定要是「IV 走回 I」那一格才成立(藍調第六小節)。只比音程不比級數的話,
+    // C7 C7 G7 也會被塞一顆 C♯dim7——那不是經過和弦,是不相干的音
+    ok: x => x.q === "dom" && x.prevSame && x.d === 5 && x.nd === 0,
+    to: x => nameOf(x.rootPc + 1, "dim7") },
+  /* 兩格同一個和弦:前面那格換成它的 ii(G7 G7 → Dm7 G7) */
+  { id: "ii-V",  feels: ["latin", "swing", "citypop"],
+    ok: x => x.q === "dom" && x.nextSame, to: x => nameOf(x.rootPc + 7, "m7") },
+  /* 經過減和弦:前面那格是同一顆、下一格在大二度上(Cmaj7 Cmaj7 Dm7 → C♯dim7) */
+  { id: "pass°",  feels: ["straight", "citypop", "swing"],
+    ok: x => x.prevSame && x.next && ((x.rootPc + 2) % 12) === x.nextRootPc,
+    to: x => nameOf(x.rootPc + 1, "dim7") },
+  /* 一轉:低音走三音,整排低音線就順了(C → C/E、G → G/B) */
+  { id: "轉位",  feels: ALL_FEELS,
+    ok: x => x.q === "maj" || x.q === "min",
+    to: x => x.full + "/" + nameOf(x.rootPc + (x.q === "min" ? 3 : 4)) },
+  /* 屬七的三轉:G → G7/F,低音下行接到 I 的三音 */
+  { id: "V7/4",  feels: ALL_FEELS,
+    ok: x => (x.q === "maj" || x.q === "dom") && x.next && ((x.rootPc + 5) % 12) === x.nextRootPc,
+    to: x => nameOf(x.rootPc, "7") + "/" + nameOf(x.rootPc + 10) },
+  /* 墊底的那條:只加色彩音。上面都不成立時至少換個聲位 */
+  { id: "加色彩音", feels: ALL_FEELS, ext: true,
+    ok: x => !!EXT_TABLE[x.suffix],
+    to: x => null },
+];
+
+/* 這一格可以換成什麼。回傳一串候選,挑哪一個交給亂數 */
+function subCandidates(bars, i, key, pcs){
+  const bar = bars[i];
+  if (!bar || !bar.ok || bar.chord.slash) return [];   // 本來就有轉位就不要再動
+  const c = bar.chord;
+  const next = bars[(i + 1) % bars.length], prev = bars[(i - 1 + bars.length) % bars.length];
+  const x = {
+    key, d: ((c.rootPc - key) % 12 + 12) % 12, q: qualOf(c), rootPc: c.rootPc,
+    suffix: c.suffix, text: c.text.slice(0, c.text.length - c.suffix.length),
+    full: c.text,        // 整串(含性質)。轉位要用它,只拿根音會把 Dm7 變成 D/F
+    next: next && next.ok ? next : null,
+    nextRootPc: next && next.ok ? next.chord.rootPc : -1,
+    nd: next && next.ok ? ((next.chord.rootPc - key) % 12 + 12) % 12 : -1,
+    nq: next && next.ok ? qualOf(next.chord) : "",
+    nextSame: !!(next && next.ok && next.chord.text === c.text) && bars.length > 1,
+    prevSame: !!(prev && prev.ok && prev.chord.text === c.text) && bars.length > 1,
+  };
+  if (x.q === "other" || x.q === "dim") return [];
+  const out = [];
+  for (const r of SUB_RULES) {
+    if (r.feels.indexOf(feelNow) < 0) continue;
+    if (!r.ok(x)) continue;
+    if (r.ext) {
+      for (const q of EXT_TABLE[x.suffix]) {
+        const t = x.text + q;
+        if (extFits(t, pcs)) out.push(t);
+      }
+      continue;
+    }
+    const t = r.to(x);
+    if (t && t !== c.text && parseChord(normalizeSymbol(t))) out.push(t);
+  }
+  return [...new Set(out)];
+}
+
+let reharmOn = true;     // 繞第二圈開始換一兩顆和弦
+let lapBuilt = -1;       // voicings 是照第幾圈建的
+let lapBars = null;      // 這一圈實際在彈的和弦(沒換過就是 null)
+/* 現在畫面上與排程要看的那一份和弦。沒有在換的時候就是使用者打的那一份 */
+function barsNow(){ return lapBars || parsed.bars; }
+function resetLap(){ lapBuilt = -1; lapBars = null; }
 
 /* 這一圈要把哪幾格換掉。第一圈(lap 0)一定照原譜——先聽過原本長怎樣,
    後面才知道變的是什麼。一圈換一到兩格,多了就不像同一首了。
@@ -1720,70 +1891,18 @@ function subBarsFor(lap, n){
   return out;
 }
 
-/* 這一段進行用到的所有音級。替換的時候拿它當守門員:
-   **加進去的音一定要是這段本來就有的音**,不然會跑出調外音。
-   踩過:`C - G - Am - F` 裡的 G 是屬和弦,套「大三 → 大七」會變成 Gmaj7(帶 F♯),
-   整個調就歪了;同一條規則放到 C 上卻是對的(Cmaj7 的 B 本來就在)。
-   用「這段有沒有這個音」判,不用管使用者打的是什麼調、什麼級數 */
-function progPcs(bars){
-  const set = new Set();
-  for (const b of bars) {
-    if (!b.ok) continue;
-    for (const iv of b.chord.intervals) set.add((b.chord.rootPc + iv) % 12);
-    set.add(b.chord.bassPc % 12);
-  }
-  return set;
-}
-
-/* 這個寫法加進來的音,是不是這段本來就有的 */
-function subFits(tok, pcs){
-  const c = parseChord(normalizeSymbol(tok));
-  if (!c) return false;
-  for (const iv of c.intervals) if (!pcs.has((c.rootPc + iv) % 12)) return false;
-  return pcs.has(c.bassPc % 12);
-}
-
-/* 一格的 token 換成加了色彩音的寫法。r 是 0–1 的亂數(決定挑哪一種),
-   next 是下一格的和弦——V 級才給「屬七的三轉」(G → G/F),
-   那是最常見的那種經過低音,但它只有在真的要解決到四度上方時才成立 */
-function subToken(bar, r, next, pcs){
-  const c = bar && bar.ok && bar.chord;
-  if (!c || c.slash) return null;             // 本來就有轉位就不要再動
-  const list = SUB_TABLE[c.suffix];
-  if (!list) return null;
-  // 原本寫的根音(含升降記號):text 是正規化過的整串,去掉尾巴的性質就是它
-  const head = c.text.slice(0, c.text.length - c.suffix.length);
-  const cand = list.map(q => head + q);
-  // V → I:三轉的屬和弦(G/F),低音走下行接到 I 的三音
-  const resolves = next && next.ok && next.chord &&
-                   ((c.rootPc + 5) % 12) === next.chord.rootPc;
-  if (resolves && (c.suffix === "" || c.suffix === "7")) {
-    const bassName = PAL_ROOTS[(c.rootPc + 10) % 12];
-    if (bassName) cand.push(head + "7/" + bassName);
-  }
-  const ok = cand.filter(t => subFits(t, pcs));
-  if (!ok.length) return null;
-  return ok[Math.min(ok.length - 1, Math.floor(r * ok.length))];
-}
-
-let reharmOn = true;     // 繞第二圈開始換一兩顆和弦的聲位
-let lapBuilt = -1;       // voicings 是照第幾圈建的
-let lapBars = null;      // 這一圈實際在彈的和弦(沒換過就是 null)
-/* 現在畫面上與排程要看的那一份和弦。沒有在換的時候就是使用者打的那一份 */
-function barsNow(){ return lapBars || parsed.bars; }
-function resetLap(){ lapBuilt = -1; lapBars = null; }
-
 /* 這一圈實際要彈的和弦。lap 0 就是原譜,之後才開始換 */
 function barsForLap(lap){
   const src = parsed.bars;
   const subs = subBarsFor(lap, src.length);
   if (!Object.keys(subs).length) return src;
+  const key = keyOf(src), pcs = progPcs(src);
   const out = src.slice();
-  const pcs = progPcs(src);
-  for (const key of Object.keys(subs)) {
-    const i = +key;
-    const tok = subToken(src[i], subs[key], src[(i + 1) % src.length], pcs);
-    if (!tok) continue;
+  for (const k of Object.keys(subs)) {
+    const i = +k;
+    const cand = subCandidates(src, i, key, pcs);
+    if (!cand.length) continue;
+    const tok = cand[Math.min(cand.length - 1, Math.floor(subs[k] * cand.length))];
     const c = parseChord(normalizeSymbol(tok));
     if (c) out[i] = { ok: true, chord: c, text: tok };
   }
@@ -2726,8 +2845,16 @@ function compPositions(absBar){
   const st = styleAt(absBar);
   if (st === "pad") return [0];
   if (st === "drive") {
-    const out = [];
-    for (let i = 0; i < slotsInBar(); i++) out.push(i);
+    /* 推進是「八分音符不停」,**不是每一格都打**。
+       City Pop 與 Funk 是一拍四格(sub:2),照格子數走就變成十六分的和弦連發——
+       一小節砸十六下,聽起來就是在亂捶(回報過「瘋狂砸和弦」)。
+       所以步進要走 subOf():八分打底,十六分的曲風再把本家的切分疊上去 */
+    const step = subOf(), out = [];
+    for (let i = 0; i < slotsInBar(); i += step) out.push(i);
+    if (step > 1) {
+      for (const i of pickCell(cellsOf(COMP_CELLS), absBar, 100)) if (out.indexOf(i) < 0) out.push(i);
+      out.sort((a, b) => a - b);
+    }
     return out;
   }
   return pickCell(cellsOf(COMP_CELLS), absBar, 100);
@@ -3053,7 +3180,16 @@ function schedulePiano(v, barStartBeat, b, transpose, absBar, isFill){
     const t = push ? slotTime(barStartBeat, idx + 1) : slotTime(barStartBeat, idx);
     const peak = idx === 0 ? p.compGain * 1.15 : push ? p.compGain * 0.8 : p.compGain;
     const dur = slotDur() * (st === "drive" ? 0.9 : 1.8);
-    for (const n of v.upper) playNote(n + transpose, t, dur, humanize(absBar, 84 + idx, peak * arc));
+    /* **不是每一下都把整組音一起砸下去**。真的在 comping 的手,重拍才落滿,
+       中間那些反拍多半只帶上面兩顆(有時只有最上面那一顆)。
+       每一下都一樣厚就是「機器人」的來源——比節奏型固定還明顯 */
+    let notes = v.upper;
+    if (idx !== 0 && notes.length > 2) {
+      const r = hash01(absBar, 110 + idx);
+      if (r < 0.34) notes = notes.slice(-2);
+      else if (r < 0.46) notes = notes.slice(-1);
+    }
+    for (const n of notes) playNote(n + transpose, t, dur, humanize(absBar, 84 + idx, peak * arc));
   }
 
   if (isFill && b === beats - 1) {
@@ -3081,7 +3217,7 @@ function scheduleBeat(i, when){
   /* absBar 是「從頭數到現在的第幾小節」,繞第二圈時會繼續往上加——
      變化就是靠它,同一格和弦第二圈聽起來才不會跟第一圈一模一樣 */
   const absBar = Math.floor(musicBeat / beats);
-  /* 繞到新的一圈就換一兩顆和弦的聲位(見 SUB_TABLE)。
+  /* 繞到新的一圈就換一兩顆和弦(代理和弦,見 SUB_RULES)。
      一定要在這一圈的第一小節第一拍做,不然會在樂句中間忽然換 */
   if (reharmOn && loopOn && b === 0 && bar === 0) {
     const lap = Math.floor(absBar / nBars);
@@ -3090,16 +3226,6 @@ function scheduleBeat(i, when){
   // 一格的進行沒有「最後一格」可言,每小節都過門會很吵,所以兩格以上才給
   const isFill = nBars >= 2 && bar === nBars - 1;
 
-  /* 愈練愈快:每繞兩圈往上推 5 BPM。在「圈的第一小節第一拍」推,
-     走 setBpm → reanchorTempo,已經排進去的音不會被改到一半。
-     排程提前 0.2 秒,所以聽起來就是新的一圈從頭開始變快 */
-  if (rampOn && loopOn && b === 0 && bar === 0 && absBar > 0) {
-    const cycle = Math.floor(absBar / nBars);
-    if (cycle !== rampedCycle && cycle % 2 === 0 && bpmOn < 240) {
-      rampedCycle = cycle;
-      setBpm(Math.min(240, bpmOn + 5));
-    }
-  }
 
   schedulePiano(v, barStartBeat, b, transposeOn, absBar, isFill);
   scheduleDrums(barStartBeat, b, absBar, isFill);
@@ -3159,7 +3285,6 @@ function startPlayback(){
     else setStatus(T("statusSamples", { n: loadedSamples.size }), false);
 
     playing = true;
-    rampedCycle = -1;
     spb = 60 / bpmOn;
     countInBeats = countInOn ? beatsInBar() * 2 : 0;
     endBeat = loopOn ? Infinity : countInBeats + voicings.length * beatsInBar();
@@ -3195,8 +3320,6 @@ const barsGrid = $("barsGrid");
 const playBtn = $("playBtn");
 
 let bpmOn = 100, transposeOn = 0, styleOn = "comp", countInOn = true, loopOn = true;
-let rampOn = false;        // 愈練愈快:每兩圈 +5 BPM
-let rampedCycle = -1;      // 已經加速過的那一圈,同一圈不會加兩次
 let lastHighlight = -1;
 
 /* SVGElement 沒有 hidden 這個 IDL 屬性,el.hidden = true 只會掛上一個沒人看的 JS 屬性,
@@ -3440,7 +3563,10 @@ function renderBars(){
      12 小節藍調剛好三排。超過 12 格才改成一排八格(等於一排兩句),
      不然排數太多會把整頁撐開。**不要用六欄**:第 5 格會跑到第一排中間,
      看的人就數不出樂句了 */
-  const n = parsed.bars.length;
+  /* 欄數一定要照**剛剛畫出來的那幾格**算,不能另外去問 parsed.bars:
+     兩邊有一瞬間對不上(見上面 reparse 的 resetLap),欄數就會配錯,
+     症狀是「8 格擠在同一橫排」 */
+  const n = src.length;
   const cols = n <= 12 ? 4 : 8;
   barsGrid.style.gridTemplateColumns = "repeat(" + cols + ",minmax(0,1fr))";
   barsGrid.classList.toggle("dense", n > 4);
@@ -3468,12 +3594,13 @@ function renderBars(){
 function reparse(){
   parsed = parseProgression(chordInput.value);
   updateFeel();
-  if (!playing) resetLap();
+  /* **一定要排在 renderBars 前面**:和弦改了,上一圈換過的那一份就作廢了。
+     漏掉的話 renderBars 會畫「上一首的格數」,但格線的欄數是照新的算的——
+     12 小節換成 16 小節那一下,就會看到 8 格擠在同一橫排(回報過) */
+  resetLap();
   renderBars();
   if (playing) {
-    // 播放中改了和弦:重算配置,下一拍開始就吃新的進行。
-    // 改過的那一圈不算數了,回到原譜重新開始換
-    resetLap();
+    // 播放中改了和弦:重算配置,下一拍開始就吃新的進行
     voicings = buildVoicings(parsed.bars);
     if (!parsed.bars.length || parsed.bars.some(b => !b.ok)) stopPlayback();
     else if (!loopOn) endBeat = countInBeats + voicings.length * beatsInBar();
@@ -3560,7 +3687,7 @@ function saveState(){
     localStorage.setItem(STATE_KEY, JSON.stringify({
       text: chordInput.value, bpm: bpmOn, transpose: transposeOn,
       style: styleOn, meter: meterOn, feel: feelPick,
-      countIn: countInOn, loop: loopOn, ramp: rampOn, reharm: reharmOn,
+      countIn: countInOn, loop: loopOn, reharm: reharmOn,
     }));
   } catch (e) {}
 }
@@ -4167,12 +4294,6 @@ $("countInToggle").addEventListener("click", () => {
   setToggle($("countInToggle"), countInOn);
   saveState();
 });
-$("rampToggle").addEventListener("click", () => {
-  rampOn = !rampOn;
-  setToggle($("rampToggle"), rampOn);
-  rampedCycle = -1;
-  saveState();
-});
 $("reharmToggle").addEventListener("click", () => {
   reharmOn = !reharmOn;
   setToggle($("reharmToggle"), reharmOn);
@@ -4364,7 +4485,6 @@ document.addEventListener("keydown", (e) => {
     if (st.feel && (st.feel === "auto" || FEELS[st.feel])) feelPick = st.feel;
     if (typeof st.countIn === "boolean") countInOn = st.countIn;
     if (typeof st.loop === "boolean") loopOn = st.loop;
-    if (typeof st.ramp === "boolean") rampOn = st.ramp;
     if (typeof st.reharm === "boolean") reharmOn = st.reharm;
     if (typeof st.bpm === "number") bpmOn = st.bpm;
     if (typeof st.transpose === "number") transposeOn = st.transpose;
@@ -4374,7 +4494,6 @@ document.addEventListener("keydown", (e) => {
   setMeter(meterOn, true);
   setToggle($("countInToggle"), countInOn);
   setToggle($("loopToggle"), loopOn);
-  setToggle($("rampToggle"), rampOn);
   setToggle($("reharmToggle"), reharmOn);
   setBpm(bpmOn);
   setTranspose(transposeOn);

@@ -237,13 +237,21 @@ main{
 }
 .seg-mini button + button{border-left:1px solid var(--line)}
 .seg-mini button[aria-pressed="true"]{background:var(--gold);color:var(--bg);font-weight:700}
-/* 自動選中時,被它判到的那個曲風畫成空心(外框金、字金、底透明),
-   等於用框指給你看「自動現在選的是這個」。實心永遠是「現在生效的那一顆」,
-   所以不用在自動那顆上再寫一次曲風名字(寫了會跟旁邊的按鈕重複) */
-.seg-mini button.detected{
-  color:var(--gold-bright);font-weight:600;
-  box-shadow:inset 0 0 0 1px var(--gold);
+/* 「自動」不是一種曲風,所以不進那排膠囊,擺在旁邊當開關:
+   亮著 = 左邊實心的那一顆是跟著和弦挑的,自己點曲風就會熄掉。
+   用空心金(外框+金字)不用實心,免得跟「現在在彈的那一顆」搶 */
+.auto-chip{
+  flex:none;border:1px solid var(--line);border-radius:var(--radius-pill);
+  background:transparent;color:var(--muted);
+  font-family:inherit;font-size:var(--fs-2xs);padding:4px 10px;cursor:pointer;white-space:nowrap;
+  transition:color .15s,border-color .15s,box-shadow .15s;
 }
+.auto-chip:hover,.auto-chip:focus-visible{color:var(--ivory);border-color:var(--gold);outline:none}
+.auto-chip[aria-pressed="true"]{
+  color:var(--gold-bright);border-color:var(--gold);
+  box-shadow:inset 0 0 0 1px var(--gold);font-weight:600;
+}
+.feel-row{gap:8px}
 .feel-row .seg-mini{flex-wrap:wrap}
 /* 變暗 = 這組進行本來不是這個拍號。還是點得下去,只是先講一聲 */
 .seg-mini button.dim{opacity:.35}
@@ -890,16 +898,13 @@ try {
         </div>
       </div>
 
-      <!-- 曲風:預設「自動」= 跟著和弦走(這是這個工具的原則)。
-           自動亮著的時候,它判到的那個曲風會多一圈外框,等於用框指給你看。
-           想自己指定就點那一顆,實心的永遠是現在生效的。
+      <!-- 曲風:實心的那一顆永遠是現在在彈的,不用另外看哪裡。
+           右邊的「自動」只是說「這一顆是跟著和弦挑的」——它不是一種曲風,
+           所以不放進同一排膠囊裡(放進去就會有人問「自動是什麼風格」)。
+           不寫標題:Pop / Bossa / Swing / Funk 自己就說明了那是曲風。
            Funk 只有 4/4 有,別的拍號會變暗 -->
       <div class="meter-row feel-row">
-        <span class="label" data-i18n="feelLabel">曲風</span>
         <div class="seg-mini" id="feelSeg">
-          <button type="button" data-feel="auto" aria-pressed="true" class="auto"
-            data-i18n="feelAuto" data-i18n-attr="title:feelAutoTip"
-            title="跟著和弦走:有九度以上是 Swing、六七度過半是 Bossa,其餘是 Pop。判到哪一個,那一顆就會多一圈外框">自動</button>
           <button type="button" data-feel="straight" aria-pressed="false"
             data-i18n="feelStraight" data-i18n-attr="title:feelStraightTip"
             title="八分音符平均、小鼓打 2、4;圓舞曲與 6/8 抒情也走這一種">Pop</button>
@@ -913,6 +918,9 @@ try {
             data-i18n="feelFunk" data-i18n-attr="title:feelFunkTip"
             title="十六分的律動,只有 4/4 有">Funk</button>
         </div>
+        <button type="button" class="auto-chip" id="feelAutoBtn" aria-pressed="true"
+          data-i18n="feelAuto" data-i18n-attr="title:feelAutoTip"
+          title="跟著和弦走:有九度以上是 Swing、六七度過半是 Bossa,其餘是 Pop。亮著就表示左邊那顆是它挑的">自動</button>
       </div>
 
       <!-- 速度與移調並排:兩個都是「一行標題 + 一排控制」,擺一起省掉一整塊高度 -->
@@ -1030,7 +1038,6 @@ const I18N = {
     chordPlaceholder: "C - Am - F - G",
     chordHint: "一個和弦一小節。用空白或「-」分隔;不想打字就點下面那排。",
     meterLabel: "拍號",
-    feelLabel: "曲風",
     feelAuto: "自動",
     feelAutoTip: "跟著和弦走:有九度以上是 Swing、六七度過半是 Bossa,其餘是 Pop。判到哪一個,那一顆就會多一圈外框",
     feelStraight: "Pop",
@@ -1137,7 +1144,6 @@ const I18N = {
     chordPlaceholder: "C - Am - F - G",
     chordHint: "One chord per bar. Separate with spaces or \"-\"; or just tap the pad below.",
     meterLabel: "Meter",
-    feelLabel: "Style",
     feelAuto: "Auto",
     feelAutoTip: "Follows the chords: 9ths and up go Swing, mostly 6ths/7ths go Bossa, the rest stay Pop \u2014 whichever it picks gets an outline",
     feelStraight: "Pop",
@@ -2964,19 +2970,19 @@ function renderTempoQuick(){
 
 /* 換拍號。鼓的打法、貝斯的位置、一小節幾拍、count-in 幾下全部跟著換,
    播放中換會有一小節接不齊(排程只提前 0.2 秒),下一小節就回到正軌 */
-/* 曲風那一排:實心 = 現在生效的那一顆;自動亮著時,被它判到的那個曲風多一圈外框
-   (`.detected`),等於用框指給你看。Funk 在非 4/4 變暗。
+/* 曲風那一排:實心的那一顆**永遠**是現在在彈的(feelNow),不管是自動挑的還是自己點的。
+   旁邊的「自動」只講「這一顆是跟著和弦挑的」。Funk 在非 4/4 變暗。
    更新時機跟著 updateFeel / setMeter 走 */
 function updateFeelSeg(){
   const seg = $("feelSeg");
   if (!seg) return;
-  const auto = feelPick === "auto";
   for (const b of seg.children) {
     const k = b.dataset.feel;
-    b.setAttribute("aria-pressed", k === feelPick ? "true" : "false");
-    b.classList.toggle("detected", auto && k === feelNow);
+    b.setAttribute("aria-pressed", k === feelNow ? "true" : "false");
     if (k === "funk") b.classList.toggle("dim", meterOn !== "4/4");   // 只有 4/4 有
   }
+  const auto = $("feelAutoBtn");
+  if (auto) auto.setAttribute("aria-pressed", feelPick === "auto" ? "true" : "false");
 }
 
 function setFeelPick(k){
@@ -3784,6 +3790,8 @@ $("bpmUp").addEventListener("click", () => setBpm(bpmOn + 1));
 for (const b of $("feelSeg").children) {
   b.addEventListener("click", () => setFeelPick(b.dataset.feel));
 }
+// 「自動」是開關不是曲風:按下去就交還給和弦去判
+$("feelAutoBtn").addEventListener("click", () => setFeelPick("auto"));
 for (const b of $("meterSeg").children) {
   // 自己動手換 = 我知道我在做什麼,那個「本來是幾拍」的提示就收起來
   b.addEventListener("click", () => { formMeter = null; setMeter(b.dataset.meter); });

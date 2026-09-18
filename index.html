@@ -181,14 +181,16 @@ main{
 .style-bar{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;margin-bottom:8px}
 .style-bar .seg-mini{flex-wrap:wrap;min-width:0}
 .style-bar .seg-mini button{padding:5px 10px;font-size:var(--fs-2xs)}
-/* 窄螢幕:六顆一定排不完。**不要讓它們在同一顆膠囊裡換行**——
+/* 窄螢幕:七顆一定排不完。**不要讓它們在同一顆膠囊裡換行**——
    接成一整塊的 seg 換行之後左右兩端是圓角、中間是直角,看起來像壞掉(手機上踩過)。
-   改成一排三顆的格線,每一顆自己有邊框,跟音名那幾排同一個長相。
+   改成格線,每一顆自己有邊框,跟音名那幾排同一個長相。
+   **一排四顆不是三顆**:七顆排三欄會變成 3+3+1,最後一排孤零零一顆而且多佔 34px;
+   四欄剛好 4+3。360px 寬時一格還有 67px 的內容寬,`City Pop` 只要 45px,不會切字。
    「自動」與狀態字一起掉到下面那行,右邊對齊 */
 @media (max-width:679px){
   .style-bar{flex-wrap:wrap;gap:6px}
   .style-bar .seg-mini{
-    flex:1 1 100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;
+    flex:1 1 100%;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;
     border:0;border-radius:0;overflow:visible;
   }
   .style-bar .seg-mini button{
@@ -842,6 +844,9 @@ try {
           <button type="button" data-feel="citypop" aria-pressed="false"
             data-i18n="feelCitypop" data-i18n-attr="title:feelCitypopTip"
             title="八〇年代日本 AOR:hi-hat 走八分、貝斯與大鼓咬十六分切分。只有 4/4">City Pop</button>
+          <button type="button" data-feel="kpop" aria-pressed="false"
+            data-i18n="feelKpop" data-i18n-attr="title:feelKpopTip"
+            title="half-time 的十六分 R&amp;B:808 電子鼓、拍手只打第 3 拍、電鋼琴。只有 4/4">K-Pop</button>
           <button type="button" data-feel="latin" aria-pressed="false"
             data-i18n="feelLatin" data-i18n-attr="title:feelLatinTip"
             title="Bossa Nova:clave、框邊小鼓、低音提琴;3/4 與 6/8 走非洲 6/8 的鈴型">Bossa</button>
@@ -857,7 +862,7 @@ try {
         </div>
         <button type="button" class="auto-chip" id="feelAutoBtn" aria-pressed="true"
           data-i18n="feelAuto" data-i18n-attr="title:feelAutoTip"
-          title="跟著和弦走:有九度以上是 Swing、六七度過半是 Bossa,其餘是 Pop。亮著就表示左邊那顆是它挑的">自動</button>
+          title="跟著和弦走:有九度以上是 Swing、六七度過半是 Bossa,其餘是 Pop。City Pop / K-Pop / Blues / Funk 推不出來,要自己點">自動</button>
         <span class="bars" id="barCount">4 小節</span>
       </div>
       <!-- 寬螢幕分兩欄:左邊「怎麼輸入」、右邊「怎麼播」。
@@ -1101,13 +1106,14 @@ const I18N = {
     chordHint: "一個和弦一小節。用空白或「-」分隔;不想打字就點下面那排。",
     meterLabel: "拍號",
     feelAuto: "自動",
-    feelAutoTip: "跟著和弦走:有九度以上是 Swing、六七度過半是 Bossa,其餘是 Pop。判到哪一個,那一顆就會多一圈外框",
+    feelAutoTip: "跟著和弦走:有九度以上是 Swing、六七度過半是 Bossa,其餘是 Pop。City Pop / K-Pop / Blues / Funk 的差別在律動不在和弦,推不出來——自己點,或從段落庫點一組進行",
     feelStraight: "Pop",
     feelLatin: "Bossa",
     feelSwing: "Swing",
     feelFunk: "Funk",
     secTitleNow: "{f} 的進行 ・ {n} 組",
     feelCitypop: "City Pop",
+    feelKpop: "K-Pop",
     feelBlues: "Blues",
     feelStraightTip: "八分音符平均、小鼓打 2、4;圓舞曲與 6/8 抒情也走這一種",
     feelCitypopTip: "八〇年代日本 AOR:hi-hat 走八分、貝斯與大鼓咬十六分切分。只有 4/4",
@@ -1115,6 +1121,7 @@ const I18N = {
     feelLatinTip: "Bossa Nova:clave、框邊小鼓、低音提琴;3/4 與 6/8 走非洲 6/8 的鈴型",
     feelSwingTip: "爵士:ride 的 ding ding-da ding、走動低音;6/8 是慢藍調 shuffle",
     feelFunkTip: "十六分的律動,hi-hat 也走滿十六分。只有 4/4",
+    feelKpopTip: "half-time 的十六分 R&B:808 電子鼓、拍手只打第 3 拍、電鋼琴。只有 4/4",
     meterTip44: "一小節四拍",
     meterTip34: "一小節三拍,圓舞曲",
     meterTip68: "一小節兩大拍,每拍三個八分",
@@ -1215,13 +1222,14 @@ const I18N = {
     chordHint: "One chord per bar. Separate with spaces or \"-\"; or just tap the pad below.",
     meterLabel: "Meter",
     feelAuto: "Auto",
-    feelAutoTip: "Follows the chords: 9ths and up go Swing, mostly 6ths/7ths go Bossa, the rest stay Pop. City Pop / Blues / Funk can't be inferred \u2014 tap them, or pick one from the library",
+    feelAutoTip: "Follows the chords: 9ths and up go Swing, mostly 6ths/7ths go Bossa, the rest stay Pop. City Pop / K-Pop / Blues / Funk can't be inferred \u2014 tap them, or pick one from the library",
     feelStraight: "Pop",
     feelLatin: "Bossa",
     feelSwing: "Swing",
     feelFunk: "Funk",
     secTitleNow: "{f} \u30fb {n} progressions",
     feelCitypop: "City Pop",
+    feelKpop: "K-Pop",
     feelBlues: "Blues",
     feelStraightTip: "Even eighths, snare on 2 and 4 \u2014 waltzes and 6/8 ballads use this one too",
     feelCitypopTip: "80s Japanese AOR: eighth-note hats over sixteenth-note bass and kick. 4/4 only",
@@ -1229,6 +1237,7 @@ const I18N = {
     feelLatinTip: "Bossa nova: clave, cross-stick snare, upright bass; 3/4 and 6/8 use the Afro 6/8 bell",
     feelSwingTip: "Jazz: the ride's ding ding-da ding, walking bass; 6/8 is a slow-blues shuffle",
     feelFunkTip: "A sixteenth-note groove with sixteenths on the hats too; 4/4 only",
+    feelKpopTip: "Half-time sixteenth R&B: 808 drums, a clap on beat 3 only, electric piano. 4/4 only",
     meterTip44: "Four beats per bar",
     meterTip34: "Three beats per bar, waltz",
     meterTip68: "Two big beats per bar, three eighths each",
@@ -1885,7 +1894,7 @@ function extFits(tok, pcs){
 /* 代理和弦的規則表。每一條:哪些曲風會用、什麼情況下成立、換成什麼。
    `d` 是這一格的級數(離主音幾個半音),`nd` 是下一格的。
    曲風要分:pop 不會用三全音代理,爵士不會用「借用 iv」那種流行的手法 */
-const ALL_FEELS = ["straight", "citypop", "latin", "blues", "swing", "funk"];
+const ALL_FEELS = ["straight", "citypop", "kpop", "latin", "blues", "swing", "funk"];
 /* **只有爵士系的兩種會整顆換掉別人**(副屬、三全音代理、補 ii)。
    Pop / City Pop / Blues / Funk 只做「加色彩音、轉位、三度代理、借用 iv」這種
    不動骨架的事——爵士本來就是邊彈邊重配,流行不是。
@@ -1894,22 +1903,22 @@ const ALL_FEELS = ["straight", "citypop", "latin", "blues", "swing", "funk"];
 const JAZZ_FEELS = ["latin", "swing"];
 const SUB_RULES = [
   /* I → vi / iii:最基本的三度代理,同一個功能換一個顏色 */
-  { id: "I→vi",  feels: ["straight", "citypop", "latin", "swing"],
+  { id: "I→vi",  feels: ["straight", "citypop", "kpop", "latin", "swing"],
     ok: x => x.d === 0 && x.q === "maj" && x.nd !== 9, to: x => nameOf(x.key + 9, "m7") },
-  { id: "I→iii", feels: ["straight", "citypop", "latin", "swing"],
+  { id: "I→iii", feels: ["straight", "citypop", "kpop", "latin", "swing"],
     ok: x => x.d === 0 && x.q === "maj" && x.nd !== 4, to: x => nameOf(x.key + 4, "m7") },
   /* IV ↔ ii:也是三度代理,下屬功能的兩張臉 */
-  { id: "IV→ii", feels: ["straight", "citypop", "latin", "swing"],
+  { id: "IV→ii", feels: ["straight", "citypop", "kpop", "latin", "swing"],
     ok: x => x.d === 5 && x.q === "maj" && x.nd !== 2, to: x => nameOf(x.key + 2, "m7") },
-  { id: "ii→IV", feels: ["straight", "citypop", "latin"],
+  { id: "ii→IV", feels: ["straight", "citypop", "kpop", "latin"],
     ok: x => x.d === 2 && x.q === "min" && x.nd !== 5, to: x => nameOf(x.key + 5, "maj7") },
   /* vi → I。**這首要真的出現過 I 才給**:`Am - F - G - Am` 的 Am 是主和弦,
      把它換成 Cmaj7 等於把主音抽掉,整段的重心就沒了 */
-  { id: "vi→I",  feels: ["straight", "citypop"],
+  { id: "vi→I",  feels: ["straight", "citypop", "kpop"],
     ok: x => x.d === 9 && x.q === "min" && x.nd !== 0 && x.hasTonic,
     to: x => nameOf(x.key, "maj7") },
   /* 借用小調的 iv:F → Fm,流行歌最愛的那一下(「借來的憂傷」) */
-  { id: "IV→iv", feels: ["straight", "citypop"],
+  { id: "IV→iv", feels: ["straight", "citypop", "kpop"],
     ok: x => x.d === 5 && x.q === "maj", to: x => nameOf(x.key + 5, "m") },
   /* **副屬化:根音不動,把性質改成屬七**。下一格的根音在自己的完全四度上方時,
      這一格就可以當它的 V7——`F - G - Em - Am` 的 Em 隨時可以彈成 E7、
@@ -1918,7 +1927,7 @@ const SUB_RULES = [
      招牌和弦、屬七要解決過來的那一格都照給(`keepsRoot`)。
      小三和弦換成大三/屬七那一下就是它的味道(Em → E),
      所以三和弦的進行也給一個純大三的選項 */
-  { id: "副屬化", feels: ["straight", "citypop", "latin", "swing"], keepsRoot: true,
+  { id: "副屬化", feels: ["straight", "citypop", "kpop", "latin", "swing"], keepsRoot: true,
     ok: x => (x.q === "maj" || x.q === "min") && x.next &&
              ((x.rootPc + 5) % 12) === x.nextRootPc && x.nextRootPc !== x.rootPc,
     to: x => nameOf(x.rootPc, x.suffix === "" || x.suffix === "m" ? "" : "7"),
@@ -1944,7 +1953,7 @@ const SUB_RULES = [
   { id: "ii-V",  feels: JAZZ_FEELS,
     ok: x => x.q === "dom" && x.nextSame, to: x => nameOf(x.rootPc + 7, "m7") },
   /* 經過減和弦:前面那格是同一顆、下一格在大二度上(Cmaj7 Cmaj7 Dm7 → C♯dim7) */
-  { id: "pass°",  feels: ["straight", "citypop", "swing"], passing: true,
+  { id: "pass°",  feels: ["straight", "citypop", "kpop", "swing"], passing: true,
     ok: x => x.prevSame && x.next && ((x.rootPc + 2) % 12) === x.nextRootPc,
     to: x => nameOf(x.rootPc + 1, "dim7") },
   /* 一轉:低音走三音(C → C/E、G → G/B)。
@@ -2137,8 +2146,55 @@ const SAMPLE_TABLE = (() => {
   }));
 })();
 
-const loadedSamples = new Map();   // midi -> AudioBuffer
-const failedSamples = new Set();   // 抓不到的就別一直重試
+/* ══ 電鋼琴(Rhodes)══════════════════════════════════════════
+   City Pop、Funk、K-Pop 的鍵盤本來就不是平台鋼琴,是 Rhodes 電鋼琴:
+   山下達郎、Stevie Wonder、K-Pop 的 R&B 段落都是這個聲音。
+   換的是**音色**,不是聲位或節奏——`buildVoicing` 與 `schedulePiano` 完全不動。
+
+   jlearman.jRhodes3c:1977 Rhodes Mark I Stage 73,跟鋼琴、鼓、貝斯同樣在
+   sfzinstruments 這個 org 底下。**取 mono 那一組**(單聲道 75–175KB,
+   立體聲同一顆是兩倍大),立體聲寬度由 `playNote` 自己的 panner 給。
+
+   檔名是 `As_<midi>__<音名>_<力度層>-mono.flac`,力度層那個數字**每往上一個
+   取樣點就 +2**(F1 是 279、B1 是 281、E2 是 283…),但**不是每一層都錄滿整個鍵盤**
+   (原作者說高音的音色差別不大)。所以這裡是兩層拼起來的:
+   F1–E5 走 279 那層(mf,有 Rhodes 的 bark),A5 以上那四顆只剩 453 那層。
+   兩層都是同一個峰值(量過都在 0.64–0.75),所以接縫只差亮度、不差音量,
+   而且那四顆在最上面一個八度,伴奏聲位幾乎踩不到。
+   **不要照公式去推 279+2n 的高音**——A5 的 301 根本不存在,會整顆 404 */
+const SRC_RHODES = [
+  "https://cdn.jsdelivr.net/gh/sfzinstruments/jlearman.jRhodes3c@master/jRhodes3c-looped-flac-sfz/",
+  "https://raw.githubusercontent.com/sfzinstruments/jlearman.jRhodes3c/master/jRhodes3c-looped-flac-sfz/",
+];
+const RHODES_TABLE = [
+  [29, "As_029__F1_279"], [35, "As_035__B1_281"], [40, "As_040__E2_283"],
+  [45, "As_045__A2_285"], [50, "As_050__D3_287"], [55, "As_055__G3_289"],
+  [59, "As_059__B3_291"], [62, "As_062__D4_293"], [65, "As_065__F4_295"],
+  [71, "As_071__B4_297"], [76, "As_076__E5_299"],
+  [81, "As_081__A5_453"], [86, "As_086__D6_455"], [91, "As_091__G6_457"],
+  [96, "As_096__C7_459"],
+].map(e => ({ midi: e[0], file: e[1] + "-mono.flac" }));
+
+/* 哪一種曲風用哪一台琴。寫在 `FEELS[x].piano`,跟貝斯的 `kit` 同一個做法——
+   不要在排程裡針對某一種曲風寫 if */
+const PIANO_KITS = {
+  acoustic: { src: SRC_PIANO,  table: SAMPLE_TABLE, gain: 1,    tau: 1   },
+  /* Rhodes 的音管衰減比平台鋼琴慢,tau 放長一點才像在延音。
+     gain **要往下收**:同一個 peak 參數下這組取樣比 Salamander 大一倍
+     (量過:四個音的和弦 Salamander 1.17、Rhodes 2.37),
+     照原樣接進去 City Pop 整段會衝到 0.92。0.62 是把兩台拉到同一個刻度的值,
+     動它就要重量一次整組響度 */
+  rhodes:   { src: SRC_RHODES, table: RHODES_TABLE, gain: 0.62, tau: 1.5 },
+};
+function pianoKit(){
+  if (typeof FEELS === "undefined" || typeof feelNow === "undefined") return "acoustic";
+  return (FEELS[feelNow] || FEELS.straight).piano || "acoustic";
+}
+const pianoBanks  = { acoustic: new Map(), rhodes: new Map() };   // midi -> AudioBuffer
+const pianoFailed = { acoustic: new Set(), rhodes: new Set() };
+/* 舊名字留著:狀態列與整份程式都拿它當「平台鋼琴那一組」 */
+const loadedSamples = pianoBanks.acoustic;
+const failedSamples = pianoFailed.acoustic;
 let sampleLoadPromise = null;
 
 function nearestIn(list, midi){
@@ -2152,22 +2208,34 @@ function nearestIn(list, midi){
 
 /* 這次的進行(含移調)真的會用到哪些取樣。只抓這些,不整組載完——
    整組 29 個檔案在 iPad 上第一次開會等很久,而四小節的進行通常只需要五六個 */
-function neededSampleMidis(midis){
+function neededSampleMidis(midis, table){
   const need = new Set();
-  for (const m of midis) need.add(nearestIn(SAMPLE_TABLE, m).midi);
+  for (const m of midis) need.add(nearestIn(table || SAMPLE_TABLE, m).midi);
   return [...need];
 }
 
-function ensureSamples(midis){
-  const want = neededSampleMidis(midis).filter(m => !loadedSamples.has(m) && !failedSamples.has(m));
+/* 載一台琴這次真的會用到的那幾顆音。回傳的 promise 等的是「這台琴」,
+   不是整組取樣 */
+function loadPianoKit(kit, midis){
+  const K = PIANO_KITS[kit], bank = pianoBanks[kit], bad = pianoFailed[kit];
+  const want = neededSampleMidis(midis, K.table).filter(m => !bank.has(m) && !bad.has(m));
   if (!want.length) return Promise.resolve();
-  const jobs = want.map(midi => {
-    const entry = SAMPLE_TABLE.find(s => s.midi === midi);
-    return fetchDecode(SRC_PIANO, entry.file)
-      .then(buf => { loadedSamples.set(midi, buf); })
-      .catch(() => { failedSamples.add(midi); });   // 單一取樣缺了不影響其他音
+  return Promise.all(want.map(midi => {
+    const entry = K.table.find(s => s.midi === midi);
+    return fetchDecode(K.src, entry.file)
+      .then(buf => { bank.set(midi, buf); })
+      .catch(() => { bad.add(midi); });   // 單一取樣缺了不影響其他音
+  }));
+}
+
+function ensureSamples(midis){
+  const kit = pianoKit();
+  /* Rhodes 是 FLAC,舊的 iOS Safari 可能整組吃不下。整組都掛的時候
+     **退回平台鋼琴**(mp3,一定載得到)而不是掉進三角波的保底音色——
+     電鋼琴換成鋼琴只是音色不對,換成合成音會整首不能聽 */
+  sampleLoadPromise = loadPianoKit(kit, midis).then(() => {
+    if (kit !== "acoustic" && !pianoBanks[kit].size) return loadPianoKit("acoustic", midis);
   });
-  sampleLoadPromise = Promise.all(jobs);
   return sampleLoadPromise;
 }
 
@@ -2262,7 +2330,13 @@ function decayTau(midi){
 }
 
 function playNote(midi, when, dur, peak){
-  const usable = [...loadedSamples.keys()];
+  /* 這首用哪一台琴。那一台整組沒載到就借平台鋼琴的取樣(見 ensureSamples),
+     兩台都空的時候才掉到保底的三角波 */
+  const kit = pianoKit();
+  const bank = pianoBanks[kit].size ? pianoBanks[kit] : pianoBanks.acoustic;
+  const K = PIANO_KITS[pianoBanks[kit].size ? kit : "acoustic"];
+  const usable = [...bank.keys()];
+  peak *= K.gain;
   const g = ctx.createGain();
   const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
   // 低音偏左一點點、高音偏右一點點,跟真的坐在鋼琴前面一樣,和弦才不會擠成一個點
@@ -2277,7 +2351,7 @@ function playNote(midi, when, dur, peak){
   let src;
   if (usable.length) {
     const bestMidi = nearestIn(usable.map(m => ({ midi: m })), midi).midi;
-    const buf = loadedSamples.get(bestMidi);
+    const buf = bank.get(bestMidi);
     src = ctx.createBufferSource();
     src.buffer = buf;
     src.playbackRate.value = Math.pow(2, (midi - bestMidi) / 12);
@@ -2299,7 +2373,7 @@ function playNote(midi, when, dur, peak){
 
   /* 包絡:敲下去之後一路自然衰減(鋼琴不會自己撐在滿音量),
      音符結束時再補一段較快的釋放。用固定時間常數,短音長音每秒衰減比例一致 */
-  const tau = decayTau(midi);
+  const tau = decayTau(midi) * K.tau;
   g.gain.setValueAtTime(0.0001, when);
   g.gain.linearRampToValueAtTime(peak, when + 0.004);
   g.gain.setTargetAtTime(0.0001, when + 0.004, tau);
@@ -2386,7 +2460,20 @@ const DRUM_FEEL_FILES = {
   hhped:  ["hh/mid_hh_pedal_vl2_rr1.flac", "hh/mid_hh_pedal_vl2_rr2.flac"],
 };
 const FEEL_PIECES = { straight: [], latin: ["xstick"], swing: ["ride", "hhped"],
-                      funk: [], citypop: [], blues: [] };
+                      funk: [], citypop: [], blues: [], kpop: [] };
+
+/* ── 808 電子鼓 ────────────────────────────────────────────────
+   TR-808 本來就**是一台合成鼓機**,不是錄音,所以這一組不下載任何檔案:
+   大鼓是一顆往下滑的正弦(那條長尾巴就是 808 的招牌)、小鼓是雜訊加一顆中頻、
+   拍手是三顆雜訊短點、hi-hat 是六顆方波疊出來的金屬感。
+   K-Pop 的骨架就是這個聲音,用爵士鼓組打會完全不像。
+
+   寫成「一整套音色」而不是「取樣載不到時的備援」:`synthDrum` 是備援
+   (要盡量像原本那顆鼓),`synth808` 是**指定的音色**,兩件事不要混在一起。 */
+function drumKit(){
+  if (typeof FEELS === "undefined" || typeof feelNow === "undefined") return "acoustic";
+  return (FEELS[feelNow] || FEELS.straight).drums || "acoustic";
+}
 
 const drumBuffers = { kick: [], snare: [], hihat: [], htom: [], ltom: [], crash: [], xstick: [], ride: [], hhped: [] };
 const drumRR = { kick: 0, snare: 0, hihat: 0, htom: 0, ltom: 0, crash: 0, xstick: 0, ride: 0, hhped: 0 };
@@ -2406,6 +2493,8 @@ function loadDrumSet(files){
 }
 
 function ensureDrums(){
+  // 808 是合成的,一個檔案都不用抓(也不要順手把爵士鼓組載下來佔頻寬)
+  if (drumKit() === "e808") return Promise.resolve();
   if (!drumsLoading) {
     drumsLoading = loadDrumSet(DRUM_FILES);
     // 過門那幾顆不放進回傳的 promise 裡,播放不必等它
@@ -2443,6 +2532,12 @@ const BASS_KITS = {
       [38, "pizz_d2_ma.wav"],  [41, "pizz_f2_ma.wav"],
     ],
   },
+  /* 808 的低音本來就是那顆大鼓調音調出來的,不是哪一把貝斯的錄音,
+     所以這一把**沒有檔案**(`synth:true`),`playBassNote` 直接合成。
+     K-Pop 的低音就是它:一顆正弦、從上面滑下來、拖得很長 */
+  /* trim 跟 808 鼓的 E808_TRIM 是同一件事:合成的正弦低音在同一個 peak 參數下
+     比電貝斯的取樣大將近三倍(量過 1.187 vs 0.423),先拉回同一個刻度 */
+  sub808: { synth: true, gain: 1, trim: 0.27, files: [] },
 };
 /* 哪一種感覺用哪一把:爵士的走動低音當然是低音提琴,bossa 也是——
    Getz/Gilberto 那個年代的 bossa 就是尼龍弦吉他加低音提琴。
@@ -2450,11 +2545,12 @@ const BASS_KITS = {
 /* 哪一把貝斯。寫在 FEELS 裡:爵士與 bossa 的走動低音本來就是低音提琴,
    流行、city pop、放克、藍調是電貝斯 */
 function bassKit(){ return (FEELS[feelNow] || FEELS.straight).kit || "electric"; }
-const bassBuffers = { electric: new Map(), upright: new Map() };   // midi -> AudioBuffer
-const bassFailed  = { electric: new Set(), upright: new Set() };
+const bassBuffers = { electric: new Map(), upright: new Map(), sub808: new Map() };   // midi -> AudioBuffer
+const bassFailed  = { electric: new Set(), upright: new Set(), sub808: new Set() };
 
 function ensureBass(midis){
   const kit = bassKit(), K = BASS_KITS[kit];
+  if (K.synth) return Promise.resolve();   // 808 的低音是算出來的,沒有檔案要載
   const want = new Set();
   for (const m of midis) {
     let best = K.files[0];
@@ -2489,6 +2585,7 @@ function bassMidiFor(pc){
 }
 
 function playDrum(piece, when, gain){
+  if (drumKit() === "e808") { synth808(piece, when, gain); return; }
   const list = drumBuffers[piece];
   if (!list || !list.length) { synthDrum(piece, when, gain); return; }
   const src = ctx.createBufferSource();
@@ -2551,11 +2648,193 @@ function synthDrum(piece, when, gain){
   src.onended = () => { activeSources.delete(src); try { src.disconnect(); f.disconnect(); g.disconnect(); } catch (e) {} };
 }
 
+/* ── 808:整套都是算出來的 ─────────────────────────────────────
+   每一顆都接在 drumBus 上,跟取樣鼓走同一條音量鏈路,所以不用另外調整體音量。
+   `noise808()` 是共用的雜訊來源:長度照各自的需要現做,不預先存一整份 */
+function noise808(seconds){
+  const len = Math.max(1, Math.floor(ctx.sampleRate * seconds));
+  const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  return buf;
+}
+/* 合成音沒有「錄音時的音量」可言:同一個 gain 下,808 的正弦大鼓比實錄大鼓大十二倍、
+   疊方波的 hi-hat 甚至是取樣的四十倍(gain=1 時量的 peak:取樣大鼓 0.084 / 808 大鼓 1.065、
+   取樣 hi-hat 0.022 / 808 hi-hat 0.917)。這張表先把每一顆拉回跟爵士鼓組同一個刻度,
+   `FEELS[x].kickGain` 那幾個數字對兩套鼓才是同一個意思。
+   沒有它的話 K-Pop 一按下去就削波(踩過:peak 1.12、rms −6.4 dBFS) */
+const E808_TRIM = { kick: 0.064, snare: 0.30, clap: 1.05, xstick: 1.05,
+                    hihat: 0.028, hhped: 0.028, ride: 0.028, crash: 0.02,
+                    htom: 0.10, ltom: 0.10 };
+function synth808(piece, when, gain){
+  gain *= (E808_TRIM[piece] || 0.1);
+  const g = ctx.createGain();
+  g.connect(drumBus);
+  const done = (node, stopAt) => {
+    activeSources.add(node);
+    node.onended = () => { activeSources.delete(node); try { node.disconnect(); g.disconnect(); } catch (e) {} };
+    node.stop(stopAt);
+  };
+
+  /* 808 大鼓:一顆正弦從 110Hz 滑到 44Hz,尾巴拖很長(0.9 秒)。
+     那條尾巴就是 808 跟真大鼓最大的差別——真大鼓是「咚」,808 是「咚——」。
+     前面再疊一顆極短的高頻點擊,不然在小喇叭上只剩空氣 */
+  if (piece === "kick") {
+    const o = ctx.createOscillator();
+    o.type = "sine";
+    o.frequency.setValueAtTime(110, when);
+    o.frequency.exponentialRampToValueAtTime(52, when + 0.07);
+    /* 尾巴收在 0.52 秒。808 的招牌是「咚——」沒錯,但一小節三顆全部拖 0.9 秒
+       就會疊成一條不會停的低頻,整首的 RMS 被它一個人拉高 5dB(量過) */
+    g.gain.setValueAtTime(gain * 1.15, when);
+    g.gain.exponentialRampToValueAtTime(0.0001, when + 0.52);
+    o.connect(g); o.start(when); done(o, when + 0.56);
+    const click = ctx.createBufferSource();
+    click.buffer = noise808(0.006);
+    const cg = ctx.createGain();
+    cg.gain.value = gain * 0.22;
+    const hp = ctx.createBiquadFilter();
+    hp.type = "highpass"; hp.frequency.value = 1200;
+    click.connect(hp); hp.connect(cg); cg.connect(drumBus);
+    click.start(when); click.stop(when + 0.02);
+    return;
+  }
+
+  /* 808 小鼓:兩顆正弦(基音 + 泛音)加一層帶通雜訊。
+     K-Pop 多半拿它當幽靈音,拍手才是 backbeat,所以收得比拍手輕 */
+  if (piece === "snare") {
+    const o = ctx.createOscillator();
+    o.type = "triangle";
+    o.frequency.setValueAtTime(190, when);
+    o.frequency.exponentialRampToValueAtTime(150, when + 0.09);
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(gain * 0.5, when);
+    og.gain.exponentialRampToValueAtTime(0.0001, when + 0.11);
+    o.connect(og); og.connect(drumBus);
+    o.start(when); done(o, when + 0.13);
+    const n = ctx.createBufferSource();
+    n.buffer = noise808(0.2);
+    const bp = ctx.createBiquadFilter();
+    bp.type = "highpass"; bp.frequency.value = 1500;
+    g.gain.setValueAtTime(gain * 0.75, when);
+    g.gain.exponentialRampToValueAtTime(0.0001, when + 0.16);
+    n.connect(bp); bp.connect(g);
+    n.start(when); n.stop(when + 0.18);
+    return;
+  }
+
+  /* 拍手:三顆很短的雜訊排在 9 毫秒裡再拖一條尾巴。
+     一顆下去只是雜訊,要三顆錯開才聽得出是「一群人在拍」 */
+  if (piece === "clap" || piece === "xstick") {
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass"; bp.frequency.value = 1450; bp.Q.value = 1.1;
+    bp.connect(g);
+    g.gain.value = 1;
+    for (let k = 0; k < 3; k++) {
+      const n = ctx.createBufferSource();
+      n.buffer = noise808(0.014);
+      const ng = ctx.createGain();
+      const t0 = when + k * 0.009;
+      /* 每一顆都給 1.5 毫秒的起音。硬邊緣的雜訊爆點會整個穿過限幅器的
+         啟動時間,整首的尖峰被它一個人推到 0.98(量過);拍手的聽感不變 */
+      ng.gain.setValueAtTime(0.0001, t0);
+      ng.gain.linearRampToValueAtTime(gain * (0.7 + k * 0.12), t0 + 0.0015);
+      ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.014);
+      n.connect(ng); ng.connect(bp);
+      n.start(t0); n.stop(t0 + 0.016);
+    }
+    const tail = ctx.createBufferSource();
+    tail.buffer = noise808(0.16);
+    const tg = ctx.createGain();
+    tg.gain.setValueAtTime(gain * 0.5, when + 0.026);
+    tg.gain.exponentialRampToValueAtTime(0.0001, when + 0.17);
+    tail.connect(tg); tg.connect(bp);
+    tail.start(when + 0.026); done(tail, when + 0.19);
+    return;
+  }
+
+  /* 808 的 hi-hat 是六顆方波疊出來的金屬感,不是雜訊。
+     用雜訊做的 hat 在十六分走滿的時候會糊成一片「嘶——」,
+     疊方波才有那種一顆一顆分得開的顆粒 */
+  if (piece === "hihat" || piece === "hhped" || piece === "ride" || piece === "crash") {
+    const open = piece === "ride" ? 0.32 : piece === "crash" ? 1.1 : piece === "hhped" ? 0.07 : 0.042;
+    const hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = piece === "crash" ? 5000 : 7600;
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass"; bp.frequency.value = 10000; bp.Q.value = 0.7;
+    hp.connect(bp); bp.connect(g);
+    g.gain.setValueAtTime(gain * 0.5, when);
+    g.gain.exponentialRampToValueAtTime(0.0001, when + open);
+    const ratios = [2, 3, 4.16, 5.43, 6.79, 8.21];
+    for (const r of ratios) {
+      const o = ctx.createOscillator();
+      o.type = "square";
+      o.frequency.value = 40 * r * 4.5;
+      o.connect(hp);
+      o.start(when); o.stop(when + open + 0.02);
+      activeSources.add(o);
+      // 六顆共用同一條 hp→bp→g,最後一顆收工時一起斷掉(重複斷是安全的)
+      o.onended = () => { activeSources.delete(o);
+        try { o.disconnect(); hp.disconnect(); bp.disconnect(); g.disconnect(); } catch (e) {} };
+    }
+    return;
+  }
+
+  // tom:808 的 tom 跟大鼓同一個做法,只是掉得少、收得快
+  const f0 = piece === "htom" ? 320 : 190;
+  const o = ctx.createOscillator();
+  o.type = "sine";
+  o.frequency.setValueAtTime(f0, when);
+  o.frequency.exponentialRampToValueAtTime(f0 * 0.55, when + 0.2);
+  g.gain.setValueAtTime(gain, when);
+  g.gain.exponentialRampToValueAtTime(0.0001, when + 0.42);
+  o.connect(g); o.start(when); done(o, when + 0.44);
+}
+
 function playBassNote(midi, when, dur, peak){
   const g = ctx.createGain();
   g.connect(bassBus);
   let src;
-  const bank = bassBuffers[bassKit()];
+  const kitNow = bassKit();
+
+  /* 808 的低音:一顆正弦,音頭從高八度快速滑下來(那一下的「咚」),
+     然後整顆音撐著不衰減。K-Pop 的低音跟大鼓其實是同一顆音色,
+     所以它跟 synth808 的 kick 用同一組參數想——差別只在它有音高、會撐長 */
+  if (BASS_KITS[kitNow].synth) {
+    peak *= BASS_KITS[kitNow].trim || 1;
+    const o = ctx.createOscillator();
+    const f = 440 * Math.pow(2, (midi - 69) / 12);
+    o.type = "sine";
+    o.frequency.setValueAtTime(f * 1.9, when);
+    o.frequency.exponentialRampToValueAtTime(f, when + 0.045);
+    // 一點點三次諧波,不然在筆電喇叭上整顆音會完全消失
+    const h = ctx.createOscillator();
+    h.type = "triangle";
+    h.frequency.setValueAtTime(f * 3, when);
+    const hg = ctx.createGain();
+    hg.gain.value = 0.085;
+    h.connect(hg); hg.connect(g);
+    o.connect(g);
+    const len = Math.max(dur, 0.12);
+    /* **要衰減,不要撐平**。808 的長音本來就是敲一下之後慢慢消,
+       撐在九成音量的話它跟大鼓的尾巴會連成一條不斷的低頻牆
+       (整首 RMS 被拉到 −7 dBFS,比其他曲風大 5dB,換曲風會嚇到人) */
+    g.gain.setValueAtTime(0.0001, when);
+    g.gain.linearRampToValueAtTime(peak * 1.1, when + 0.008);
+    g.gain.setTargetAtTime(peak * 0.34, when + 0.008, 0.26);
+    g.gain.setTargetAtTime(0.0001, when + len, 0.09);
+    const stopAt = when + len + 0.5;
+    o.start(when); o.stop(stopAt);
+    h.start(when); h.stop(stopAt);
+    activeSources.add(o); activeSources.add(h);
+    const bye = () => { activeSources.delete(o); activeSources.delete(h);
+      try { o.disconnect(); h.disconnect(); hg.disconnect(); g.disconnect(); } catch (e) {} };
+    o.onended = bye; h.onended = bye;
+    return;
+  }
+
+  const bank = bassBuffers[kitNow];
   const keys = [...bank.keys()];
   if (keys.length) {
     let best = keys[0];
@@ -2755,6 +3034,9 @@ const FEELS = {
     snarePiece: "snare", snareGain: 0.6,
     cym: "hihat", cymGain: 0.24,
     bass: "citypop", kit: "electric", meters: ["4/4"],
+    /* City Pop 的鍵盤是 Rhodes,不是平台鋼琴——山下達郎、竹內瑪莉亞那個年代
+       錄音室裡擺的就是電鋼琴。和聲一模一樣,換掉音色才聽得出是這一種 */
+    piano: "rhodes",
   },
   /* Blues:shuffle。跟 Pop 同一組鼓件、同一個 backbeat,差別在**八分是三連音的**
      (`swing: 0.66`,不是爵士的 0.58——藍調的搖擺更接近正三連音),
@@ -2788,6 +3070,25 @@ const FEELS = {
     snarePiece: "snare", snareGain: 0.72,
     cym: "hihat", cymGain: 0.3,
     bass: "funk", kit: "electric", meters: ["4/4"],
+    // 放克的鍵盤也是電鋼琴(Stevie Wonder、Herbie 那條線),鼓與貝斯維持實錄
+    piano: "rhodes",
+  },
+  /* K-Pop:half-time 的十六分 R&B / trap。**三件事同時跟別人不一樣**:
+     - **拍子是半速的**:小鼓(其實是拍手)整小節只打第 3 拍一下,不是二四。
+       這就是為什麼同樣走十六分 hi-hat,它聽起來比放克慢一半
+     - **鼓是 808**(`drums: "e808"`),一個取樣都不載:大鼓是拖長尾巴的正弦、
+       backbeat 是拍手。用爵士鼓組打這個型完全不像
+     - **低音也是 808**(`kit: "sub808"`):跟大鼓同一顆音色,調了音而已
+     鍵盤用 Rhodes——K-Pop 的 R&B 段落鋪的就是電鋼琴。
+     **只有 4/4**:half-time 的骨架要四拍才成立,三拍沒有「第 3 拍」可以打 */
+  kpop: {
+    swing: 0.5, push: true, sub: 2,
+    /* 808 大鼓的尾巴拖 0.9 秒,一小節三顆會疊在一起,所以比實錄的鼓再收一階 */
+    kickGain: 0.8,
+    snarePiece: "clap", snareGain: 0.62,
+    cym: "hihat", cymGain: 0.28,
+    bass: "kpop", kit: "sub808", meters: ["4/4"],
+    piano: "rhodes", drums: "e808",
   },
   /* 搖擺:爵士。ride 打型、hi-hat 踏鈸給拍子感、大鼓 feathering、小鼓在 comping */
   swing: {
@@ -2842,6 +3143,12 @@ const GROOVES = {
      配十六分的低音律動,那個對比就是它的味道 */
   citypop: {
     "4/4": { snare: [4, 12], cym: [0,2,4,6,8,10,12,14], push: 14, ghost: 11 },
+  },
+  /* K-Pop 是 half-time:hi-hat 跟放克一樣走滿十六分,但**拍手只打第 3 拍**。
+     少了二四的 backbeat,整個律動就慢了一半——同樣的速度聽起來比放克鬆。
+     幽靈音那顆(第 12 格 = 第 4 拍)是 trap 那種「補一下再空掉」的位置 */
+  kpop: {
+    "4/4": { snare: [8], cym: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], push: 14, ghost: 12 },
   },
   /* Blues 的格子跟 Pop 一樣,靠 FEELS.blues.swing = 0.66 把後半格推成三連音。
      6/8 不用推——12/8 的長短本來就在拍號裡,ride/hi-hat 打 0 2 3 5 就是 shuffle */
@@ -2930,6 +3237,12 @@ const COMP_CELLS = {
   citypop: {
     "4/4": [[0,6,10,14], [2,6,10], [0,6,11,14], [6,10,14], [0,3,10,14]],
   },
+  /* K-Pop 的 Rhodes 是**鋪**不是打:一小節兩三下,第 1 拍與第 3 拍是骨架,
+     中間補一顆切分。跟放克(一小節四顆 stab)剛好相反——half-time 的空間
+     是留給 808 與人聲的,鍵盤一密整首就擠了 */
+  kpop: {
+    "4/4": [[0,8], [0,6,8], [0,8,14], [0,3,8], [0,8,11]],
+  },
   // Blues 的右手就是 shuffle 的八分,偶爾只剩 backbeat
   blues: {
     "4/4": [[0,2,4,6], [2,6], [0,3,4,6], [0,2,4,5,6], [2,4,6]],
@@ -2961,6 +3274,11 @@ const KICK_CELLS = {
   // City pop 的大鼓比放克少、比 Pop 碎:一與「三的前一格」是本家
   citypop: {
     "4/4": [[0,10], [0,6,10], [0,3,10], [0,10,14], [0,8]],
+  },
+  /* 808 的大鼓尾巴很長,打太密會整片糊成一條低頻,所以一小節只有兩三顆。
+     本家型是「1 ・ 3的前一格 ・ 3的後半」——half-time 最典型的那個 */
+  kpop: {
+    "4/4": [[0,6,10], [0,7,10], [0,6,11], [0,10], [0,3,10,14]],
   },
   blues: {
     "4/4": [[0,4], [0,4,7], [0,3,4], [0,5]],
@@ -3138,8 +3456,12 @@ function scheduleDrums(barStartBeat, b, absBar, isFill){
         playDrum("snare", t, humanize(absBar, 55, f.snareGain * 0.3));   // 幽靈音
       }
     } else if (g.snare.indexOf(idx) >= 0) {
-      playDrum("snare", t, humanize(absBar, idx + 40, f.snareGain * p.energy * arc));
+      /* backbeat 打的是 `f.snarePiece` 不是寫死的 "snare":
+         Pop / Blues / Funk / City Pop 的 snarePiece 本來就是 "snare"(零差異),
+         K-Pop 的是**拍手**——half-time 的第 3 拍在 K-Pop 裡是 clap 不是小鼓 */
+      playDrum(f.snarePiece, t, humanize(absBar, idx + 40, f.snareGain * p.energy * arc));
     } else if (idx === g.ghost && chance(absBar, 3, 0.25)) {
+      // 幽靈音一律是小鼓:拍手沒有「很輕地補一下」這種打法
       playDrum("snare", t, humanize(absBar, 55, f.snareGain * 0.23));
     }
 
@@ -3255,6 +3577,23 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord, span){
       const pc = (idx >= div * 2 && chance(absBar, 5, 0.5)) ? fifthPc : rootPc;
       playBassNote(bassMidiFor(pc), slotTime(barStartBeat, idx), slotDur() * 1.5,
                    humanize(absBar, 70 + idx, idx === 0 ? 0.5 : 0.38));
+    }
+    return;
+  }
+
+  /* K-Pop 的 808 低音:一顆長音撐住整顆和弦,音頭從上面滑下來。
+     它**不是**十六分的切分型——放克與 city pop 的貝斯在跑律動,808 在撐低頻,
+     跑起來會跟大鼓的長尾巴打架。所以這裡用「每顆和弦各自算」的 span 版本
+     (`b === 0` 是這顆和弦的第一拍),一小節兩顆和弦時兩顆都有自己的低音。
+     中間那顆很短的切分(「3 的 a」)就是 808 常見的那一下補音 */
+  if (mode === "kpop") {
+    if (b === 0) {
+      playBassNote(bassMidiFor(rootPc), beatTimeAt(0),
+                   spb * (beats - 0.3), humanize(absBar, 70, 0.48));
+      if (beats >= 4 && chance(absBar, 6, 0.45)) {
+        playBassNote(bassMidiFor(rootPc), slotTimeAt(mid * div + div - 1),
+                     slotDur() * 2.2, humanize(absBar, 71, 0.34));
+      }
     }
     return;
   }
@@ -3475,15 +3814,8 @@ function startPlayback(){
   resetLap();                       // 每次按播放都從原譜那一圈開始
   voicings = buildVoicings(parsed.bars);
 
-  // 這次會用到的音(含移調),只載這些取樣
-  const midis = [];
-  for (const spans of voicings) {
-    for (const sp of (spans || [])) {          // 一格可能有好幾顆和弦,每一顆的音都要載
-      if (!sp || !sp.v) continue;
-      midis.push(sp.v.bass + transposeOn);
-      for (const n of sp.v.upper) midis.push(n + transposeOn);
-    }
-  }
+  // 這次會用到的音(含移調),只載這些取樣(一格可能有好幾顆和弦,每一顆的音都要算)
+  const midis = pianoMidisOf();
 
   // 貝斯用的音(含移調)跟鋼琴不同,要另外算
   const bassMidis = bassMidisOf();
@@ -3497,9 +3829,12 @@ function startPlayback(){
     ensureBass(bassMidis),
   ]).then(() => {
     playBtn.disabled = false;
-    if (!loadedSamples.size) setStatus(T("statusSynth"), true);
-    else if (failedSamples.size) setStatus(T("statusPartial", { n: failedSamples.size }), true);
-    else setStatus(T("statusSamples", { n: loadedSamples.size }), false);
+    /* 狀態列講的是「這首真的在用的那一台琴」:Rhodes 整組沒載到時
+       ensureSamples 已經把平台鋼琴補上了,這裡就會看到平台鋼琴那一組 */
+    const kitNow = pianoBanks[pianoKit()].size ? pianoKit() : "acoustic";
+    if (!pianoBanks[kitNow].size) setStatus(T("statusSynth"), true);
+    else if (pianoFailed[kitNow].size) setStatus(T("statusPartial", { n: pianoFailed[kitNow].size }), true);
+    else setStatus(T("statusSamples", { n: pianoBanks[kitNow].size }), false);
 
     playing = true;
     spb = 60 / bpmOn;
@@ -3577,6 +3912,9 @@ const TEMPO_QUICK = {
   swing:    { "4/4": [100, 140, 180], "3/4": [130, 170, 210], "6/8": [40, 55, 70] },
   funk:     { "4/4": [90, 105, 120] },
   citypop:  { "4/4": [95, 110, 125] },
+  /* K-Pop 的譜面速度通常寫成 120–130,但那是 half-time 的寫法——
+     拍手在第 3 拍,聽起來是一半。這裡的數字是四分音符,所以給 85–120 */
+  kpop:     { "4/4": [85, 100, 120] },
   blues:    { "4/4": [70, 90, 110],   "6/8": [40, 55, 70] },
 };
 function tempoQuick(){
@@ -3675,8 +4013,8 @@ function clearFormMeter(){
 
 const STYLE_I18N = { pad: "stylePad", comp: "styleComp", drive: "styleDrive", mix: "styleMix" };
 /* 曲風的 key → 畫面上的名字。程式裡的 key 不跟著畫面改(存檔與網址都用它) */
-const FEEL_I18N = { straight: "feelStraight", citypop: "feelCitypop", latin: "feelLatin",
-                    blues: "feelBlues", swing: "feelSwing", funk: "feelFunk" };
+const FEEL_I18N = { straight: "feelStraight", citypop: "feelCitypop", kpop: "feelKpop",
+                    latin: "feelLatin", blues: "feelBlues", swing: "feelSwing", funk: "feelFunk" };
 /* 混合時把現在走到哪一種也寫出來:不講的話會以為是自己亂變的。
    這跟「感覺」不一樣——感覺是和弦決定的、不顯示;疏密本來就是使用者選的那一軸 */
 function styleName(absBar){
@@ -3690,6 +4028,9 @@ function styleName(absBar){
 function feelAuto(){ return detectFeel(parsed.bars); }
 function updateFeel(){
   const before = typeof feelNow !== "undefined" ? bassKit() : "";
+  /* 音色也跟著曲風換:換到 City Pop 就從平台鋼琴變 Rhodes、換到 K-Pop
+     連鼓都變成 808。播放中換的話那一台琴還沒載,要在背景補上 */
+  const pianoBefore = typeof feelNow !== "undefined" ? pianoKit() : "";
   const feelBefore = feelNow;
   /* 這個曲風在這個拍號沒有節奏型(放克、city pop 只有 4/4,藍調沒有三拍)
      就退回「自動」——留著會變成「格子數對不上」的靜音小節 */
@@ -3702,6 +4043,24 @@ function updateFeel(){
   /* 播放中把和弦改成爵士的語彙,貝斯就從電貝斯換成低音提琴——
      那一把還沒載,先在背景抓(不要 await,擋住的話下一拍就沒聲音了) */
   if (playing && before && before !== bassKit()) ensureBass(bassMidisOf());
+  /* 鋼琴同理(不要 await:擋住的話下一拍就沒聲音了,還沒到位時 playNote
+     會先用平台鋼琴那一組頂著)。808 是合成的,沒有東西要載 */
+  if (playing && pianoBefore && pianoBefore !== pianoKit()) ensureSamples(pianoMidisOf());
+  if (playing) ensureDrums();
+}
+
+/* 這段進行的鋼琴會用到哪些音(含移調)。startPlayback 裡也是同一份算法,
+   播放中換琴時要再算一次 */
+function pianoMidisOf(){
+  const out = [];
+  for (const spans of (voicings || [])) {
+    for (const sp of (spans || [])) {
+      if (!sp || !sp.v) continue;
+      out.push(sp.v.bass + transposeOn);
+      for (const n of sp.v.upper) out.push(n + transposeOn);
+    }
+  }
+  return out;
 }
 
 function updateTransportIdle(){
@@ -4322,6 +4681,18 @@ const SECTIONS = [
   { text: "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",        feel: "citypop", meter: "4/4" },  // 王道的七和弦聲位
   { text: "Cmaj7 - Cmaj7 - Bm7b5 - E7 - Am7 - Am7 - Dm7 - G7",     feel: "citypop", meter: "4/4" },  // 大調起、小調 ii-V 繞一圈
   { text: "Fmaj7 - G7 - Em7 - Am7 - Fmaj7 - G7 - Cmaj7 - Cmaj7",   feel: "citypop", meter: "4/4" },  // 4536 兩次,第二次收在 I
+
+  /* ── K-Pop:half-time 的十六分 R&B。808 大鼓、拍手打第 3 拍、Rhodes ──
+     和聲是全世界流行歌共用的那幾條(vi-IV-I-V、4536、Canon),
+     所以**一定要自己帶 feel**——光看和弦跟 Pop、City Pop 分不出來,
+     差別全在律動與音色。全部 4/4:half-time 要四拍才有「第 3 拍」可以打 */
+  { text: "Am7 - Fmaj7 - Cmaj7 - G",   feel: "kpop",    meter: "4/4" },  // vi-IV-I-V,全世界流行歌最常見的那一圈
+  { text: "Fmaj7 - G - Em7 - Am7",     feel: "kpop",    meter: "4/4" },  // 4536,K-Pop 抒情的骨幹
+  { text: "Am7 - Em7 - Fmaj7 - G",     feel: "kpop",    meter: "4/4" },  // vi-iii-IV-V
+  { text: "Dm7 - Em7 - Fmaj7 - G7",    feel: "kpop",    meter: "4/4" },  // ii-iii-IV-V,一路往上推的副歌前
+  { text: "Am7 - G - Fmaj7 - E7",      feel: "kpop",    meter: "4/4" },  // 安達魯西亞終止,小調 hook 常用
+  { text: "Am7 - Fmaj7 - Cmaj7 - G - Am7 - Fmaj7 - Dm7 - G7",      feel: "kpop",    meter: "4/4" },  // vi-IV-I-V 兩次,後半走 ii-V
+  { text: "Cmaj7 - G - Am7 - Em7 - Fmaj7 - Cmaj7 - Dm7 - G7",      feel: "kpop",    meter: "4/4" },  // 卡農進行,K-Pop 抒情的整句
 
   /* ── Bossa Nova:clave、框邊小鼓、低音提琴 ─────────────────── */
   { text: "Cmaj7 - A7 - Dm7 - G7",     feel: "latin",   meter: "4/4" },  // I-VI7-ii-V

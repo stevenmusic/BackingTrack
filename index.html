@@ -2339,17 +2339,31 @@ let slowLfo = null;
 /* 殘響用程式合成的脈衝響應,不外掛音檔,維持單檔架構。
    Salamander 是近距離收音、幾乎全乾的,沒有這層空間感會很「貼在臉上」。
    左右聲道各自獨立亂數 → 殘響才有真正的立體聲寬度;高頻隨時間衰減得比低頻快。 */
+/* 固定種子的 mulberry32。殘響的尾巴、撥弦的激發、hi-hat 的雜訊全部走它:
+   `Math.random()` 的話每次重新整理殘響就是另一條尾巴,量到的尖峰跟著飄 */
+function mulberry32(seed){
+  let a = seed | 0;
+  return () => {
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 function buildImpulseResponse(seconds, decayPow){
   const rate = ctx.sampleRate;
   const len = Math.max(1, Math.floor(rate * seconds));
   const ir = ctx.createBuffer(2, len, rate);
   for (let ch = 0; ch < 2; ch++) {
     const d = ir.getChannelData(ch);
+    /* **左右兩聲道要是不相關的兩份雜訊**(種子不一樣),那是殘響「有寬度」的來源;
+       同一份給兩邊的話整片殘響會塌回正中間,聽起來是「加了效果」不是「在一個空間裡」 */
+    const rnd = mulberry32(ch ? 0x5bf03635 : 0x9e3779b9);
     let lp = 0;
     for (let i = 0; i < len; i++) {
       const t = i / len;
       const env = Math.pow(1 - t, decayPow);
-      const noise = (Math.random() * 2 - 1) * env;
+      const noise = (rnd() * 2 - 1) * env;
       const a = 0.42 * (1 - t * 0.8) + 0.02;
       lp += a * (noise - lp);
       d[i] = lp;
@@ -2520,6 +2534,27 @@ function playNote(midi, when, dur, peak){
   send.gain.value = 0.3;
   out.connect(send); send.connect(reverbBus);
 
+  /* ── 力度要改變**亮度**,不只改變音量 ────────────────────────
+     鋼琴打輕的時候高次泛音少很多(琴槌壓縮得少、弦的高階模態激發得少),
+     所以同一顆音輕彈是「暗」的不是「小聲」的。
+     取樣只有一層力度,只調音量的話整段 comping 每一下都一樣亮——
+     那是「像 MIDI」最主要的來源。
+
+     真的多力度層太貴:Salamander 一顆音一層就 1.5–2.5MB,
+     四層 × 七顆音是 50MB 下載、解碼後兩百多 MB 記憶體,手機會直接掛。
+     一顆低通把高頻按力度收掉,拿到的是同一件事的九成 */
+  const velRef = 0.42;                       // 大約是「用力彈」的 peak
+  const vel = Math.max(0.12, Math.min(1, peak / velRef));
+  let tone = null;
+  /* 0.88 以上整顆濾波器是空跑的(截止已經在 14kHz 以上,取樣本身就沒有那麼多高頻),
+     而最大聲的那幾下正是同時發聲最多的時候——省下的就是那時候的節點 */
+  if (vel < 0.88) {
+    tone = ctx.createBiquadFilter();
+    tone.type = "lowpass";
+    tone.frequency.value = 700 + 16000 * Math.pow(vel, 1.45);
+    tone.Q.value = 0.35;
+  }
+
   let src;
   if (usable.length) {
     const bestMidi = nearestIn(usable.map(m => ({ midi: m })), midi).midi;
@@ -2541,7 +2576,7 @@ function playNote(midi, when, dur, peak){
     src.type = "triangle";
     src.frequency.value = 440 * Math.pow(2, (midi - 69) / 12);
   }
-  src.connect(g);
+  if (tone) { src.connect(tone); tone.connect(g); } else { src.connect(g); }
 
   /* 包絡:敲下去之後一路自然衰減(鋼琴不會自己撐在滿音量),
      音符結束時再補一段較快的釋放。用固定時間常數,短音長音每秒衰減比例一致 */
@@ -2556,7 +2591,8 @@ function playNote(midi, when, dur, peak){
   src.start(when);
   src.stop(stopAt);
   activeSources.add(src);
-  src.onended = () => { activeSources.delete(src); try { src.disconnect(); g.disconnect(); } catch (e) {} };
+  src.onended = () => { activeSources.delete(src);
+    try { src.disconnect(); if (tone) tone.disconnect(); g.disconnect(); } catch (e) {} };
 }
 
 /* count-in 的節拍聲:合成的短音,不佔取樣頻寬。第一拍高一點,分得出小節頭 */
@@ -2777,21 +2813,26 @@ function ensureDrums(){
 /* 電貝斯的檔名是 midi = 八度 × 12 + 音級(e2 = 28 = 四弦貝斯的最低音 E);
    低音提琴的檔名是科學音名(eb1 = 27、g1 = 31,mf 力度取 m、round robin 取 a)。
    兩把都只收我們用得到的那一段(E1 前後一個八度),不要整組載 */
+/* **每個音要有好幾份 round robin**。走動低音一小節四顆、boogie 一小節八顆,
+   同一個音高一直播同一份取樣是「機器在按」最明顯的地方——
+   真的貝斯手不可能兩次撥得一模一樣。
+   兩把琴都錄了 4 份(電貝斯是 `_rr1..4`、低音提琴是 `_ma..md`),
+   第一份擋住播放、其餘跟鼓一樣背景補(`drumFillGate`) */
 const BASS_KITS = {
   electric: {
-    src: SRC_BASS, gain: 1,
+    src: SRC_BASS, gain: 1, rr: ["rr1", "rr2", "rr3"],
     files: [
-      [28, "darkblack_e2_mf_rr1.wav"],  [31, "darkblack_g2_mf_rr1.wav"],
-      [34, "darkblack_bb2_mf_rr1.wav"], [37, "darkblack_db3_mf_rr1.wav"],
-      [40, "darkblack_e3_mf_rr1.wav"],  [43, "darkblack_g3_mf_rr1.wav"],
-      [46, "darkblack_bb3_mf_rr1.wav"],
+      [28, "darkblack_e2_mf_"],  [31, "darkblack_g2_mf_"],
+      [34, "darkblack_bb2_mf_"], [37, "darkblack_db3_mf_"],
+      [40, "darkblack_e3_mf_"],  [43, "darkblack_g3_mf_"],
+      [46, "darkblack_bb3_mf_"],
     ],
   },
   upright: {
-    src: SRC_UPRIGHT, gain: 1,
+    src: SRC_UPRIGHT, gain: 1, rr: ["ma", "mb", "mc"],
     files: [
-      [27, "pizz_eb1_ma.wav"], [31, "pizz_g1_ma.wav"], [34, "pizz_bb1_ma.wav"],
-      [38, "pizz_d2_ma.wav"],  [41, "pizz_f2_ma.wav"],
+      [27, "pizz_eb1_"], [31, "pizz_g1_"], [34, "pizz_bb1_"],
+      [38, "pizz_d2_"],  [41, "pizz_f2_"],
     ],
   },
   /* 808 的低音本來就是那顆大鼓調音調出來的,不是哪一把貝斯的錄音,
@@ -2807,8 +2848,23 @@ const BASS_KITS = {
 /* 哪一把貝斯。寫在 FEELS 裡:爵士與 bossa 的走動低音本來就是低音提琴,
    流行、city pop、放克、藍調是電貝斯 */
 function bassKit(){ return (FEELS[feelNow] || FEELS.straight).kit || "electric"; }
-const bassBuffers = { electric: new Map(), upright: new Map(), sub808: new Map() };   // midi -> AudioBuffer
+const bassBuffers = { electric: new Map(), upright: new Map(), sub808: new Map() };   // midi -> AudioBuffer[]
 const bassFailed  = { electric: new Set(), upright: new Set(), sub808: new Set() };
+const bassRRLoaded = {};        // "kit:midi:rr" -> true
+let bassRR = 0;
+
+function loadBassOne(kit, K, entry, rr){
+  const key = kit + ":" + entry[0] + ":" + rr;
+  if (bassRRLoaded[key]) return Promise.resolve();
+  bassRRLoaded[key] = true;
+  return fetchDecode(K.src, entry[1] + rr + ".wav")
+    .then(b => {
+      const list = bassBuffers[kit].get(entry[0]) || [];
+      list.push(b);
+      bassBuffers[kit].set(entry[0], list);
+    })
+    .catch(() => { if (rr === K.rr[0]) bassFailed[kit].add(entry[0]); });
+}
 
 function ensureBass(midis){
   const kit = bassKit(), K = BASS_KITS[kit];
@@ -2819,12 +2875,13 @@ function ensureBass(midis){
     for (const e of K.files) if (Math.abs(e[0] - m) < Math.abs(best[0] - m)) best = e;
     want.add(best);
   }
-  const jobs = [...want]
-    .filter(e => !bassBuffers[kit].has(e[0]) && !bassFailed[kit].has(e[0]))
-    .map(e => fetchDecode(K.src, e[1])
-      .then(b => { bassBuffers[kit].set(e[0], b); })
-      .catch(() => { bassFailed[kit].add(e[0]); }));
-  return Promise.all(jobs);
+  const list = [...want].filter(e => !bassFailed[kit].has(e[0]));
+  // 第一份擋住播放,其餘的 round robin 等真的開始播了再補(跟鼓同一個閘門)
+  const core = Promise.all(list.map(e => loadBassOne(kit, K, e, K.rr[0])));
+  core.then(() => drumFillGate()).then(() =>
+    Promise.all(list.map(e =>
+      Promise.all(K.rr.slice(1).map(rr => loadBassOne(kit, K, e, rr)))))).catch(() => {});
+  return core;
 }
 
 /* 這段進行的貝斯會用到哪幾個音(根音與五音,移調之後的) */
@@ -3249,7 +3306,9 @@ function synthKeyNote(midi, when, dur, peak){
      在 808 上面整個跳出來(被回報「lead synth 太突出」)。
      pluck 要有形狀但不要有存在感 */
   lp.Q.value = 3.2;
-  const hi = Math.min(6200, f * 9), lo = Math.max(380, f * 1.6);
+  /* 開口跟著力度走:輕的那幾下不只小聲也比較暗,跟取樣鋼琴同一條規則 */
+  const vel = Math.max(0.25, Math.min(1, peak / 0.22));
+  const hi = Math.min(6200, f * (4 + 5 * vel)), lo = Math.max(380, f * 1.6);
   lp.frequency.setValueAtTime(hi, when);
   lp.frequency.exponentialRampToValueAtTime(lo, when + 0.17);
   lp.connect(g);
@@ -3641,7 +3700,9 @@ function playBassNote(midi, when, dur, peak){
   if (keys.length) {
     let best = keys[0];
     for (const k of keys) if (Math.abs(k - midi) < Math.abs(best - midi)) best = k;
-    const buf = bank.get(best);
+    const list = bank.get(best);
+    // 同一個音高輪流用不同的那一份:走動低音一小節四顆,用同一份就是機器在按
+    const buf = list[bassRR++ % list.length];
     src = ctx.createBufferSource();
     src.buffer = buf;
     src.playbackRate.value = Math.pow(2, (midi - best) / 12);
@@ -3661,7 +3722,23 @@ function playBassNote(midi, when, dur, peak){
     lp.type = "lowpass"; lp.frequency.value = 700;
     src.connect(lp); lp.connect(g);
   }
-  if (src.buffer) src.connect(g);
+  /* **輕的那一顆要暗**,跟鋼琴同一條規則(見 `playNote` 的 velRef)。
+     取樣只有 mf 一層力度,走動低音的經過音、放克的幽靈音都是照 gain 調小的——
+     只調小聲的話每一顆的指板噪音與弦的亮度都一模一樣,那就是「MIDI 貝斯」。
+     真的貝斯手撥輕一點,2–4kHz 那段的撥弦聲整個縮回去。
+     0.56 是量出來的「用力撥」的 peak(七個曲風的最大值都落在這裡) */
+  const bVelRef = 0.56;
+  const bVel = Math.max(0.3, Math.min(1, peak / bVelRef));
+  if (src.buffer) {
+    // 備援的三角波已經自己接了一顆低通,只有取樣這一路要補
+    if (bVel < 0.95) {
+      const btone = ctx.createBiquadFilter();
+      btone.type = "lowpass";
+      btone.frequency.value = 500 + 6000 * Math.pow(bVel, 1.8);
+      btone.Q.value = 0.4;
+      src.connect(btone); btone.connect(g);
+    } else src.connect(g);
+  }
   // 貝斯不像鋼琴會一路自然衰減,撐住整個音長再收
   g.gain.setValueAtTime(0.0001, when);
   g.gain.linearRampToValueAtTime(peak, when + 0.012);
@@ -3949,18 +4026,22 @@ const FEELS = {
   swing: {
     swing: 0.58, push: true,
     kickGain: 0.16, feather: true,
-    snarePiece: "snare", snareGain: 0.36, compSnare: true,
+    snarePiece: "snare", snareGain: 0.42, compSnare: true,
     /* ride 一小節打六下、取樣又長,太大聲會糊成一團;
        但**它就是搖擺的聲音**,收太多就只剩「有點搖的流行樂」。
        0.40 配上 skip note 收到 0.46 的強弱差,是「聽得出 ding ding-da ding」
        又不糊的位置。真的力度層進來之後輕的那幾下本來就比較暗,比以前更不吵 */
     cym: "ride", cymGain: 0.40,
-    hhpedGain: 0.26,
+    /* 踏鈸是**爵士唯一的二四**(不是小鼓),它要找得到才數得出拍子;
+       吉他那層四分音符同理。整組搖擺比別的曲風安靜 2dB 以上,
+       補的是這兩層與 comping 的小鼓,**不是 ride**——
+       ride 的 0.40 是被回報「很吵」之後量出來的位置,往上就又糊了 */
+    hhpedGain: 0.30,
     bass: "jazz", kit: "upright",
     /* **Freddie Green**:archtop 的四分音符 comping,很短、很悶、每一拍都有。
        大樂團的節奏組就是「走動低音 + 四分音符吉他 + ride」三件事扣在一起,
        少了吉他那一層拍子的網就鬆了。不給鋪底:爵士沒有人在後面鋪弦樂 */
-    parts: { guitar: "four", gtone: "archtop", glevel: 0.3 },
+    parts: { guitar: "four", gtone: "archtop", glevel: 0.35 },
   },
 };
 
@@ -4613,7 +4694,20 @@ function schedulePiano(spans, barStartBeat, b, transpose, absBar, isFill){
     const push = f.push && st !== "drive" && div === 2 && k === 0 && b % 2 === 1
                  && chance(absBar, 90 + idx, 0.45);
     const t = push ? slotTime(barStartBeat, idx + 1) : slotTime(barStartBeat, idx);
-    const peak = idx === 0 ? p.compGain * 1.15 : push ? p.compGain * 0.8 : p.compGain;
+    /* ── 重音結構:comping 的動態範圍要**拉開** ──────────────────
+       原本只有「第一下 1.15、推過去的 0.8、其餘 1.0」,前後差 3dB——
+       整段聽起來每一下都一樣用力,那是「像 MIDI」的另一半
+       (前一半是每一下都一樣亮,見 `playNote` 的力度濾波)。
+       真的手在 comping 的動態是十幾 dB:拍頭落實、反拍帶過去、
+       十六分的 e 跟 a 幾乎只是擦過去。
+       跟亮度那條是一起作用的——輕的那幾下同時變小聲**也變暗** */
+    const inBeat = idx % div;                 // 0 是拍頭
+    const accent = idx === 0 ? 1.35            // 小節的第一下
+                 : inBeat === 0 ? 1.0          // 其他拍的拍頭
+                 : (div === 4 && inBeat === 2) ? 0.62   // 十六分裡的「&」
+                 : div === 4 ? 0.45            // 十六分裡的 e / a
+                 : 0.62;                       // 八分的反拍
+    const peak = p.compGain * accent * (push ? 0.8 : 1);
     const dur = slotDur() * (st === "drive" ? 0.9 : 1.8);
     /* **不是每一下都把整組音一起砸下去**。真的在 comping 的手,重拍才落滿,
        中間那些反拍多半只帶上面兩顆(有時只有最上面那一顆)。

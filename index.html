@@ -408,18 +408,37 @@ main{
 .bars-grid.eight .bar-chip:nth-child(8n+5){margin-left:7px}
 .bar-chip{
   position:relative;
-  display:flex;align-items:center;justify-content:center;
-  width:100%;min-height:42px;padding:6px 5px;cursor:pointer;
+  display:flex;align-items:stretch;justify-content:center;
+  width:100%;min-height:42px;padding:6px 5px;
   background:var(--surface-inset);border:1px solid var(--line);border-radius:var(--radius-md);
   font-family:"Noto Serif TC",serif;font-size:var(--fs-lg);font-weight:600;
   color:var(--ivory);letter-spacing:.02em;text-align:center;
   container-type:inline-size;
   transition:background-color .12s,border-color .12s,color .12s;
 }
-.bar-chip:hover,.bar-chip:focus-visible{border-color:var(--gold);outline:none}
-/* 選取中的那一格:之後點性質鈕就是改這一格。用外框不用填色,
+/* 一格裡的每一顆和弦各自是一顆可以點的。一格一顆時它就佔滿整格,
+   長相跟以前一模一樣;兩顆時中間畫一條細線分開 */
+.bar-ch{
+  flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;
+  border:0;background:transparent;padding:0;cursor:pointer;
+  font:inherit;color:inherit;letter-spacing:inherit;
+  border-radius:calc(var(--radius-md) - 2px);
+  container-type:inline-size;
+}
+/* 兩顆和弦中間畫一條線,一眼看得出「這一格有兩顆」。
+   第一顆左邊要留出小節號的位置,不然數字會壓在和弦名上 */
+.bar-chip.multi .bar-ch + .bar-ch{border-left:1px solid var(--line)}
+.bar-chip.multi .bar-ch{padding:0 2px}
+.bar-chip.multi .bar-ch:first-of-type{padding-left:13px}
+.bars-grid.dense .bar-chip.multi .bar-ch:first-of-type{padding-left:10px}
+.bars-grid.denser .bar-chip.multi .bar-ch:first-of-type{padding-left:9px}
+.bar-ch.bad{color:var(--danger)}
+.bar-ch:hover,.bar-ch:focus-visible{outline:none}
+.bar-chip:hover,.bar-chip:focus-within{border-color:var(--gold)}
+/* 選取中的那一顆:之後點性質鈕就是改它。用外框不用填色,
    才不會跟「正在響」的那一格搞混 */
-.bar-chip.sel{border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold)}
+.bar-ch.sel{box-shadow:inset 0 0 0 1px var(--gold);color:var(--gold-bright)}
+.bar-chip.sel{border-color:var(--gold)}
 /* 目前正在響的小節。用邊框+底色,不用 transform,免得整排格子在每小節抖一下 */
 .bar-chip.on{background:var(--gold);border-color:var(--gold);color:var(--bg)}
 .bar-chip.bad{border-color:var(--danger);color:var(--danger);background:var(--danger-bg)}
@@ -451,7 +470,7 @@ main{
    不然一選取就多一排、整個版面會跳一下 */
 .bar-tools-btns{display:flex;gap:5px;flex:none}
 .tool-btn{
-  min-width:34px;height:28px;padding:0 10px;
+  min-width:34px;height:28px;padding:0 8px;
   display:flex;align-items:center;justify-content:center;
   border:1px solid var(--line);background:var(--surface-inset);color:var(--muted-bright);
   border-radius:var(--radius-sm);cursor:pointer;
@@ -916,6 +935,8 @@ try {
           <div class="bar-tools-btns">
             <button class="tool-btn" id="barDup" type="button" data-i18n="barDupBtn">插一格</button>
             <button class="tool-btn" id="barDel" type="button" data-i18n="barDelBtn">刪一格</button>
+            <!-- 一小節切成兩顆和弦 / 合併回一顆。沒有它就只能自己在文字框打「|」 -->
+            <button class="tool-btn" id="barSplit" type="button" data-i18n="barSplitBtn">切兩顆</button>
             <button class="tool-btn" id="barUndo" type="button" data-i18n="barUndoBtn">復原</button>
           </div>
         </div>
@@ -1130,6 +1151,9 @@ const I18N = {
     barsLabel: "小節數",
     secToggle: "段落庫 {n} 組",
     secToggleOpen: "收起段落庫",
+    barSplitBtn: "切兩顆",
+    barSplitLabel: "把這一格切成兩顆和弦(各佔半小節)",
+    barMergeLabel: "把這一格合併回一顆和弦",
     barDupBtn: "插一格",
     barDelBtn: "刪一格",
     barUndoBtn: "復原",
@@ -1137,8 +1161,8 @@ const I18N = {
     barDelLabel: "刪掉這一格",
     barUndoLabel: "復原上一步",
     barUndoNone: "沒有可以復原的了",
-    palHintIdle: "先選 4 / 8 / 12 小節,再點格子一格一格改。",
-    palHintSel: "正在改第 {n} 格({chord}):點音名換根音、點性質換和弦種類。",
+    palHintIdle: "先選小節數,再點格子改和弦。",
+    palHintSel: "正在改第 {n} 格的 {chord}:點下面換它。",
     palRootLabel: "加一格 {root}",
     palQualLabel: "改成 {q}",
     palDelLast: "刪掉最後一格",
@@ -1241,6 +1265,9 @@ const I18N = {
     barsLabel: "Bars",
     secToggle: "Sections ({n})",
     secToggleOpen: "Hide sections",
+    barSplitBtn: "Split",
+    barSplitLabel: "Split this bar into two chords (half a bar each)",
+    barMergeLabel: "Merge this bar back into one chord",
     barDupBtn: "Insert",
     barDelBtn: "Delete",
     barUndoBtn: "Undo",
@@ -1248,8 +1275,8 @@ const I18N = {
     barDelLabel: "Delete this bar",
     barUndoLabel: "Undo",
     barUndoNone: "Nothing to undo",
-    palHintIdle: "Pick 4 / 8 / 12 bars, then tap a bar to edit it.",
-    palHintSel: "Editing bar {n} ({chord}): tap a note name for the root, a quality for the chord type.",
+    palHintIdle: "Pick the bar count, then tap a bar to edit.",
+    palHintSel: "Editing {chord} in bar {n} — tap below to change it.",
     palRootLabel: "Add a bar of {root}",
     palQualLabel: "Change to {q}",
     palDelLast: "Delete the last bar",
@@ -1560,7 +1587,7 @@ function transposeSteps(bars){
   let best = base, bestCost = Infinity;
   for (const cand of [base, base + dir, base - dir]) {
     let cost = 0;
-    for (const b of (bars || [])) {
+    for (const b of flatChords(bars || [])) {   // 一格有好幾顆時每一顆都要算
       if (!b.ok) continue;
       for (const pair of [[b.chord.rootLetter, b.chord.rootPc],
                           [b.chord.bassLetter, b.chord.bassPc]]) {
@@ -1609,19 +1636,74 @@ function updateBarCount(){
 
 /* 整段進行:用空白 / - / | / 逗號分隔。「/」不能當分隔符,那是轉位用的 */
 function parseProgression(text){
-  /* 爵士的和弦表把小三和弦寫成 C-7。但這裡的「-」同時是小節分隔符
-     (C - Am - F - G),所以只認「根音後面緊接著 -,再接數字或結尾」那一種:
+  /* 爵士的和弦表把小三和弦寫成 C-7。但這裡的「-」同時是分隔符,
+     所以只認「根音後面緊接著 -,再接數字或結尾」那一種:
      C-7 / F#-9 / Bb- 是小調,C-Am(後面接音名)跟 C - Am(有空白)還是分隔符。
      U+2212 的「−」沒有這個問題,normalizeSymbol 已經處理掉了 */
-  const tokens = text.replace(/([A-Ga-g][#b♯♭]?)-(?=\d|\s|$)/g, "$1m")
-    .split(/[\s,|\-－]+/).filter(Boolean);
+  const clean = text.replace(/([A-Ga-g][#b♯♭]?)-(?=\d|\s|$)/g, "$1m");
+  /* **「|」是小節線**。有寫 `|` 的時候,一條線之間的和弦全部擠在同一小節裡
+     (`C Am | F G` = 兩小節,每小節兩顆);沒寫 `|` 的時候照舊「一個和弦一小節」。
+     用「有沒有 |」切換而不是換一套語法,舊的進行、存檔、分享連結才全部還能用 */
+  const byBar = clean.indexOf("|") >= 0
+    ? clean.split("|").map(seg => seg.split(/[\s,\-－]+/).filter(Boolean)).filter(a => a.length)
+    : clean.split(/[\s,\-－]+/).filter(Boolean).map(t => [t]);
   const bars = [];
-  for (const tok of tokens) {
-    const ch = parseChord(tok);
-    bars.push(ch ? { ok: true, chord: ch, text: tok } : { ok: false, chord: null, text: tok });
+  let total = 0;
+  for (const toks of byBar) {
+    /* 一小節最多幾顆:不能比拍數多(4/4 最多四顆、6/8 最多兩顆),
+       再多就沒有一顆音的時間了。多打的直接丟掉,不要靜悄悄排不進去 */
+    const cap = Math.max(1, beatsInBar());
+    const use = toks.slice(0, cap);
+    const chords = use.map(tok => {
+      const ch = parseChord(tok);
+      return ch ? { ok: true, chord: ch, text: tok } : { ok: false, chord: null, text: tok };
+    });
+    total += toks.length;
+    bars.push({
+      ok: chords.every(c => c.ok),
+      chords,
+      text: use.join(" "),
+      // 只需要一顆代表的地方(整格的調性、比對「前一格是不是同一顆」)就用第一顆
+      chord: chords[0].chord,
+    });
     if (bars.length >= MAX_BARS) break;
   }
-  return { bars, overflow: tokens.length > MAX_BARS };
+  return { bars, overflow: byBar.length > MAX_BARS };
+}
+
+/* ══ 一小節可以有好幾顆和弦 ═════════════════════════════════════
+   「一個和弦一小節」是最常見的情況,但不是規則:`C Am | F G` 這種
+   一小節兩顆的寫法在流行歌裡到處都是。所以資料結構是
+   **每一格帶一串和弦**,排程時再按「一小節幾格」切成幾段。
+
+   `flatChords()` 是分析用的那一份(判調、判曲風、代理和弦都看它):
+   和弦的前後關係跟小節線無關,`C Am | F` 的 Am 後面就是 F。 */
+function flatChords(bars){
+  const out = [];
+  bars.forEach((b, i) => (b.chords || []).forEach((c, j) => {
+    out.push({ ok: c.ok, text: c.text, chord: c.chord, bar: i, idx: j });
+  }));
+  return out;
+}
+
+/* 這一格的和弦各佔哪幾格(slot)。拍數平分,分不完的**前面的拿多的**:
+   4/4 兩顆 = 2+2 拍、三顆 = 2+1+1 拍、3/4 兩顆 = 2+1 拍。
+   這是真的譜上的寫法——一小節兩顆和弦,第一顆通常撐得比較長 */
+function spansOf(bar){
+  const list = (bar && bar.chords) || [];
+  const n = Math.max(1, list.length);
+  const beats = beatsInBar(), d = divNow();
+  const each = Math.floor(beats / n), extra = beats % n;
+  const out = [];
+  let beat = 0;
+  for (let i = 0; i < n; i++) {
+    const len = each + (i < extra ? 1 : 0);
+    out.push({ ok: list[i] ? list[i].ok : false, chord: list[i] ? list[i].chord : null,
+               text: list[i] ? list[i].text : "",
+               fromBeat: beat, toBeat: beat + len, from: beat * d, to: (beat + len) * d });
+    beat += len;
+  }
+  return out;
 }
 
 /* ══ 配置(voicing)══════════════════════════════════════════════
@@ -1720,7 +1802,8 @@ function keyOf(bars){
   /* 主和弦通常是「出現最多次的那顆大三/屬七」,小調就是關係小調的 vi。
      用次數不用「第一顆」:ii-V-I 的第一顆是 ii,拿它當主音會整組錯位 */
   const tonicHits = new Array(12).fill(0);
-  for (const b of bars) {
+  const flat = flatChords(bars);        // 判調要看每一顆,不是每一格的第一顆
+  for (const b of flat) {
     if (!b.ok) continue;
     const q = qualOf(b.chord), r = b.chord.rootPc;
     if (q === "maj" || q === "dom") tonicHits[r]++;
@@ -1730,7 +1813,7 @@ function keyOf(bars){
   for (let k = 0; k < 12; k++) {
     const scale = new Set(MAJOR_SCALE.map(x => (x + k) % 12));
     let hit = 0;
-    for (const b of bars) {
+    for (const b of flat) {
       if (!b.ok) continue;
       hit += scale.has(b.chord.rootPc) ? 2 : -2;
       for (const iv of b.chord.intervals) {
@@ -1785,7 +1868,7 @@ const EXT_TABLE = {
    那是它們的用處,不能拿同一把尺去量 */
 function progPcs(bars){
   const set = new Set();
-  for (const b of bars) {
+  for (const b of flatChords(bars)) {
     if (!b.ok) continue;
     for (const iv of b.chord.intervals) set.add((b.chord.rootPc + iv) % 12);
     set.add(b.chord.bassPc % 12);
@@ -1966,19 +2049,28 @@ function subBarsFor(lap, n){
 /* 這一圈實際要彈的和弦。lap 0 就是原譜,之後才開始換 */
 function barsForLap(lap){
   const src = parsed.bars;
-  const subs = subBarsFor(lap, src.length);
+  /* 代理和弦換的是**一顆和弦**,不是一小節——一小節兩顆的時候只換其中一顆。
+     所以先攤平,選號、前後文、換完之後再照原本的小節結構組回去 */
+  const flat = flatChords(src);
+  const subs = subBarsFor(lap, flat.length);
   if (!Object.keys(subs).length) return src;
   const key = keyOf(src), pcs = progPcs(src);
-  const out = src.slice();
+  const out = flat.map(c => ({ ok: c.ok, text: c.text, chord: c.chord }));
   for (const k of Object.keys(subs)) {
     const i = +k;
-    const cand = subCandidates(src, i, key, pcs);
+    const cand = subCandidates(out, i, key, pcs);
     if (!cand.length) continue;
     const tok = cand[Math.min(cand.length - 1, Math.floor(subs[k] * cand.length))];
     const c = parseChord(normalizeSymbol(tok));
     if (c) out[i] = { ok: true, chord: c, text: tok };
   }
-  return out;
+  // 組回小節:結構照原本的,只有和弦換掉
+  let n = 0;
+  return src.map(b => {
+    const chords = b.chords.map(() => out[n++]);
+    return { ok: chords.every(c => c.ok), chords, text: chords.map(c => c.text).join(" "),
+             chord: chords[0].chord };
+  });
 }
 
 /* 換圈:重建這一圈的和弦與聲位,順便把小節格重畫成真的在響的那幾顆。
@@ -1992,16 +2084,29 @@ function buildLap(lap){
   if (typeof renderBars === "function") renderBars();
 }
 
+/* 每一格回傳一串 span(和弦 + 佔哪幾格 + 聲位)。
+   聲部連接是**跨小節線**接下去的:一小節裡第二顆和弦要接第一顆,
+   下一小節的第一顆要接上一小節的最後一顆 */
 function buildVoicings(bars){
   const out = [];
   let prev = null;
   for (const b of bars) {
-    if (!b.ok) { out.push(null); continue; }
-    const v = buildVoicing(b.chord, prev);
-    prev = v.upper;
-    out.push(v);
+    const spans = spansOf(b);
+    for (const sp of spans) {
+      if (!sp.ok || !sp.chord) { sp.v = null; continue; }
+      sp.v = buildVoicing(sp.chord, prev);
+      prev = sp.v.upper;
+    }
+    out.push(spans);
   }
   return out;
+}
+
+/* 排程時問「這一格的這一個 slot 是哪一顆和弦」 */
+function spanAt(spans, slot){
+  if (!spans || !spans.length) return null;
+  for (const sp of spans) if (slot >= sp.from && slot < sp.to) return sp;
+  return spans[spans.length - 1];
 }
 
 /* ══ 取樣鋼琴 ══════════════════════════════════════════════════
@@ -2368,7 +2473,7 @@ function ensureBass(midis){
 function bassMidisOf(){
   const out = [];
   if (typeof parsed === "undefined" || !parsed) return out;
-  for (const b of parsed.bars) {
+  for (const b of flatChords(parsed.bars)) {
     if (!b.ok) continue;
     for (const raw of [b.chord.bassPc, b.chord.rootPc + 7]) {
       out.push(bassMidiFor((((raw + transposeOn) % 12) + 12) % 12));
@@ -2571,7 +2676,7 @@ function isDominant(iv){
 
 function detectFeel(bars){
   let ext = false, sevBars = 0, total = 0;
-  for (const b of bars) {
+  for (const b of flatChords(bars)) {   // 判曲風也是每一顆都算
     if (!b.ok) continue;
     total++;
     const iv = b.chord.intervals;
@@ -3065,11 +3170,24 @@ function scheduleDrums(barStartBeat, b, absBar, isFill){
 /* ── 貝斯 ─────────────────────────────────────────────────────
    位置一律用「第幾拍」算,拍號換了就跟著換:4/4 的一、三在 3/4 是一、三、
    在 6/8 是兩顆附點四分 */
-function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord){
+/* `span` 是「這一拍屬於哪一顆和弦」。一小節只有一顆時 span 就是整小節,
+   下面所有的 `b` / `beats` / `last` / `mid` 都跟以前一模一樣(零行為差異);
+   一小節兩顆的時候,**每一顆和弦各自當一個小節看**——
+   第二顆的第一拍就是它的「第一拍」,該彈根音,不是接著前一顆的五音 */
+function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord, span){
   const mode = bassMode(absBar);
-  const m = meter(), beats = m.beats, div = divNow();
-  const last = beats - 1, mid = midBeat();
-  const lastSlot = slotsInBar() - 1;
+  const m = meter(), div = divNow();
+  const beats = span ? (span.toBeat - span.fromBeat) : m.beats;
+  const b0 = span ? span.fromBeat : 0;          // 這顆和弦從第幾拍開始(整小節裡)
+  const whole = beats === m.beats;              // 這一格只有一顆和弦
+  b = b - b0;                                   // 以下一律用「這顆和弦裡的第幾拍」
+  const last = beats - 1;
+  const mid = beats >= 4 ? 2 : beats - 1;
+  const lastSlot = beats * div - 1;             // 這顆和弦的最後一格(整小節時就是整格的最後)
+  const bAbs = b + b0;                          // 整小節裡的第幾拍(節奏型的格子要用它)
+  /* 時間還是要用整小節的絕對格號,不然第二顆和弦會被排到小節開頭 */
+  const slotTimeAt = (idx) => slotTime(barStartBeat, idx + b0 * div);
+  const beatTimeAt = (n) => beatTime(barStartBeat + b0 + n);
   const pcOf = (raw) => ((((raw + transposeOn) % 12) + 12) % 12);
   const rootPc = pcOf(chord.bassPc);
   const fifthPc = pcOf(chord.rootPc + 7);
@@ -3080,7 +3198,7 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord){
   if (isFill && b === last && nextChord && mode !== "drive") {
     const target = bassMidiFor(pcOf(nextChord.bassPc));
     playBassNote(target - (chance(absBar, 7, 0.5) ? 1 : 2),
-                 slotTime(barStartBeat, lastSlot), slotDur() * 0.9, 0.42);
+                 slotTimeAt(lastSlot), slotDur() * 0.9, 0.42);
   }
 
   if (mode === "bossa") {
@@ -3088,18 +3206,18 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord){
        那個往前靠的推力就是 bossa */
     const early = chance(absBar, 6, 0.45);
     if (b === 0) {
-      playBassNote(bassMidiFor(rootPc), beatTime(barStartBeat), spb * (mid - 0.1), humanize(absBar, 70, 0.52));
+      playBassNote(bassMidiFor(rootPc), beatTimeAt(0), spb * (mid - 0.1), humanize(absBar, 70, 0.52));
       /* 6/8 只有兩拍,提前進來的那顆五音就落在第一拍自己的最後一格——
          mid-1 跟 0 是同一拍,寫成 else if 的話那顆會整個不見 */
       if (early && mid - 1 === 0) {
-        playBassNote(bassMidiFor(fifthPc), slotTime(barStartBeat, div - 1),
+        playBassNote(bassMidiFor(fifthPc), slotTimeAt(div - 1),
                      spb * (beats - mid + 0.4), humanize(absBar, 71, 0.44));
       }
     } else if (b === mid - 1 && early) {
-      playBassNote(bassMidiFor(fifthPc), slotTime(barStartBeat, (mid - 1) * div + div - 1),
+      playBassNote(bassMidiFor(fifthPc), slotTimeAt((mid - 1) * div + div - 1),
                    spb * (beats - mid + 0.4), humanize(absBar, 71, 0.44));
     } else if (b === mid && !early) {
-      playBassNote(bassMidiFor(fifthPc), beatTime(barStartBeat + mid), spb * (beats - mid - 0.1), humanize(absBar, 72, 0.44));
+      playBassNote(bassMidiFor(fifthPc), beatTimeAt(mid), spb * (beats - mid - 0.1), humanize(absBar, 72, 0.44));
     }
     return;
   }
@@ -3109,9 +3227,12 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord){
   if (mode === "funk") {
     const cell = pickCell([[0,3,10,14], [0,6,10], [0,3,6,14], [0,10,14], [0,3,7,10]], absBar, 103);
     for (let k = 0; k < div; k++) {
-      const idx = b * div + k;
+      /* 放克與 city pop 的貝斯是「整小節的十六分切分」,格號要用**絕對**的
+         (整小節 0–15),不能跟著和弦重新從 0 數——不然一小節兩顆和弦時,
+         第二顆會去對 [0,3,10] 這種寫給整小節的格子,大半個小節就沒聲音了 */
+      const idx = bAbs * div + k;
       if (cell.indexOf(idx) < 0) continue;
-      if (idx === lastSlot && isFill) continue;
+      if (idx === slotsInBar() - 1 && isFill) continue;
       const pc = (idx >= div * 2 && chance(absBar, 5, 0.45)) ? fifthPc : rootPc;
       playBassNote(bassMidiFor(pc), slotTime(barStartBeat, idx), slotDur() * 0.8,
                    humanize(absBar, 70 + idx, idx === 0 ? 0.52 : 0.4));
@@ -3125,9 +3246,12 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord){
   if (mode === "citypop") {
     const cell = pickCell([[0,6,10], [0,10,14], [0,6,11], [0,3,10], [0,8,14]], absBar, 104);
     for (let k = 0; k < div; k++) {
-      const idx = b * div + k;
+      /* 放克與 city pop 的貝斯是「整小節的十六分切分」,格號要用**絕對**的
+         (整小節 0–15),不能跟著和弦重新從 0 數——不然一小節兩顆和弦時,
+         第二顆會去對 [0,3,10] 這種寫給整小節的格子,大半個小節就沒聲音了 */
+      const idx = bAbs * div + k;
       if (cell.indexOf(idx) < 0) continue;
-      if (idx === lastSlot && isFill) continue;
+      if (idx === slotsInBar() - 1 && isFill) continue;
       const pc = (idx >= div * 2 && chance(absBar, 5, 0.5)) ? fifthPc : rootPc;
       playBassNote(bassMidiFor(pc), slotTime(barStartBeat, idx), slotDur() * 1.5,
                    humanize(absBar, 70 + idx, idx === 0 ? 0.5 : 0.38));
@@ -3154,7 +3278,7 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord){
       const step = eighths ? idx : b;
       /* 三連音的後半格離下一拍只剩 1/3 拍,音再留長就會跟下一顆疊在一起
          (尖峰會多 0.08,量過)。所以 boogie 的八分要比別的走法短 */
-      playBassNote(bassMidiFor(line[step % line.length]), slotTime(barStartBeat, idx),
+      playBassNote(bassMidiFor(line[step % line.length]), slotTimeAt(idx),
                    slotDur() * (eighths ? 0.62 : 1.8),
                    /* boogie 是一小節八顆音,力度要比別的走法收一點——
                       照 0.5 打下去整段的尖峰會衝到 0.87(量過),超出 0.85 那條線 */
@@ -3169,7 +3293,7 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord){
       const idx = b * div + k;
       if (idx === lastSlot && isFill) continue;
       const pc = (b === mid && chance(absBar, 5, 0.4)) ? fifthPc : rootPc;
-      playBassNote(bassMidiFor(pc), slotTime(barStartBeat, idx), slotDur() * 0.92,
+      playBassNote(bassMidiFor(pc), slotTimeAt(idx), slotDur() * 0.92,
                    humanize(absBar, 70 + idx, k === 0 ? 0.5 : 0.38));
     }
     return;
@@ -3186,12 +3310,12 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord){
       const up = hash01(absBar, 17) < 0.6;
       const seq = up ? [rootPc, pcOf(chord.rootPc + third), fifthPc]
                      : [rootPc, fifthPc, pcOf(chord.rootPc + third)];
-      playBassNote(bassMidiFor(seq[b % seq.length]), beatTime(barStartBeat + b), spb * 0.92,
+      playBassNote(bassMidiFor(seq[b % seq.length]), beatTimeAt(b), spb * 0.92,
                    humanize(absBar, 70 + b, b === 0 ? 0.5 : 0.42));
     } else {
       const nextRoot = nextChord ? bassMidiFor(pcOf(nextChord.bassPc)) : bassMidiFor(rootPc);
       playBassNote(nextRoot + (chance(absBar, 8, 0.5) ? -1 : 1),
-                   beatTime(barStartBeat + b), spb * 0.92, humanize(absBar, 73, 0.42));
+                   beatTimeAt(b), spb * 0.92, humanize(absBar, 73, 0.42));
     }
     return;
   }
@@ -3199,15 +3323,15 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord){
   // root5 / jazz 的非走動情形:根音撐到中間那一拍、五音撐完後半,jazz 會多一顆切分預備音
   const syncop = mode === "jazz" && hash01(absBar, 6) >= 0.45;
   if (b === 0) {
-    playBassNote(bassMidiFor(rootPc), beatTime(barStartBeat),
+    playBassNote(bassMidiFor(rootPc), beatTimeAt(0),
                  spb * (syncop ? mid - 0.6 : mid), humanize(absBar, 70, 0.52));
     if (syncop) {
-      playBassNote(bassMidiFor(rootPc), slotTime(barStartBeat, (mid - 1) * div + div - 1), slotDur(),
+      playBassNote(bassMidiFor(rootPc), slotTimeAt((mid - 1) * div + div - 1), slotDur(),
                    humanize(absBar, 71, 0.34));
     }
   } else if (b === mid) {
     const pc = chance(absBar, 5, 0.25) ? rootPc : fifthPc;
-    playBassNote(bassMidiFor(pc), beatTime(barStartBeat + mid),
+    playBassNote(bassMidiFor(pc), beatTimeAt(mid),
                  spb * (beats - mid) * (isFill ? 0.75 : 1), humanize(absBar, 72, 0.44));
   }
 }
@@ -3215,26 +3339,37 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord){
 /* ── 鋼琴 ─────────────────────────────────────────────────────
    左手低音一律留長(四拍的一、三各撐兩拍;三拍與六八拍一小節撐一次),
    右手照樣式與感覺決定的格子打 */
-function schedulePiano(v, barStartBeat, b, transpose, absBar, isFill){
+/* `spans` 是這一格的和弦們(一顆就一段,兩顆就兩段)。
+   左手在**每一顆和弦的開頭**落一次低音、撐到那顆和弦結束;
+   右手打到哪一格就用那一格當下的和弦。一格只有一顆時跟以前一模一樣 */
+function schedulePiano(spans, barStartBeat, b, transpose, absBar, isFill){
   const f = feel(), p = pat(absBar), st = styleAt(absBar);
   const m = meter(), beats = m.beats, div = divNow(), mid = midBeat();
   const positions = compPositions(absBar);
   const arc = arcGain(absBar);
+  const here = spanAt(spans, b * div);
+  if (!here || !here.v) return;
+  const v = here.v;
+  const multi = spans.length > 1;
 
-  if (b === 0) {
-    playNote(v.bass + transpose, beatTime(barStartBeat), spb * (beats >= 4 ? mid : beats),
-             0.52 * lhGain());
-  } else if (beats >= 4 && b === mid) {
+  // 左手低音:每一顆和弦的第一拍落一次,撐到這顆和弦結束
+  if (b === here.fromBeat) {
+    const len = here.toBeat - here.fromBeat;
+    playNote(v.bass + transpose, beatTime(barStartBeat + b),
+             spb * (multi ? len : (beats >= 4 ? mid : beats)), 0.52 * lhGain());
+  } else if (!multi && beats >= 4 && b === mid) {
+    // 整小節同一顆和弦時才在中間補一下(換和弦的地方已經有新的低音了)
     playNote(v.bass + transpose, beatTime(barStartBeat + mid), spb * (beats - mid), 0.42 * lhGain());
   }
 
-  // 墊底:一小節一下,撐滿整個小節
+  // 墊底:一顆和弦一下,撐滿它自己那一段
   if (st === "pad") {
-    if (b === 0) {
-      for (const n of v.upper) playNote(n + transpose, beatTime(barStartBeat), spb * beats,
+    if (b === here.fromBeat) {
+      for (const n of v.upper) playNote(n + transpose, beatTime(barStartBeat + b),
+                                        spb * (here.toBeat - here.fromBeat),
                                         humanize(absBar, 84, p.compGain));
     }
-    if (b === mid && isFill && chance(absBar, 80, 0.55)) {
+    if (!multi && b === mid && isFill && chance(absBar, 80, 0.55)) {
       for (const n of v.upper) playNote(n + transpose, beatTime(barStartBeat + mid),
                                         spb * (beats - mid), p.compGain * 0.85);
     }
@@ -3245,6 +3380,9 @@ function schedulePiano(v, barStartBeat, b, transpose, absBar, isFill){
     const idx = b * div + k;
     if (positions.indexOf(idx) < 0) continue;
     if (idx !== 0 && chance(absBar, 82 + idx, 0.15)) continue;   // 偶爾空一下
+    // 打在哪一格就用那一格當下的和弦(一小節兩顆時後半要換過去)
+    const sp = spanAt(spans, idx);
+    if (!sp || !sp.v) continue;
     /* 有些感覺的偶數拍會往後挪成切分(4/4 的二、四),挪過去那一下輕一點,
        聽起來才像順手帶過去的 */
     const push = f.push && st !== "drive" && div === 2 && k === 0 && b % 2 === 1
@@ -3255,7 +3393,7 @@ function schedulePiano(v, barStartBeat, b, transpose, absBar, isFill){
     /* **不是每一下都把整組音一起砸下去**。真的在 comping 的手,重拍才落滿,
        中間那些反拍多半只帶上面兩顆(有時只有最上面那一顆)。
        每一下都一樣厚就是「機器人」的來源——比節奏型固定還明顯 */
-    let notes = v.upper;
+    let notes = sp.v.upper;
     if (idx !== 0 && notes.length > 2) {
       const r = hash01(absBar, 110 + idx);
       if (r < 0.34) notes = notes.slice(-2);
@@ -3265,7 +3403,7 @@ function schedulePiano(v, barStartBeat, b, transpose, absBar, isFill){
   }
 
   if (isFill && b === beats - 1) {
-    for (const n of v.upper) {
+    for (const n of (spanAt(spans, slotsInBar() - 1) || here).v.upper) {
       playNote(n + transpose, slotTime(barStartBeat, slotsInBar() - 1), slotDur(), p.compGain * 0.85);
     }
   }
@@ -3283,7 +3421,7 @@ function scheduleBeat(i, when){
     bar = bar % nBars;
   }
   const v = voicings[bar];
-  if (!v) return;                            // 這一格解析失敗(理論上播放前就擋掉了)
+  if (!v || !v.length) return;               // 這一格解析失敗(理論上播放前就擋掉了)
   const b = ((musicBeat % beats) + beats) % beats;
   const barStartBeat = countInBeats + Math.floor(musicBeat / beats) * beats;
   /* absBar 是「從頭數到現在的第幾小節」,繞第二圈時會繼續往上加——
@@ -3302,12 +3440,17 @@ function scheduleBeat(i, when){
   schedulePiano(v, barStartBeat, b, transposeOn, absBar, isFill);
   scheduleDrums(barStartBeat, b, absBar, isFill);
   {
-    const src = barsNow();
-    const ch = src[bar] && src[bar].chord;
-    // 過門的經過音要接到下一小節的根音;不循環時最後一格後面沒東西可接
+    /* 貝斯吃「這一拍屬於哪一顆和弦」。接下去的那一顆可能還在同一小節裡
+       (一小節兩顆的後半),所以先找同一格的下一段,沒有了才看下一小節 */
+    const sp = spanAt(v, b * divNow());
+    const here = v.indexOf(sp);
     const nextIdx = bar + 1 >= nBars ? (loopOn ? 0 : -1) : bar + 1;
-    const nextCh = nextIdx >= 0 && src[nextIdx] ? src[nextIdx].chord : null;
-    if (ch) scheduleBass(ch, barStartBeat, b, absBar, isFill, nextCh);
+    const nextSp = here >= 0 && here + 1 < v.length ? v[here + 1]
+                 : (nextIdx >= 0 && voicings[nextIdx] ? voicings[nextIdx][0] : null);
+    if (sp && sp.chord) {
+      scheduleBass(sp.chord, barStartBeat, b, absBar, isFill,
+                   nextSp ? nextSp.chord : null, sp);
+    }
   }
 }
 
@@ -3334,10 +3477,12 @@ function startPlayback(){
 
   // 這次會用到的音(含移調),只載這些取樣
   const midis = [];
-  for (const v of voicings) {
-    if (!v) continue;
-    midis.push(v.bass + transposeOn);
-    for (const n of v.upper) midis.push(n + transposeOn);
+  for (const spans of voicings) {
+    for (const sp of (spans || [])) {          // 一格可能有好幾顆和弦,每一顆的音都要載
+      if (!sp || !sp.v) continue;
+      midis.push(sp.v.bass + transposeOn);
+      for (const n of sp.v.upper) midis.push(n + transposeOn);
+    }
   }
 
   // 貝斯用的音(含移調)跟鋼琴不同,要另外算
@@ -3595,8 +3740,14 @@ function paintPlayhead(){
       lastHighlight = bar;
     }
     setTransport(
-      T("playingTitle", { bar: bar + 1, chord: (() => { const x = barsNow()[bar];
-        return x ? chordDisplay(x.chord) || x.text : ""; })() }),
+      /* 一小節兩顆和弦時要顯示**現在真的在響的那一顆**,不是這一格的第一顆 */
+      T("playingTitle", { bar: bar + 1, chord: (() => {
+        const x = barsNow()[bar];
+        if (!x || !x.chords || !x.chords.length) return "";
+        const within = musicBeat - Math.floor(musicBeat / beatsInBar()) * beatsInBar();
+        const sp = spanAt(spansOf(x), Math.floor(within) * divNow());
+        const c = sp && sp.chord ? sp : x.chords[0];
+        return chordDisplay(c.chord) || c.text; })() }),
       T("playingSub", { bpm: bpmOn, style: styleName(absBar), loop: loopOn ? T("loopSuffix") : "" })
     );
   }
@@ -3608,26 +3759,38 @@ function renderBars(){
   // 整段用同一個字母走法,才不會一格 D♭maj7 一格 F♯maj7
   const src = barsNow();
   const trSteps = transposeSteps(src);
-  if (selectedBar >= src.length) selectedBar = -1;
+  if (selectedBar >= flatChords(src).length) selectedBar = -1;
+  let flat = 0;                       // 攤平的和弦序號(選取用的就是它)
   for (let i = 0; i < src.length; i++) {
     const b = src[i];
-    const chip = document.createElement("button");
-    chip.type = "button";
-    chip.className = "bar-chip" + (b.ok ? "" : " bad") + (i === selectedBar ? " sel" : "");
+    const chip = document.createElement("div");
+    chip.className = "bar-chip" + (b.ok ? "" : " bad");
     const num = document.createElement("span");
     num.className = "num";
     num.textContent = i + 1;
     chip.appendChild(num);
-    // 和弦包一層 span:格子太窄時 CSS 靠 --len 把字縮小,
-    // 不然 break-all 會把 Cmaj7 斷成「Cmaj / 7」,看起來像別的和弦
-    const name = document.createElement("span");
-    name.className = "bar-name";
-    name.textContent = b.ok ? chordDisplay(b.chord, trSteps) : b.text;
-    chip.style.setProperty("--len", name.textContent.length);
-    chip.appendChild(name);
-    // 點一下選起來(之後點性質鈕就是改這一格),再點一次取消
-    // 一直有一格在編輯,點同一格不取消:取消了鍵盤就不知道要改誰
-    chip.addEventListener("click", () => selectBar(i));
+    /* 一格裡可能有兩顆和弦,每一顆各自是一個可以點的按鈕。
+       和弦名包一層 span:格子太窄時 CSS 靠 --len 把字縮小,
+       不然會把 Cmaj7 斷成「Cmaj / 7」,看起來像別的和弦 */
+    const list = b.chords && b.chords.length ? b.chords : [{ ok: false, text: b.text, chord: null }];
+    if (list.length > 1) chip.classList.add("multi");
+    for (const c of list) {
+      const my = flat++;
+      const cell = document.createElement("button");
+      cell.type = "button";
+      cell.className = "bar-ch" + (c.ok ? "" : " bad") + (my === selectedBar ? " sel" : "");
+      const name = document.createElement("span");
+      name.className = "bar-name";
+      name.textContent = c.ok ? chordDisplay(c.chord, trSteps) : c.text;
+      cell.style.setProperty("--len", name.textContent.length);
+      cell.appendChild(name);
+      // 點一下選起來(之後點音名/性質就是改這一顆)。點同一顆不取消:
+      // 一直要有一顆在編輯,不然鍵盤不知道要改誰
+      cell.addEventListener("click", () => selectBar(my));
+      chip.appendChild(cell);
+    }
+    const p = posOf(selectedBar);
+    if (p && p.bar === i) chip.classList.add("sel");
     barsGrid.appendChild(chip);
   }
   lastHighlight = -1;
@@ -3872,33 +4035,67 @@ function joinToken(root, suffix, bass){
   return root + suffix + (bass ? "/" + bass : "");
 }
 
-function barTokens(){ return parsed.bars.map(b => b.text); }
-function setTokens(arr){
-  chordInput.value = arr.join(" - ");
+/* ── 編輯的單位是「一顆和弦」,不是「一小節」 ──────────────────
+   一小節可以有兩顆和弦之後,選取、鍵盤、工具列都要對得到某一顆。
+   所以內部用**攤平的和弦序號**(第幾顆,從 0 數),小節結構另外記在 groups 裡 */
+function barGroups(){ return parsed.bars.map(b => b.chords.map(c => c.text)); }
+function chordTokens(){ const out = []; for (const g of barGroups()) for (const t of g) out.push(t); return out; }
+/* 攤平的序號 → 在第幾格的第幾顆 */
+function posOf(i){
+  const g = barGroups();
+  let n = 0;
+  for (let bi = 0; bi < g.length; bi++) for (let j = 0; j < g[bi].length; j++) {
+    if (n === i) return { bar: bi, idx: j };
+    n++;
+  }
+  return null;
+}
+/* 把「每一格一串和弦」組回文字。**全部都是一格一顆時用舊寫法**(`C - Am - F - G`),
+   有任何一格不只一顆才寫小節線(`C Am | F | G`)——
+   舊的存檔與分享連結因此一個字都不會變 */
+function groupsToText(groups){
+  return groups.every(g => g.length === 1)
+    ? groups.map(g => g[0]).join(" - ")
+    : groups.map(g => g.join(" ")).join(" | ");
+}
+function setGroups(groups){
+  chordInput.value = groupsToText(groups.filter(g => g.length));
   reparse();
+}
+/* 只改某一顆和弦的文字,小節結構不動 */
+function setChordAt(i, tok){
+  const g = barGroups(), p = posOf(i);
+  if (!p) return;
+  g[p.bar][p.idx] = tok;
+  setGroups(g);
 }
 
 function selectBar(i){
   selectedBar = i;
+  const chips = barsGrid.querySelectorAll(".bar-ch");
+  for (let n = 0; n < chips.length; n++) chips[n].classList.toggle("sel", n === selectedBar);
+  const p = posOf(i);
   for (let n = 0; n < barsGrid.children.length; n++) {
-    barsGrid.children[n].classList.toggle("sel", n === selectedBar);
+    barsGrid.children[n].classList.toggle("sel", !!p && n === p.bar);
   }
   updatePalHint();
 }
 
-/* 鍵盤與工具列作用的目標:一直是「正在編輯的那一格」。
-   沒選到的時候當第 1 格——這樣點下去一定改得到東西,不會默默加到最後面 */
+/* 鍵盤與工具列作用的目標:一直是「正在編輯的那一顆」。
+   沒選到的時候當第 1 顆——這樣點下去一定改得到東西,不會默默加到最後面 */
 function targetBar(){
-  if (selectedBar >= 0 && selectedBar < parsed.bars.length) return selectedBar;
-  return parsed.bars.length ? 0 : -1;
+  const n = chordTokens().length;
+  if (selectedBar >= 0 && selectedBar < n) return selectedBar;
+  return n ? 0 : -1;
 }
 
 function updatePalHint(){
   const el = $("palHint");
+  const flat = flatChords(parsed.bars);
   const i = selectedBar;
-  if (i >= 0 && i < parsed.bars.length) {
+  if (i >= 0 && i < flat.length) {
     el.textContent = T("palHintSel", {
-      n: i + 1, chord: chordDisplay(parsed.bars[i].chord) || parsed.bars[i].text });
+      n: flat[i].bar + 1, chord: chordDisplay(flat[i].chord) || flat[i].text });
   } else {
     el.textContent = T("palHintIdle");
   }
@@ -3909,25 +4106,23 @@ function updatePalHint(){
    **不會自己往後跳一格**——改完第 3 格還是停在第 3 格,要改下一格就點下一格。
    一格都沒有的時候才開一格出來 */
 function palRoot(root){
-  const t = barTokens();
+  const t = chordTokens();
   pushUndo();
-  if (!t.length) { setTokens([root]); selectBar(0); return; }
+  if (!t.length) { setGroups([[root]]); selectBar(0); return; }
   const i = targetBar();
   const p = splitToken(t[i]);
-  t[i] = p ? joinToken(root, p.suffix, p.bass) : root;
-  setTokens(t);
+  setChordAt(i, p ? joinToken(root, p.suffix, p.bass) : root);
   selectBar(i);
 }
 
 /* 點性質:換掉正在編輯那一格的性質,根音與轉位低音都留著 */
 function palQual(suffix){
-  const t = barTokens();
+  const t = chordTokens();
   pushUndo();
-  if (!t.length) { setTokens(["C" + suffix]); selectBar(0); return; }
+  if (!t.length) { setGroups([["C" + suffix]]); selectBar(0); return; }
   const i = targetBar();
   const p = splitToken(t[i]);
-  t[i] = p ? joinToken(p.root, suffix, p.bass) : "C" + suffix;
-  setTokens(t);
+  setChordAt(i, p ? joinToken(p.root, suffix, p.bass) : "C" + suffix);
   selectBar(i);
 }
 
@@ -3935,24 +4130,26 @@ function palQual(suffix){
    變多就把現有的進行重複貼滿(4 → 8 就是同一句唱兩次),變少就截掉;
    一格都沒有的話開一排 C 出來讓人改 */
 function setBarCount(n){
-  const t = barTokens();
+  const g = barGroups();
   pushUndo();
   const out = [];
-  for (let i = 0; i < n; i++) out.push(t.length ? t[i % t.length] : "C");
+  for (let i = 0; i < n; i++) out.push(g.length ? g[i % g.length].slice() : ["C"]);
   formParts = [];          // 手動改長度就回自由輸入,形式那行才不會對不上
   clearFormMeter();
-  setTokens(out);
-  selectBar(0);            // 直接停在第 1 格,接著就能改
+  setGroups(out);
+  selectBar(0);            // 直接停在第 1 顆,接著就能改
 }
 
+/* 刪一格:刪掉**正在編輯的那一顆所在的整格**。
+   一格裡有兩顆的時候先刪掉那一顆,剩下的留著(那是「合併回一顆」) */
 function palDelete(){
-  const t = barTokens();
-  if (!t.length) return;
-  const i = targetBar();
+  const g = barGroups(), p = posOf(targetBar());
+  if (!p) return;
   pushUndo();
-  t.splice(i, 1);
-  setTokens(t);
-  selectBar(Math.min(i, t.length - 1));
+  if (g[p.bar].length > 1) g[p.bar].splice(p.idx, 1);
+  else g.splice(p.bar, 1);
+  setGroups(g);
+  selectBar(Math.min(targetBar(), Math.max(0, chordTokens().length - 1)));
 }
 
 /* ── 復原 ────────────────────────────────────────────────────
@@ -3978,13 +4175,28 @@ function undoEdit(){
    選一格就能搬移、在後面插一格(複製)、刪掉。插入用複製的,因為
    「同一個和弦撐兩小節」跟「先插一格再改」都是這一顆按鈕 */
 function dupBar(){
-  const t = barTokens();
-  if (!t.length) return;
-  const i = targetBar();
+  const g = barGroups(), p = posOf(targetBar());
+  if (!p) return;
   pushUndo();
-  t.splice(i + 1, 0, t[i]);
-  setTokens(t);
-  selectBar(i + 1);
+  g.splice(p.bar + 1, 0, g[p.bar].slice());
+  setGroups(g);
+  selectBar(targetBar() + g[p.bar].length);
+}
+
+/* ── 一小節切成兩顆 / 合併回一顆 ──────────────────────────────
+   這是工具列的第四顆按鈕。加按鈕之前問過「沒有它做得到嗎」——
+   做不到:除了自己在文字框打 `|`,沒有別的路可以把一小節變成兩顆和弦。
+   切:把正在編輯那一格複製成兩顆(再去改第二顆);
+   合:兩顆變回一顆(留第一顆) */
+function splitBar(){
+  const g = barGroups(), p = posOf(targetBar());
+  if (!p) return;
+  pushUndo();
+  const cap = Math.max(1, beatsInBar());
+  if (g[p.bar].length > 1) g[p.bar] = [g[p.bar][0]];        // 合併
+  else if (cap > 1) g[p.bar] = [g[p.bar][0], g[p.bar][0]];  // 切成兩顆
+  setGroups(g);
+  selectBar(targetBar());
 }
 
 /* 小節數那一排亮的是「現在幾小節」,不是「要看哪一組段落」 */
@@ -3999,7 +4211,7 @@ function updateLenSeg(){
 
 function updateBarTools(){
   if (!$("barDup")) return;
-  const n = parsed.bars.length;
+  const n = chordTokens().length;
   const i = (selectedBar >= 0 && selectedBar < n) ? selectedBar : -1;
   const set = (id, disabled, label) => {
     const el = $(id);
@@ -4010,6 +4222,13 @@ function updateBarTools(){
   };
   set("barDup",   !n,                   T("barDupLabel"));
   set("barDel",   !n,                   T("barDelLabel"));
+  {
+    const p = posOf(i >= 0 ? i : 0);
+    const two = !!(p && parsed.bars[p.bar] && parsed.bars[p.bar].chords.length > 1);
+    set("barSplit", !n || beatsInBar() < 2, two ? T("barMergeLabel") : T("barSplitLabel"));
+    const el = $("barSplit");
+    if (el) el.classList.toggle("on", two);
+  }
   set("barUndo",  !undoStack.length,    undoStack.length ? T("barUndoLabel") : T("barUndoNone"));
 }
 
@@ -4411,6 +4630,7 @@ $("formClear").addEventListener("click", () => {
 /* 小節工具列 */
 $("barDup").addEventListener("click", dupBar);
 $("barDel").addEventListener("click", palDelete);
+$("barSplit").addEventListener("click", splitBar);
 $("barUndo").addEventListener("click", undoEdit);
 
 /* 段落庫的開關。收起來是預設:清單佔掉左邊將近一半的版面,
@@ -4524,7 +4744,7 @@ document.addEventListener("keydown", (e) => {
   const t = e.target;
   if (t && (t.tagName === "TEXTAREA" || t.tagName === "INPUT")) return;
   if (e.metaKey || e.ctrlKey || e.altKey) return;
-  const n = parsed.bars.length;
+  const n = chordTokens().length;          // ← → 走的是「一顆一顆」,一格兩顆就走兩下
   if (!n) return;
   if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
     e.preventDefault();
@@ -4532,9 +4752,14 @@ document.addEventListener("keydown", (e) => {
     selectBar(Math.max(0, Math.min(n - 1, cur + (e.key === "ArrowRight" ? 1 : -1))));
     return;
   }
+  /* 數字鍵跳的是「第幾格」(那是使用者數得出來的東西),跳到那一格的第一顆 */
   if (/^[1-9]$/.test(e.key)) {
-    const i = +e.key - 1;
-    if (i < n) { e.preventDefault(); selectBar(i); }
+    const bar = +e.key - 1;
+    if (bar >= parsed.bars.length) return;
+    let flat = 0;
+    for (let i = 0; i < bar; i++) flat += parsed.bars[i].chords.length;
+    e.preventDefault();
+    selectBar(flat);
   }
 });
 

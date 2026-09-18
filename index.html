@@ -1828,9 +1828,18 @@ const SUB_RULES = [
   /* 借用小調的 iv:F → Fm,流行歌最愛的那一下(「借來的憂傷」) */
   { id: "IV→iv", feels: ["straight", "citypop"],
     ok: x => x.d === 5 && x.q === "maj", to: x => nameOf(x.key + 5, "m") },
-  /* I7:要去 IV 之前先變成它的屬七(C → C7 → F) */
-  { id: "I→I7",  feels: ["straight", "citypop", "blues"], keepsRoot: true,
-    ok: x => x.d === 0 && x.q === "maj" && x.nd === 5, to: x => nameOf(x.key, "7") },
+  /* **副屬化:根音不動,把性質改成屬七**。下一格的根音在自己的完全四度上方時,
+     這一格就可以當它的 V7——`F - G - Em - Am` 的 Em 隨時可以彈成 E7、
+     `… Am - Dm …` 的 Am 隨時可以彈成 A7、要去 F 之前的 C 可以彈成 C7。
+     這是流行歌裡最常見的一手,而且**低音一個音都沒動**,所以永遠安全:
+     招牌和弦、屬七要解決過來的那一格都照給(`keepsRoot`)。
+     小三和弦換成大三/屬七那一下就是它的味道(Em → E),
+     所以三和弦的進行也給一個純大三的選項 */
+  { id: "副屬化", feels: ["straight", "citypop", "latin", "swing"], keepsRoot: true,
+    ok: x => (x.q === "maj" || x.q === "min") && x.next &&
+             ((x.rootPc + 5) % 12) === x.nextRootPc && x.nextRootPc !== x.rootPc,
+    to: x => nameOf(x.rootPc, x.suffix === "" || x.suffix === "m" ? "" : "7"),
+    also: x => nameOf(x.rootPc, "7") },
   /* 副屬和弦:下一格的 V7 放在這裡。ii 前面放 VI7、V 前面放 II7…… */
   { id: "V7/next", feels: JAZZ_FEELS,
     ok: x => x.next && x.q !== "dom" && x.nq !== "dom" && x.nq !== "dim" &&
@@ -1924,8 +1933,9 @@ function subCandidates(bars, i, key, pcs){
       }
       continue;
     }
-    const t = r.to(x);
-    if (t && t !== c.text && parseChord(normalizeSymbol(t))) out.push(t);
+    for (const t of [r.to(x), r.also && r.also(x)]) {
+      if (t && t !== c.text && parseChord(normalizeSymbol(t))) out.push(t);
+    }
   }
   return [...new Set(out)];
 }
@@ -4059,7 +4069,11 @@ const SECTIONS = [
   { text: "C - G - Am - F - C - G - F - G",                        feel: "straight", meter: "4/4" },  // I-V-vi-IV,後半收在 V
   { text: "C - Am - F - G - C - Am - Dm - G",                      feel: "straight", meter: "4/4" },  // 五〇年代,收在 ii-V
   { text: "C - G - Am - Em - F - C - F - G",                       feel: "straight", meter: "4/4" },  // 卡農進行
-  { text: "Fmaj7 - G/F - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",        feel: "straight", meter: "4/4" },  // 王道進行 4536251,七和弦聲位;G/F 是屬七的三轉,低音 F→E 順著下行
+  /* 王道進行(4536251)整組搬去 City Pop 了:它配七和弦就是 city pop 的聲音,
+     兩邊各放一組只是同一句話講兩次(被指出「POP 那組實際上就是 City Pop 那組」)。
+     這一格改放下行低音的卡農——低音 C-B-A-G-F-E-D-G 一路走下來,
+     轉位在這裡是結構的一部分,不是裝飾 */
+  { text: "C - G/B - Am - Am/G - F - C/E - Dm7 - G7",              feel: "straight", meter: "4/4" },  // 下行低音(卡農的低音線版)
   { text: "Am - F - C - G - Am - F - Dm - E7",                     feel: "straight", meter: "4/4" },  // 小調流行,收在 V7
   /* 圓舞曲:一樣是 Pop,換了拍號鼓就整套換成 oom-pah-pah */
   { text: "C - F - G7 - C",            feel: "straight", meter: "3/4" },  // I-IV-V7-I,圓舞曲最基本的終止
@@ -4101,7 +4115,12 @@ const SECTIONS = [
 
   /* ── Swing:爵士。ride、走動低音、小鼓 comping ───────────────
      這幾組要用九度以上的聲位,detectFeel 才判得到搖擺 */
-  { text: "Dm7 - G7 - Cmaj7 - Cmaj7",  feel: "swing",   meter: "4/4" },  // ii-V-I,爵士最常練的四小節
+  /* 這一格本來是 `Dm7 - G7 - Cmaj7 - Cmaj7`,跟下面那組只差聲位(七度 vs 九度),
+     那個差別是「和弦變化」自己會做的事,不該佔兩格。改放小調的 ii°-V7-i。
+     (試過 `Em9 - A7b9 - Dm9 - G13`,但那一串從頭到尾沒有出現主和弦,
+     `keyOf` 會判成 G 大調、整組代理規則跟著錯位;而且 Em9 帶 F♯,
+     那個音不在 C 大調裡——大調的 iii 級是 Em7 不是 Em9) */
+  { text: "Bm7b5 - E7b9 - Am9 - Am9",  feel: "swing",   meter: "4/4" },  // 小調 ii°-V7-i,爵士最常練的小調終止
   { text: "Dm9 - G13 - Cmaj9 - Cmaj9", feel: "swing",   meter: "4/4" },  // 同一個 ii-V-I 換九度聲位
   { text: "Am9 - Dm9 - E7b9 - Am9",    feel: "swing",   meter: "4/4" },  // 爵士小調
   { text: "Dm7 - G7 - Cmaj7 - Fmaj7 - Bm7b5 - E7 - Am7 - A7",      feel: "swing",   meter: "4/4" },  // 大調 ii-V-I 接小調 ii-V-i(落葉型)

@@ -150,9 +150,9 @@ I-VI7-ii-V）和 `Fmaj7 - E7 - Am7 - C7`（city pop）都剛好是 2/4，兩個�
 | --- | --- | --- |
 | 加色彩音 | C → Cmaj7、G7 → G13 | 全部 |
 | 轉位（低音級進時才給） | C → C/E、G → G/B | 全部 |
+| **副屬化**（根音不動，性質變屬七） | Em → E7（下一格是 Am）、Am → A7（下一格是 Dm）、C → C7（下一格是 F） | Pop、City Pop、Bossa、Swing |
 | 三度代理 | C → Am7 / Em7、F → Dm7 | Pop、City Pop、Bossa、Swing |
 | 借用小調的 iv | F → Fm | Pop、City Pop |
-| 去 IV 之前先變屬七 | C → C7（下一格是 F） | Pop、City Pop、Blues |
 | 經過減和弦 | Cmaj7 Cmaj7 Dm7 → Cmaj7 C♯dim7 Dm7 | Pop、City Pop、Swing |
 | ♯IV 減七 | F7 F7 C7 → F7 F♯dim7 C7 | Blues、Swing |
 | 副屬和弦 | Cmaj7 → A7（下一格是 Dm7） | **只有** Bossa、Swing |

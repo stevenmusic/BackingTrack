@@ -148,16 +148,23 @@ I-VI7-ii-V）和 `Fmaj7 - E7 - Am7 - C7`（city pop）都剛好是 2/4，兩個�
 
 | 手法 | 例 | 哪些曲風會用 |
 | --- | --- | --- |
+| 加色彩音 | C → Cmaj7、G7 → G13 | 全部 |
+| 轉位（低音級進時才給） | C → C/E、G → G/B | 全部 |
 | 三度代理 | C → Am7 / Em7、F → Dm7 | Pop、City Pop、Bossa、Swing |
 | 借用小調的 iv | F → Fm | Pop、City Pop |
 | 去 IV 之前先變屬七 | C → C7（下一格是 F） | Pop、City Pop、Blues |
-| 副屬和弦 | Am → C7（下一格是 F）、Cmaj7 → A7 | Pop、City Pop、Bossa、Swing |
-| 三全音代理 | G7 → D♭7 | Bossa、Swing、City Pop |
-| 兩格同一顆就補 ii | G7 G7 → Dm7 G7 | Bossa、Swing、City Pop |
 | 經過減和弦 | Cmaj7 Cmaj7 Dm7 → Cmaj7 C♯dim7 Dm7 | Pop、City Pop、Swing |
-| ♯IV 減七 | F7 F7 C7 → F7 F♯dim7 C7 | Blues、Swing、City Pop |
-| 轉位 | C → C/E、G → G/B、G7 → G7/F（**只在低音因此級進時才給**） | 全部 |
-| 加色彩音（墊底用） | C → Cmaj7、G7 → G13 | 全部 |
+| ♯IV 減七 | F7 F7 C7 → F7 F♯dim7 C7 | Blues、Swing |
+| 副屬和弦 | Cmaj7 → A7（下一格是 Dm7） | **只有** Bossa、Swing |
+| 三全音代理 | G7 → D♭7 | **只有** Bossa、Swing |
+| 兩格同一顆就補 ii | G7 G7 → Dm7 G7 | **只有** Bossa、Swing |
+
+**只有爵士系（Bossa / Swing）會整顆換掉別人。** Pop、City Pop、Blues、Funk
+只做不動骨架的事——爵士本來就是邊彈邊重配，流行不是。
+
+**而且有兩種和弦一律不動它的根音**（非爵士系）：調外的那幾顆（丸サ進行的 E7、
+藍調的 C7 是作者故意寫的招牌），還有「上一格的屬七要解決到這裡」的那一顆
+（`E7 - Am7` 的 Am7 換掉的話，E7 就解決不到任何地方）。這兩種只加色彩音跟轉位。
 
 代理是講級數的事，所以要先知道調。判調只看和弦的**骨架音**（根音、三度、五度、大七），
 降七度與延伸音不算——藍調的 C7 F7 G7 全帶降七度，算進去的話 F 大調會贏、F7 變成 I 級，

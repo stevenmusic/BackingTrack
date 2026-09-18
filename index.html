@@ -1803,6 +1803,12 @@ function extFits(tok, pcs){
    `d` 是這一格的級數(離主音幾個半音),`nd` 是下一格的。
    曲風要分:pop 不會用三全音代理,爵士不會用「借用 iv」那種流行的手法 */
 const ALL_FEELS = ["straight", "citypop", "latin", "blues", "swing", "funk"];
+/* **只有爵士系的兩種會整顆換掉別人**(副屬、三全音代理、補 ii)。
+   Pop / City Pop / Blues / Funk 只做「加色彩音、轉位、三度代理、借用 iv」這種
+   不動骨架的事——爵士本來就是邊彈邊重配,流行不是。
+   被回報過:City Pop 的 `Fmaj7 - E7 - Am7 - C7` 被換成 `Fmaj7 - B♭7 - Am7 - C7`,
+   那是 E7 的三全音代理,理論上對,但 E7 正是丸サ進行的招牌,換掉就不是那首了 */
+const JAZZ_FEELS = ["latin", "swing"];
 const SUB_RULES = [
   /* I → vi / iii:最基本的三度代理,同一個功能換一個顏色 */
   { id: "I→vi",  feels: ["straight", "citypop", "latin", "swing"],
@@ -1823,47 +1829,47 @@ const SUB_RULES = [
   { id: "IV→iv", feels: ["straight", "citypop"],
     ok: x => x.d === 5 && x.q === "maj", to: x => nameOf(x.key + 5, "m") },
   /* I7:要去 IV 之前先變成它的屬七(C → C7 → F) */
-  { id: "I→I7",  feels: ["straight", "citypop", "blues"],
+  { id: "I→I7",  feels: ["straight", "citypop", "blues"], keepsRoot: true,
     ok: x => x.d === 0 && x.q === "maj" && x.nd === 5, to: x => nameOf(x.key, "7") },
   /* 副屬和弦:下一格的 V7 放在這裡。ii 前面放 VI7、V 前面放 II7…… */
-  { id: "V7/next", feels: ["straight", "citypop", "latin", "swing"],
+  { id: "V7/next", feels: JAZZ_FEELS,
     ok: x => x.next && x.q !== "dom" && x.nq !== "dom" && x.nq !== "dim" &&
              ((x.rootPc + 5) % 12) !== x.nextRootPc &&      // 本來就是它的 V 就不用換
              x.nextRootPc !== x.rootPc,
     to: x => nameOf(x.nextRootPc + 7, "7") },
   /* V7 的三全音代理:G7 → D♭7,低音半音走下去接到 I */
-  { id: "tritone", feels: ["latin", "swing", "citypop"],
+  { id: "tritone", feels: JAZZ_FEELS,
     ok: x => x.q === "dom" && x.next && ((x.rootPc + 5) % 12) === x.nextRootPc,
     to: x => nameOf(x.rootPc + 6, "7") },
   /* ♯IV 減七:兩格同一顆屬七、下一格在五度上(F7 F7 C7 → F7 F♯dim7 C7)。
      藍調與爵士藍調第六小節的那顆經過和弦,幾乎是固定寫法 */
-  { id: "♯IV°", feels: ["blues", "swing", "citypop"],
+  { id: "♯IV°", feels: ["blues", "swing"], passing: true,
     // 一定要是「IV 走回 I」那一格才成立(藍調第六小節)。只比音程不比級數的話,
     // C7 C7 G7 也會被塞一顆 C♯dim7——那不是經過和弦,是不相干的音
     ok: x => x.q === "dom" && x.prevSame && x.d === 5 && x.nd === 0,
     to: x => nameOf(x.rootPc + 1, "dim7") },
   /* 兩格同一個和弦:前面那格換成它的 ii(G7 G7 → Dm7 G7) */
-  { id: "ii-V",  feels: ["latin", "swing", "citypop"],
+  { id: "ii-V",  feels: JAZZ_FEELS,
     ok: x => x.q === "dom" && x.nextSame, to: x => nameOf(x.rootPc + 7, "m7") },
   /* 經過減和弦:前面那格是同一顆、下一格在大二度上(Cmaj7 Cmaj7 Dm7 → C♯dim7) */
-  { id: "pass°",  feels: ["straight", "citypop", "swing"],
+  { id: "pass°",  feels: ["straight", "citypop", "swing"], passing: true,
     ok: x => x.prevSame && x.next && ((x.rootPc + 2) % 12) === x.nextRootPc,
     to: x => nameOf(x.rootPc + 1, "dim7") },
   /* 一轉:低音走三音(C → C/E、G → G/B)。
      **只有在低音因此走到下一格是級進時才成立**——轉位的用處就是把低音線接順,
      隨便把三音丟到低音只會得到一條亂跳的低音線(被回報「很多 slash chord 很難聽」)。
      `C G/B Am` 的 B→A 是級進 ✓;`Cmaj7/E` 後面接 Cmaj7 的 E→C 是三度 ✗ */
-  { id: "轉位",  feels: ALL_FEELS,
+  { id: "轉位",  feels: ALL_FEELS, keepsRoot: true,
     ok: x => (x.q === "maj" || x.q === "min") && stepToNext(x, x.rootPc + (x.q === "min" ? 3 : 4)),
     to: x => x.full + "/" + nameOf(x.rootPc + (x.q === "min" ? 3 : 4)) },
   /* 屬七的三轉:G → G7/F,低音下行接到下一格(王道的 Fmaj7 - G/F - Em7 就是它,
      F→E 級進)。一樣要級進才給 */
-  { id: "V7/4",  feels: ALL_FEELS,
+  { id: "V7/4",  feels: ALL_FEELS, keepsRoot: true,
     ok: x => (x.q === "maj" || x.q === "dom") && x.next &&
              ((x.rootPc + 5) % 12) === x.nextRootPc && stepToNext(x, x.rootPc + 10),
     to: x => nameOf(x.rootPc, "7") + "/" + nameOf(x.rootPc + 10) },
   /* 墊底的那條:只加色彩音。上面都不成立時至少換個聲位 */
-  { id: "加色彩音", feels: ALL_FEELS, ext: true,
+  { id: "加色彩音", feels: ALL_FEELS, ext: true, keepsRoot: true,
     ok: x => !!EXT_TABLE[x.suffix],
     to: x => null },
 ];
@@ -1889,10 +1895,27 @@ function subCandidates(bars, i, key, pcs){
     hasTonic: bars.some(bb => bb.ok && bb.chord.rootPc === key &&
                               (qualOf(bb.chord) === "maj" || qualOf(bb.chord) === "dom")),
   };
+  /* ── 兩種「這一顆不要動它的根音」 ──────────────────────────
+     1. **調外的和弦是作者故意寫的**:丸サ進行的 E7、藍調的 C7 都帶調外音,
+        那就是那首歌的招牌。換成別的根音等於把招牌拆掉
+     2. **上一格的屬七要解決到這裡**:`E7 - Am7` 的 Am7 換成 Cmaj7 的話,
+        前面那顆 E7 就解決不到任何地方,聽起來會懸在半空
+     兩種都只擋「換根音」的規則,加色彩音與轉位照舊。
+     爵士系(Bossa / Swing)不套這條——爵士本來就是邊彈邊重配,
+     ii-V 之後把 I 換成 iii 或 vi 是它的日常 */
+  const scale = new Set(MAJOR_SCALE.map(n => (n + key) % 12));
+  const chromatic = c.intervals.some(iv => !scale.has((c.rootPc + iv) % 12)) ||
+                    !scale.has(c.rootPc);
+  const resolvesHere = !!(prev && prev.ok && qualOf(prev.chord) === "dom" &&
+                          ((prev.chord.rootPc + 5) % 12) === c.rootPc);
+  const keepRootOnly = JAZZ_FEELS.indexOf(feelNow) < 0 && (chromatic || resolvesHere);
   if (x.q === "other" || x.q === "dim") return [];
   const out = [];
   for (const r of SUB_RULES) {
     if (r.feels.indexOf(feelNow) < 0) continue;
+    /* 經過和弦(pass° / ♯IV°)不受上面那條保護的限制:它們要求前一格是同一顆,
+       和弦本身已經講過一次了,換的是「重複的那一格」,沒有拆掉任何招牌 */
+    if (keepRootOnly && !r.keepsRoot && !r.passing) continue;
     if (!r.ok(x)) continue;
     if (r.ext) {
       for (const q of EXT_TABLE[x.suffix]) {

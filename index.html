@@ -237,6 +237,14 @@ main{
 }
 .seg-mini button + button{border-left:1px solid var(--line)}
 .seg-mini button[aria-pressed="true"]{background:var(--gold);color:var(--bg);font-weight:700}
+/* 自動選中時,被它判到的那個曲風畫成空心(外框金、字金、底透明),
+   等於用框指給你看「自動現在選的是這個」。實心永遠是「現在生效的那一顆」,
+   所以不用在自動那顆上再寫一次曲風名字(寫了會跟旁邊的按鈕重複) */
+.seg-mini button.detected{
+  color:var(--gold-bright);font-weight:600;
+  box-shadow:inset 0 0 0 1px var(--gold);
+}
+.feel-row .seg-mini{flex-wrap:wrap}
 /* 變暗 = 這組進行本來不是這個拍號。還是點得下去,只是先講一聲 */
 .seg-mini button.dim{opacity:.35}
 .seg-mini button.dim:hover,.seg-mini button.dim:focus-visible{opacity:1}
@@ -882,6 +890,31 @@ try {
         </div>
       </div>
 
+      <!-- 曲風:預設「自動」= 跟著和弦走(這是這個工具的原則)。
+           自動亮著的時候,它判到的那個曲風會多一圈外框,等於用框指給你看。
+           想自己指定就點那一顆,實心的永遠是現在生效的。
+           Funk 只有 4/4 有,別的拍號會變暗 -->
+      <div class="meter-row feel-row">
+        <span class="label" data-i18n="feelLabel">曲風</span>
+        <div class="seg-mini" id="feelSeg">
+          <button type="button" data-feel="auto" aria-pressed="true" class="auto"
+            data-i18n="feelAuto" data-i18n-attr="title:feelAutoTip"
+            title="跟著和弦走:有九度以上是 Swing、六七度過半是 Bossa,其餘是 Pop。判到哪一個,那一顆就會多一圈外框">自動</button>
+          <button type="button" data-feel="straight" aria-pressed="false"
+            data-i18n="feelStraight" data-i18n-attr="title:feelStraightTip"
+            title="八分音符平均、小鼓打 2、4;圓舞曲與 6/8 抒情也走這一種">Pop</button>
+          <button type="button" data-feel="latin" aria-pressed="false"
+            data-i18n="feelLatin" data-i18n-attr="title:feelLatinTip"
+            title="Bossa Nova:clave、框邊小鼓、低音提琴;3/4 與 6/8 走非洲 6/8 的鈴型">Bossa</button>
+          <button type="button" data-feel="swing" aria-pressed="false"
+            data-i18n="feelSwing" data-i18n-attr="title:feelSwingTip"
+            title="爵士:ride 的 ding ding-da ding、走動低音;6/8 是慢藍調 shuffle">Swing</button>
+          <button type="button" data-feel="funk" aria-pressed="false"
+            data-i18n="feelFunk" data-i18n-attr="title:feelFunkTip"
+            title="十六分的律動,只有 4/4 有">Funk</button>
+        </div>
+      </div>
+
       <!-- 速度與移調並排:兩個都是「一行標題 + 一排控制」,擺一起省掉一整塊高度 -->
       <div class="control-pair">
       <div class="control">
@@ -997,6 +1030,17 @@ const I18N = {
     chordPlaceholder: "C - Am - F - G",
     chordHint: "一個和弦一小節。用空白或「-」分隔;不想打字就點下面那排。",
     meterLabel: "拍號",
+    feelLabel: "曲風",
+    feelAuto: "自動",
+    feelAutoTip: "跟著和弦走:有九度以上是 Swing、六七度過半是 Bossa,其餘是 Pop。判到哪一個,那一顆就會多一圈外框",
+    feelStraight: "Pop",
+    feelLatin: "Bossa",
+    feelSwing: "Swing",
+    feelFunk: "Funk",
+    feelStraightTip: "八分音符平均、小鼓打 2、4;圓舞曲與 6/8 抒情也走這一種",
+    feelLatinTip: "Bossa Nova:clave、框邊小鼓、低音提琴;3/4 與 6/8 走非洲 6/8 的鈴型",
+    feelSwingTip: "爵士:ride 的 ding ding-da ding、走動低音;6/8 是慢藍調 shuffle",
+    feelFunkTip: "十六分的律動,只有 4/4 有",
     meterTip44: "一小節四拍",
     meterTip34: "一小節三拍,圓舞曲",
     meterTip68: "一小節兩大拍,每拍三個八分",
@@ -1093,6 +1137,17 @@ const I18N = {
     chordPlaceholder: "C - Am - F - G",
     chordHint: "One chord per bar. Separate with spaces or \"-\"; or just tap the pad below.",
     meterLabel: "Meter",
+    feelLabel: "Style",
+    feelAuto: "Auto",
+    feelAutoTip: "Follows the chords: 9ths and up go Swing, mostly 6ths/7ths go Bossa, the rest stay Pop \u2014 whichever it picks gets an outline",
+    feelStraight: "Pop",
+    feelLatin: "Bossa",
+    feelSwing: "Swing",
+    feelFunk: "Funk",
+    feelStraightTip: "Even eighths, snare on 2 and 4 \u2014 waltzes and 6/8 ballads use this one too",
+    feelLatinTip: "Bossa nova: clave, cross-stick snare, upright bass; 3/4 and 6/8 use the Afro 6/8 bell",
+    feelSwingTip: "Jazz: the ride's ding ding-da ding, walking bass; 6/8 is a slow-blues shuffle",
+    feelFunkTip: "A sixteenth-note groove; 4/4 only",
     meterTip44: "Four beats per bar",
     meterTip34: "Three beats per bar, waltz",
     meterTip68: "Two big beats per bar, three eighths each",
@@ -1871,7 +1926,7 @@ const DRUM_FEEL_FILES = {
   ride:   ["ride/mid_ride_ride_vl2_rr1.flac", "ride/mid_ride_ride_vl2_rr2.flac"],
   hhped:  ["hh/mid_hh_pedal_vl2_rr1.flac", "hh/mid_hh_pedal_vl2_rr2.flac"],
 };
-const FEEL_PIECES = { straight: [], latin: ["xstick"], swing: ["ride", "hhped"] };
+const FEEL_PIECES = { straight: [], latin: ["xstick"], swing: ["ride", "hhped"], funk: [] };
 
 const drumBuffers = { kick: [], snare: [], hihat: [], htom: [], ltom: [], crash: [], xstick: [], ride: [], hhped: [] };
 const drumRR = { kick: 0, snare: 0, hihat: 0, htom: 0, ltom: 0, crash: 0, xstick: 0, ride: 0, hhped: 0 };
@@ -2197,11 +2252,16 @@ const METER_KEYS = ["4/4", "3/4", "6/8"];
 let meterOn = "4/4";
 function meter(){ return METERS[meterOn] || METERS["4/4"]; }
 function beatsInBar(){ return meter().beats; }
-function slotsInBar(){ return meter().beats * meter().div; }
+/* 一拍切幾格。拍號說了算(單拍子 2、複拍子 3),但**感覺可以再細一層**:
+   放克整個律動是十六分的,hi-hat、大鼓、貝斯都踩在十六分上,
+   用八分的格子寫不出來。FEELS 的 `sub` 就是這個倍數 */
+function subOf(){ const f = FEELS[feelNow]; return (f && f.sub) || 1; }
+function divNow(){ return meter().div * subOf(); }
+function slotsInBar(){ return meter().beats * divNow(); }
 /* 每一拍的正拍落在第幾格:4/4 是 0 2 4 6,6/8 是 0 3 */
 function beatSlots(){
-  const m = meter(), out = [];
-  for (let i = 0; i < m.beats; i++) out.push(i * m.div);
+  const m = meter(), d = divNow(), out = [];
+  for (let i = 0; i < m.beats; i++) out.push(i * d);
   return out;
 }
 /* 低音要換的地方:四拍以上是一、三,三拍與兩拍的一小節只換一次 */
@@ -2225,6 +2285,17 @@ const FEELS = {
     snarePiece: "xstick", snareGain: 0.42,
     cym: "hihat", cymGain: 0.26,
     bass: "bossa",
+  },
+  /* 放克:十六分的律動(`sub:2`,一拍四格)。hi-hat 走滿十六分、正拍重反拍輕,
+     小鼓照樣踩二四但四周都是幽靈音,大鼓與貝斯咬在十六分的切分上。
+     **只有 4/4**:放克的骨架就是四拍十六分,三拍與六八拍沒有這個東西,
+     硬寫出來只是湊數。感覺選單在別的拍號會把它變暗 */
+  funk: {
+    swing: 0.5, push: true, sub: 2,
+    kickGain: 0.9,
+    snarePiece: "snare", snareGain: 0.72,
+    cym: "hihat", cymGain: 0.3,
+    bass: "funk",
   },
   /* 搖擺:爵士。ride 打型、hi-hat 踏鈸給拍子感、大鼓 feathering、小鼓在 comping */
   swing: {
@@ -2266,6 +2337,11 @@ const GROOVES = {
        在 3/4 就是同一個形狀落在八分上,也就是 afro waltz 的框邊型 */
     "3/4": { clave: [[0,2,3,5]], cym: [0,1,2,3,4,5], push: 5 },
     "6/8": { clave: [[0,2,3,5]], cym: [0,1,2,3,4,5], push: 5 },
+  },
+  /* 放克是一拍四格,所以這裡的數字是十六分:0 = 1、4 = 2、8 = 3、12 = 4。
+     hi-hat 走滿十六分,小鼓在二四,推力在「四的後半」(進下一小節) */
+  funk: {
+    "4/4": { snare: [4, 12], cym: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], push: 14, ghost: 7 },
   },
   swing: {
     "4/4": { cym: [0,2,3,4,6,7], hhped: [2, 6] },
@@ -2309,6 +2385,9 @@ function styleAt(absBar){
 }
 
 let feelNow = "straight";
+/* 「感覺」預設跟著和弦走(auto)。使用者可以指定,那是覆寫不是預設——
+   這條線是整個工具的設計:先有和弦才有感覺,不是先挑曲風再硬套 */
+let feelPick = "auto";
 function feel(){ return FEELS[feelNow] || FEELS.straight; }
 function pat(absBar){ return PATTERNS[styleAt(absBar)] || PATTERNS.comp; }
 
@@ -2336,6 +2415,10 @@ const COMP_CELLS = {
     "3/4": [[0,3], [3,5], [2,4], [0,4], [3]],
     "6/8": [[0,3], [2,5], [0,5], [3], [0,2,3]],
   },
+  // 放克的右手是短促的切分 stab,咬在十六分的反拍上
+  funk: {
+    "4/4": [[2,6,10,14], [0,3,6,11], [6,10,14], [0,6,10], [2,6,11,14]],
+  },
 };
 const KICK_CELLS = {
   straight: {
@@ -2353,6 +2436,11 @@ const KICK_CELLS = {
     "4/4": [[], [7], [3], [5], [3,7]],
     "3/4": [[], [3], [5], [1], [3,5]],
     "6/8": [[], [2], [5], [4], [2,5]],
+  },
+  /* 放克的大鼓是十六分的切分:一定有「1」,其餘咬在 a 與 & 上。
+     第一個是本家型(1 · a1 · &3),就是最典型的那個 */
+  funk: {
+    "4/4": [[0,3,10], [0,6,10,14], [0,3,6,11], [0,7,10], [0,3,10,14]],
   },
 };
 /* 爵士的小鼓不是 backbeat,是 comping:一小節丟一兩顆在反拍上,有時整小節不打。
@@ -2396,13 +2484,14 @@ function arcGain(absBar){
 /* 第幾格落在什麼時間。單拍子的後半格要搖擺(直的 0.5 就是正中間),
    複拍子的三格本來就是平均的三連音,不另外搖 */
 function slotTime(barStartBeat, slot){
-  const m = meter();
-  const b = Math.floor(slot / m.div), k = slot % m.div;
-  if (m.div === 3) return beatTime(barStartBeat + b) + k * (spb / 3);
-  return beatTime(barStartBeat + b) + (k ? spb * feel().swing : 0);
+  const d = divNow();
+  const b = Math.floor(slot / d), k = slot % d;
+  // 一拍兩格才有「後半拍」可以搖擺;三連音與十六分都是平均切
+  if (d === 2) return beatTime(barStartBeat + b) + (k ? spb * feel().swing : 0);
+  return beatTime(barStartBeat + b) + k * (spb / d);
 }
 // 一格有多長(秒)。音的長度要跟著格子走,不然 6/8 的音會蓋掉下一格
-function slotDur(){ return spb / meter().div; }
+function slotDur(){ return spb / divNow(); }
 
 /* 右手打在哪:墊底一小節一下、推進走滿每一格、打點照感覺與拍號的節奏型 */
 function compPositions(absBar){
@@ -2443,7 +2532,7 @@ const FILLS_2BEAT = [
 
 function scheduleDrums(barStartBeat, b, absBar, isFill){
   const f = feel(), g = groove(), p = pat(absBar), arc = arcGain(absBar), st = styleAt(absBar);
-  const m = meter(), beats = m.beats, div = m.div, last = slotsInBar() - 1;
+  const m = meter(), beats = m.beats, div = divNow(), last = slotsInBar() - 1;
   const cymPat = st === "pad" ? beatSlots() : g.cym;   // 墊底只打正拍,不然太吵
   const big = isFill && beats >= 3 && chance(absBar, 10, 0.25 * p.fill);
   const fillFrom = big ? beats - 2 : beats - 1;
@@ -2517,9 +2606,12 @@ function scheduleDrums(barStartBeat, b, absBar, isFill){
     /* 鈸:流行與拉丁是 hi-hat、爵士是 ride 的打型。
        ride 的重音在偶數拍(4/4 的二與四),反拍那幾顆(skip note)要輕 */
     if (cymPat.indexOf(idx) >= 0 && !(idx === last && !g.hhped && chance(absBar, 4, 0.18))) {
+      /* ride 的反拍(skip note)要輕、重音在偶數拍;
+         hi-hat 走十六分時是「正拍重、後半拍中、e 跟 a 最輕」,
+         全部一樣大聲就變成節拍器 */
       const acc = f.cym === "ride"
         ? (off ? 0.6 : (beatIdx % 2 === 1 ? 1.05 : 0.88))
-        : (off ? 0.68 : 1);
+        : (div === 4 ? (k === 0 ? 1 : k === 2 ? 0.78 : 0.5) : (off ? 0.68 : 1));
       playDrum(f.cym, t, humanize(absBar, idx + 60, f.cymGain * acc * p.energy * arc));
     }
 
@@ -2535,7 +2627,7 @@ function scheduleDrums(barStartBeat, b, absBar, isFill){
    在 6/8 是兩顆附點四分 */
 function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord){
   const mode = bassMode(absBar);
-  const m = meter(), beats = m.beats, div = m.div;
+  const m = meter(), beats = m.beats, div = divNow();
   const last = beats - 1, mid = midBeat();
   const lastSlot = slotsInBar() - 1;
   const pcOf = (raw) => ((((raw + transposeOn) % 12) + 12) % 12);
@@ -2568,6 +2660,21 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord){
                    spb * (beats - mid + 0.4), humanize(absBar, 71, 0.44));
     } else if (b === mid && !early) {
       playBassNote(bassMidiFor(fifthPc), beatTime(barStartBeat + mid), spb * (beats - mid - 0.1), humanize(absBar, 72, 0.44));
+    }
+    return;
+  }
+
+  /* 放克的貝斯:根音咬在一與十六分的切分上,音都很短(悶音的感覺),
+     中間補一顆五度。它是整個律動的骨頭,不是襯底 */
+  if (mode === "funk") {
+    const cell = pickCell([[0,3,10,14], [0,6,10], [0,3,6,14], [0,10,14], [0,3,7,10]], absBar, 103);
+    for (let k = 0; k < div; k++) {
+      const idx = b * div + k;
+      if (cell.indexOf(idx) < 0) continue;
+      if (idx === lastSlot && isFill) continue;
+      const pc = (idx >= div * 2 && chance(absBar, 5, 0.45)) ? fifthPc : rootPc;
+      playBassNote(bassMidiFor(pc), slotTime(barStartBeat, idx), slotDur() * 0.8,
+                   humanize(absBar, 70 + idx, idx === 0 ? 0.52 : 0.4));
     }
     return;
   }
@@ -2626,7 +2733,7 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord){
    右手照樣式與感覺決定的格子打 */
 function schedulePiano(v, barStartBeat, b, transpose, absBar, isFill){
   const f = feel(), p = pat(absBar), st = styleAt(absBar);
-  const m = meter(), beats = m.beats, div = m.div, mid = midBeat();
+  const m = meter(), beats = m.beats, div = divNow(), mid = midBeat();
   const positions = compPositions(absBar);
   const arc = arcGain(absBar);
 
@@ -2835,6 +2942,7 @@ const TEMPO_QUICK = {
   straight: { "4/4": [80, 100, 120],  "3/4": [90, 120, 150],  "6/8": [50, 65, 80] },
   latin:    { "4/4": [110, 130, 150], "3/4": [120, 150, 180], "6/8": [80, 100, 120] },
   swing:    { "4/4": [100, 140, 180], "3/4": [130, 170, 210], "6/8": [40, 55, 70] },
+  funk:     { "4/4": [90, 105, 120] },
 };
 function tempoQuick(){
   const byFeel = TEMPO_QUICK[feelNow] || TEMPO_QUICK.straight;
@@ -2856,6 +2964,29 @@ function renderTempoQuick(){
 
 /* 換拍號。鼓的打法、貝斯的位置、一小節幾拍、count-in 幾下全部跟著換,
    播放中換會有一小節接不齊(排程只提前 0.2 秒),下一小節就回到正軌 */
+/* 曲風那一排:實心 = 現在生效的那一顆;自動亮著時,被它判到的那個曲風多一圈外框
+   (`.detected`),等於用框指給你看。Funk 在非 4/4 變暗。
+   更新時機跟著 updateFeel / setMeter 走 */
+function updateFeelSeg(){
+  const seg = $("feelSeg");
+  if (!seg) return;
+  const auto = feelPick === "auto";
+  for (const b of seg.children) {
+    const k = b.dataset.feel;
+    b.setAttribute("aria-pressed", k === feelPick ? "true" : "false");
+    b.classList.toggle("detected", auto && k === feelNow);
+    if (k === "funk") b.classList.toggle("dim", meterOn !== "4/4");   // 只有 4/4 有
+  }
+}
+
+function setFeelPick(k){
+  if (k === "funk" && meterOn !== "4/4") return;   // 放克只有 4/4
+  feelPick = k;
+  updateFeel();            // 重算 feelNow、建議速度、貝斯那一把
+  if (playing) voicings = buildVoicings(parsed.bars);
+  saveState();
+}
+
 function setMeter(m, quiet){
   const divBefore = meter().div;
   meterOn = METERS[m] ? m : "4/4";
@@ -2869,8 +3000,10 @@ function setMeter(m, quiet){
     const q = tempoQuick();
     if (bpmOn < q[0] || bpmOn > q[2]) setBpm(q[1]);
   }
+  if (feelPick === "funk" && meterOn !== "4/4") { feelPick = "auto"; updateFeel(); }
   renderTempoQuick();
   updateMeterDim();
+  updateFeelSeg();
   /* 清單跟著跳到這個拍號那一段:換成三拍就是要練三拍的東西 */
   if (secMeter !== meterOn) { secMeter = meterOn; if (typeof renderExamples === "function") renderExamples(); }
   if (playing && !loopOn) endBeat = countInBeats + voicings.length * beatsInBar();
@@ -2907,9 +3040,13 @@ function styleName(absBar){
 }
 
 /* 感覺是和弦決定的,和弦一改就要重算 */
+function feelAuto(){ return detectFeel(parsed.bars); }
 function updateFeel(){
   const before = typeof feelNow !== "undefined" ? bassKit() : "";
-  feelNow = detectFeel(parsed.bars);
+  /* 放克只有 4/4 寫得出來,別的拍號自動退回「自動」 */
+  if (feelPick === "funk" && meterOn !== "4/4") feelPick = "auto";
+  feelNow = feelPick === "auto" ? feelAuto() : feelPick;
+  updateFeelSeg();
   renderTempoQuick();   // 換了和弦語彙,建議速度也不一樣了
   /* 播放中把和弦改成爵士的語彙,貝斯就從電貝斯換成低音提琴——
      那一把還沒載,先在背景抓(不要 await,擋住的話下一拍就沒聲音了) */
@@ -3078,6 +3215,7 @@ function shareURL(){
   if (meterOn !== "4/4") u.searchParams.set("m", meterOn);
   if (styleOn !== "comp") u.searchParams.set("s", styleOn);
   if (transposeOn) u.searchParams.set("t", transposeOn);
+  if (feelPick !== "auto") u.searchParams.set("f", feelPick);
   return u.toString();
 }
 /* 網址帶了參數就以網址為準(蓋過上次留在這台裝置上的設定)——
@@ -3096,6 +3234,8 @@ function applyURLParams(){
   if (st && STYLE_KEYS.indexOf(st) >= 0) styleOn = st;
   const t = parseInt(q.get("t"), 10);
   if (!isNaN(t)) transposeOn = Math.min(12, Math.max(-12, t));
+  const f = q.get("f");
+  if (f && (f === "auto" || FEELS[f])) feelPick = f;
   return true;
 }
 
@@ -3103,7 +3243,8 @@ function saveState(){
   try {
     localStorage.setItem(STATE_KEY, JSON.stringify({
       text: chordInput.value, bpm: bpmOn, transpose: transposeOn,
-      style: styleOn, meter: meterOn, countIn: countInOn, loop: loopOn, ramp: rampOn,
+      style: styleOn, meter: meterOn, feel: feelPick,
+      countIn: countInOn, loop: loopOn, ramp: rampOn,
     }));
   } catch (e) {}
 }
@@ -3603,6 +3744,7 @@ function refreshDynamicText(){
   updateBarTools();
   if (typeof updateSecToggleText === "function") updateSecToggleText();
   if (typeof updateMeterDim === "function") updateMeterDim();
+  if (typeof updateFeelSeg === "function") updateFeelSeg();
   setTranspose(transposeOn);
   setPlayIcon(playing);
   renderSaved();
@@ -3639,6 +3781,9 @@ $("bpmInput").addEventListener("input", (e) => {
 $("bpmInput").addEventListener("blur", () => setBpm(bpmOn));
 $("bpmDown").addEventListener("click", () => setBpm(bpmOn - 1));
 $("bpmUp").addEventListener("click", () => setBpm(bpmOn + 1));
+for (const b of $("feelSeg").children) {
+  b.addEventListener("click", () => setFeelPick(b.dataset.feel));
+}
 for (const b of $("meterSeg").children) {
   // 自己動手換 = 我知道我在做什麼,那個「本來是幾拍」的提示就收起來
   b.addEventListener("click", () => { formMeter = null; setMeter(b.dataset.meter); });
@@ -3844,6 +3989,7 @@ document.addEventListener("keydown", (e) => {
     if (typeof st.text === "string") chordInput.value = st.text;
     if (st.style && STYLE_KEYS.indexOf(st.style) >= 0) styleOn = st.style;
     if (st.meter && METERS[st.meter]) meterOn = st.meter;
+    if (st.feel && (st.feel === "auto" || FEELS[st.feel])) feelPick = st.feel;
     if (typeof st.countIn === "boolean") countInOn = st.countIn;
     if (typeof st.loop === "boolean") loopOn = st.loop;
     if (typeof st.ramp === "boolean") rampOn = st.ramp;

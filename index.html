@@ -211,7 +211,10 @@ main{
 .ex-panel[hidden]{display:none}
 /* 面板最上面那一排:左邊是拍號分頁、右邊是接幾次 */
 .ex-top{display:flex;align-items:center;justify-content:space-between;gap:8px 12px;flex-wrap:wrap;margin-bottom:2px}
-#secMeterSeg button{padding:5px 14px;font-size:var(--fs-xs)}
+/* 六個曲風排一排,窄的時候(手機上的浮動面板)換行。
+   一排塞不下六顆是正常的,不要為了排一排把字縮到看不清楚 */
+#secFeelSeg{flex-wrap:wrap}
+#secFeelSeg button{padding:5px 11px;font-size:var(--fs-2xs)}
 /* 同一個拍號裡再按長度分開:4 小節一區、8 小節一區、12 小節一區,
    不要全部混在一起(混在一起找不到自己要的那種長度) */
 .ex-group{
@@ -251,8 +254,6 @@ main{
   color:var(--gold-bright);border-color:var(--gold);
   box-shadow:inset 0 0 0 1px var(--gold);font-weight:600;
 }
-.feel-row{gap:8px}
-.feel-row .seg-mini{flex-wrap:wrap}
 /* 變暗 = 這組進行本來不是這個拍號。還是點得下去,只是先講一聲 */
 .seg-mini button.dim{opacity:.35}
 .seg-mini button.dim:hover,.seg-mini button.dim:focus-visible{opacity:1}
@@ -471,6 +472,12 @@ svg[hidden]{display:none}
 .meter-row{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
 .meter-row .label{font-size:var(--fs-xs);color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
 .meter-row .seg-mini button{padding:5px 12px;font-size:var(--fs-xs)}
+/* 曲風那排:六顆膠囊在手機上一定排不完,讓**膠囊自己換行**、
+   「自動」留在右邊——整排 wrap 的話那顆會自己掉到第三行,看起來像忘了收的東西。
+   所以這一排不 wrap(蓋掉 .meter-row 的 flex-wrap),改讓 seg 縮小自己去換行 */
+.feel-row{gap:8px;flex-wrap:nowrap}
+.feel-row .seg-mini{flex-wrap:wrap;min-width:0}
+.feel-row .seg-mini button{padding:5px 10px;font-size:var(--fs-2xs)}
 
 /* 速度與移調並排。夠寬就兩欄,窄了自己疊回一欄 */
 .control-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(152px,1fr));gap:10px}
@@ -805,10 +812,13 @@ try {
         <!-- 拍號分頁放最上面:一眼看得出現在在看哪一種拍子的進行。
              這裡只是換清單,不會動到曲子的拍號——點下面的進行才會換 -->
         <div class="ex-top">
-          <div class="seg-mini" id="secMeterSeg">
-            <button type="button" data-secmeter="4/4" aria-pressed="true">4/4</button>
-            <button type="button" data-secmeter="3/4" aria-pressed="false">3/4</button>
-            <button type="button" data-secmeter="6/8" aria-pressed="false">6/8</button>
+          <div class="seg-mini" id="secFeelSeg">
+            <button type="button" data-secfeel="straight" aria-pressed="true" data-i18n="feelStraight">Pop</button>
+            <button type="button" data-secfeel="citypop" aria-pressed="false" data-i18n="feelCitypop">City Pop</button>
+            <button type="button" data-secfeel="latin" aria-pressed="false" data-i18n="feelLatin">Bossa</button>
+            <button type="button" data-secfeel="blues" aria-pressed="false" data-i18n="feelBlues">Blues</button>
+            <button type="button" data-secfeel="swing" aria-pressed="false" data-i18n="feelSwing">Swing</button>
+            <button type="button" data-secfeel="funk" aria-pressed="false" data-i18n="feelFunk">Funk</button>
           </div>
           <div class="ex-segs">
             <span class="ex-segs-label" data-i18n="repLabel">接幾次</span>
@@ -908,15 +918,21 @@ try {
           <button type="button" data-feel="straight" aria-pressed="false"
             data-i18n="feelStraight" data-i18n-attr="title:feelStraightTip"
             title="八分音符平均、小鼓打 2、4;圓舞曲與 6/8 抒情也走這一種">Pop</button>
+          <button type="button" data-feel="citypop" aria-pressed="false"
+            data-i18n="feelCitypop" data-i18n-attr="title:feelCitypopTip"
+            title="八〇年代日本 AOR:hi-hat 走八分、貝斯與大鼓咬十六分切分。只有 4/4">City Pop</button>
           <button type="button" data-feel="latin" aria-pressed="false"
             data-i18n="feelLatin" data-i18n-attr="title:feelLatinTip"
             title="Bossa Nova:clave、框邊小鼓、低音提琴;3/4 與 6/8 走非洲 6/8 的鈴型">Bossa</button>
+          <button type="button" data-feel="blues" aria-pressed="false"
+            data-i18n="feelBlues" data-i18n-attr="title:feelBluesTip"
+            title="Shuffle:八分是三連音的、boogie 貝斯;6/8 就是 12/8 的慢藍調。沒有三拍的">Blues</button>
           <button type="button" data-feel="swing" aria-pressed="false"
             data-i18n="feelSwing" data-i18n-attr="title:feelSwingTip"
             title="爵士:ride 的 ding ding-da ding、走動低音;6/8 是慢藍調 shuffle">Swing</button>
           <button type="button" data-feel="funk" aria-pressed="false"
             data-i18n="feelFunk" data-i18n-attr="title:feelFunkTip"
-            title="十六分的律動,只有 4/4 有">Funk</button>
+            title="十六分的律動,hi-hat 也走滿十六分。只有 4/4">Funk</button>
         </div>
         <button type="button" class="auto-chip" id="feelAutoBtn" aria-pressed="true"
           data-i18n="feelAuto" data-i18n-attr="title:feelAutoTip"
@@ -1044,10 +1060,14 @@ const I18N = {
     feelLatin: "Bossa",
     feelSwing: "Swing",
     feelFunk: "Funk",
+    feelCitypop: "City Pop",
+    feelBlues: "Blues",
     feelStraightTip: "八分音符平均、小鼓打 2、4;圓舞曲與 6/8 抒情也走這一種",
+    feelCitypopTip: "八〇年代日本 AOR:hi-hat 走八分、貝斯與大鼓咬十六分切分。只有 4/4",
+    feelBluesTip: "Shuffle:八分是三連音的、boogie 貝斯;6/8 就是 12/8 的慢藍調。沒有三拍的",
     feelLatinTip: "Bossa Nova:clave、框邊小鼓、低音提琴;3/4 與 6/8 走非洲 6/8 的鈴型",
     feelSwingTip: "爵士:ride 的 ding ding-da ding、走動低音;6/8 是慢藍調 shuffle",
-    feelFunkTip: "十六分的律動,只有 4/4 有",
+    feelFunkTip: "十六分的律動,hi-hat 也走滿十六分。只有 4/4",
     meterTip44: "一小節四拍",
     meterTip34: "一小節三拍,圓舞曲",
     meterTip68: "一小節兩大拍,每拍三個八分",
@@ -1077,8 +1097,8 @@ const I18N = {
     palDel: "刪一格",
     len12: "12 小節",
     repLabel: "接幾次",
-    secMeterGroup: "{m} 拍",
     secLenGroup: "{n} 小節",
+    secLenMeterGroup: "{n} 小節 ・ {m}",
     secGroupCount: "{n} 組",
     meterDimTip: "這組進行本來是 {m} 的",
     barsLabel: "小節數",
@@ -1145,15 +1165,19 @@ const I18N = {
     chordHint: "One chord per bar. Separate with spaces or \"-\"; or just tap the pad below.",
     meterLabel: "Meter",
     feelAuto: "Auto",
-    feelAutoTip: "Follows the chords: 9ths and up go Swing, mostly 6ths/7ths go Bossa, the rest stay Pop \u2014 whichever it picks gets an outline",
+    feelAutoTip: "Follows the chords: 9ths and up go Swing, mostly 6ths/7ths go Bossa, the rest stay Pop. City Pop / Blues / Funk can't be inferred \u2014 tap them, or pick one from the library",
     feelStraight: "Pop",
     feelLatin: "Bossa",
     feelSwing: "Swing",
     feelFunk: "Funk",
+    feelCitypop: "City Pop",
+    feelBlues: "Blues",
     feelStraightTip: "Even eighths, snare on 2 and 4 \u2014 waltzes and 6/8 ballads use this one too",
+    feelCitypopTip: "80s Japanese AOR: eighth-note hats over sixteenth-note bass and kick. 4/4 only",
+    feelBluesTip: "Shuffle: triplet eighths and a boogie bass; 6/8 is the 12/8 slow blues. No 3/4",
     feelLatinTip: "Bossa nova: clave, cross-stick snare, upright bass; 3/4 and 6/8 use the Afro 6/8 bell",
     feelSwingTip: "Jazz: the ride's ding ding-da ding, walking bass; 6/8 is a slow-blues shuffle",
-    feelFunkTip: "A sixteenth-note groove; 4/4 only",
+    feelFunkTip: "A sixteenth-note groove with sixteenths on the hats too; 4/4 only",
     meterTip44: "Four beats per bar",
     meterTip34: "Three beats per bar, waltz",
     meterTip68: "Two big beats per bar, three eighths each",
@@ -1183,8 +1207,8 @@ const I18N = {
     palDel: "Delete bar",
     len12: "12 bars",
     repLabel: "Repeat",
-    secMeterGroup: "{m}",
     secLenGroup: "{n} bars",
+    secLenMeterGroup: "{n} bars \u30fb {m}",
     secGroupCount: "{n}",
     meterDimTip: "This progression is in {m}",
     barsLabel: "Bars",
@@ -1932,7 +1956,8 @@ const DRUM_FEEL_FILES = {
   ride:   ["ride/mid_ride_ride_vl2_rr1.flac", "ride/mid_ride_ride_vl2_rr2.flac"],
   hhped:  ["hh/mid_hh_pedal_vl2_rr1.flac", "hh/mid_hh_pedal_vl2_rr2.flac"],
 };
-const FEEL_PIECES = { straight: [], latin: ["xstick"], swing: ["ride", "hhped"], funk: [] };
+const FEEL_PIECES = { straight: [], latin: ["xstick"], swing: ["ride", "hhped"],
+                      funk: [], citypop: [], blues: [] };
 
 const drumBuffers = { kick: [], snare: [], hihat: [], htom: [], ltom: [], crash: [], xstick: [], ride: [], hhped: [] };
 const drumRR = { kick: 0, snare: 0, hihat: 0, htom: 0, ltom: 0, crash: 0, xstick: 0, ride: 0, hhped: 0 };
@@ -1993,7 +2018,9 @@ const BASS_KITS = {
 /* 哪一種感覺用哪一把:爵士的走動低音當然是低音提琴,bossa 也是——
    Getz/Gilberto 那個年代的 bossa 就是尼龍弦吉他加低音提琴。
    流行搖滾維持電貝斯 */
-function bassKit(){ return feelNow === "straight" ? "electric" : "upright"; }
+/* 哪一把貝斯。寫在 FEELS 裡:爵士與 bossa 的走動低音本來就是低音提琴,
+   流行、city pop、放克、藍調是電貝斯 */
+function bassKit(){ return (FEELS[feelNow] || FEELS.straight).kit || "electric"; }
 const bassBuffers = { electric: new Map(), upright: new Map() };   // midi -> AudioBuffer
 const bassFailed  = { electric: new Set(), upright: new Set() };
 
@@ -2170,7 +2197,11 @@ function reanchorTempo(newBpm){
 
 /* 鼓與貝斯永遠都在,鋼琴左手固定讓一點位置出來,
    不然同一個根音疊兩層,低頻會糊 */
-function lhGain(){ return 0.55; }
+/* 鋼琴左手的低音。貝斯一直都在,所以左手一律讓位(0.55)。
+   **boogie 再讓一階**:貝斯一小節走八顆(根-五-六-五),左手同時撐著一顆長的根音,
+   兩層低頻疊在一起會糊。
+   藍調鋼琴本來就是左手自己在走 boogie 或乾脆不碰低音,不是壓著根音不放 */
+function lhGain(){ return feel().bass === "boogie" ? 0.38 : 0.55; }
 
 /* ── 變化的亂數 ─────────────────────────────────────────────────
    同一個伴奏樣式每小節都一模一樣,聽起來就是個 loop。這裡讓每一小節依
@@ -2276,13 +2307,37 @@ function midBeat(){ const b = meter().beats; return b >= 4 ? 2 : b - 1; }
 /* 感覺:跟拍號無關的那一半(搖擺比例、各軌音量、用哪顆鼓、貝斯走法)。
    真正打在哪幾格是 GROOVES 按拍號給的 */
 const FEELS = {
-  /* 直:流行與搖滾 */
+  /* Pop:八分平均的流行與搖滾。圓舞曲與 6/8 抒情也走這一種(差別在拍號) */
   straight: {
     swing: 0.5, push: true,
     kickGain: 0.85,
     snarePiece: "snare", snareGain: 0.7,
     cym: "hihat", cymGain: 0.33,
-    bass: "root5",
+    bass: "root5", kit: "electric",
+  },
+  /* City Pop:七〇末到八〇的日本 AOR(山下達郎、竹內瑪莉亞)。
+     它跟 Pop 差在**十六分**(`sub:2`):hi-hat 走十六分但比放克輕、
+     大鼓只咬幾顆切分、電鋼琴般的和弦打在反拍。和聲是 maj7/9 加二級屬,
+     但**推不出來**——同一串 maj7 也可能是 bossa,差別在律動。
+     只有 4/4:city pop 沒有三拍的 */
+  citypop: {
+    swing: 0.5, push: true, sub: 2,
+    kickGain: 0.66,
+    snarePiece: "snare", snareGain: 0.6,
+    cym: "hihat", cymGain: 0.24,
+    bass: "citypop", kit: "electric", meters: ["4/4"],
+  },
+  /* Blues:shuffle。跟 Pop 同一組鼓件、同一個 backbeat,差別在**八分是三連音的**
+     (`swing: 0.66`,不是爵士的 0.58——藍調的搖擺更接近正三連音),
+     貝斯走 boogie(根-五-六-五)。
+     6/8 就是 12/8 的慢藍調,那裡三連音是拍號自己就有的,不再另外搖。
+     3/4 的藍調基本上不存在,所以只有 4/4 與 6/8 */
+  blues: {
+    swing: 0.66, push: true,
+    kickGain: 0.78,
+    snarePiece: "snare", snareGain: 0.66,
+    cym: "hihat", cymGain: 0.3,
+    bass: "boogie", kit: "electric", meters: ["4/4", "6/8"],
   },
   /* 拉丁:bossa nova 與它的三拍、六八拍親戚。小鼓一律用框邊敲擊(cross stick) */
   latin: {
@@ -2290,7 +2345,7 @@ const FEELS = {
     kickGain: 0.5,
     snarePiece: "xstick", snareGain: 0.42,
     cym: "hihat", cymGain: 0.26,
-    bass: "bossa",
+    bass: "bossa", kit: "upright",
   },
   /* 放克:十六分的律動(`sub:2`,一拍四格)。hi-hat 走滿十六分、正拍重反拍輕,
      小鼓照樣踩二四但四周都是幽靈音,大鼓與貝斯咬在十六分的切分上。
@@ -2301,7 +2356,7 @@ const FEELS = {
     kickGain: 0.9,
     snarePiece: "snare", snareGain: 0.72,
     cym: "hihat", cymGain: 0.3,
-    bass: "funk",
+    bass: "funk", kit: "electric", meters: ["4/4"],
   },
   /* 搖擺:爵士。ride 打型、hi-hat 踏鈸給拍子感、大鼓 feathering、小鼓在 comping */
   swing: {
@@ -2310,7 +2365,7 @@ const FEELS = {
     snarePiece: "snare", snareGain: 0.36, compSnare: true,
     cym: "ride", cymGain: 0.38,
     hhpedGain: 0.34,
-    bass: "jazz",
+    bass: "jazz", kit: "upright",
   },
 };
 
@@ -2348,6 +2403,18 @@ const GROOVES = {
      hi-hat 走滿十六分,小鼓在二四,推力在「四的後半」(進下一小節) */
   funk: {
     "4/4": { snare: [4, 12], cym: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], push: 14, ghost: 7 },
+  },
+  /* City pop 也是一拍四格,但 hi-hat 只走**八分**(0 2 4 …)、把十六分留給
+     大鼓與貝斯去咬。走滿十六分就變成放克了——city pop 的鼓是乾淨的 8 beat 骨架
+     配十六分的低音律動,那個對比就是它的味道 */
+  citypop: {
+    "4/4": { snare: [4, 12], cym: [0,2,4,6,8,10,12,14], push: 14, ghost: 11 },
+  },
+  /* Blues 的格子跟 Pop 一樣,靠 FEELS.blues.swing = 0.66 把後半格推成三連音。
+     6/8 不用推——12/8 的長短本來就在拍號裡,ride/hi-hat 打 0 2 3 5 就是 shuffle */
+  blues: {
+    "4/4": { snare: [2, 6], cym: [0,1,2,3,4,5,6,7], push: 3, ghost: 5 },
+    "6/8": { snare: [3], cym: [0,2,3,5], push: 5, ghost: 4 },
   },
   swing: {
     "4/4": { cym: [0,2,3,4,6,7], hhped: [2, 6] },
@@ -2425,6 +2492,16 @@ const COMP_CELLS = {
   funk: {
     "4/4": [[2,6,10,14], [0,3,6,11], [6,10,14], [0,6,10], [2,6,11,14]],
   },
+  /* City pop 的和弦打在「拍與拍中間」,而且常常提前半個十六分進來(搶拍)。
+     比放克長、比放克少顆,聽起來像電鋼琴在鋪 */
+  citypop: {
+    "4/4": [[0,6,10,14], [2,6,10], [0,6,11,14], [6,10,14], [0,3,10,14]],
+  },
+  // Blues 的右手就是 shuffle 的八分,偶爾只剩 backbeat
+  blues: {
+    "4/4": [[0,2,4,6], [2,6], [0,3,4,6], [0,2,4,5,6], [2,4,6]],
+    "6/8": [[0,3], [0,2,3,5], [3,5], [0,5], [0,3,5]],
+  },
 };
 const KICK_CELLS = {
   straight: {
@@ -2447,6 +2524,14 @@ const KICK_CELLS = {
      第一個是本家型(1 · a1 · &3),就是最典型的那個 */
   funk: {
     "4/4": [[0,3,10], [0,6,10,14], [0,3,6,11], [0,7,10], [0,3,10,14]],
+  },
+  // City pop 的大鼓比放克少、比 Pop 碎:一與「三的前一格」是本家
+  citypop: {
+    "4/4": [[0,10], [0,6,10], [0,3,10], [0,10,14], [0,8]],
+  },
+  blues: {
+    "4/4": [[0,4], [0,4,7], [0,3,4], [0,5]],
+    "6/8": [[0], [0,3], [0,4], [0,2]],
   },
 };
 /* 爵士的小鼓不是 backbeat,是 comping:一小節丟一兩顆在反拍上,有時整小節不打。
@@ -2519,6 +2604,14 @@ function bassMode(absBar){
     if (feelNow === "swing") return "walk";
   }
   return feel().bass;
+}
+
+/* 有些曲風只在某幾個拍號成立(放克與 city pop 是四拍十六分的、藍調沒有三拍的)。
+   `FEELS[x].meters` 沒寫就是三個拍號都可以。膠囊變暗、指定會退回自動都靠這個,
+   不要再針對某一種曲風寫 if——加第三個受限的曲風時一定會漏掉一邊 */
+function feelFitsMeter(k, m){
+  const f = FEELS[k];
+  return !f || !f.meters || f.meters.indexOf(m || meterOn) >= 0;
 }
 
 /* 過門。佔滿最後兩拍、又是整串 tom 滾奏會很突兀,所以預設只佔最後一拍,
@@ -2681,6 +2774,50 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord){
       const pc = (idx >= div * 2 && chance(absBar, 5, 0.45)) ? fifthPc : rootPc;
       playBassNote(bassMidiFor(pc), slotTime(barStartBeat, idx), slotDur() * 0.8,
                    humanize(absBar, 70 + idx, idx === 0 ? 0.52 : 0.4));
+    }
+    return;
+  }
+
+  /* City pop 的貝斯:一顆根音落在正拍,後面咬一兩顆十六分的切分,
+     常常在下一小節之前提前半拍進來。比放克長、比放克少——它在唱旋律,
+     不是在打點(細野晴臣那種走法) */
+  if (mode === "citypop") {
+    const cell = pickCell([[0,6,10], [0,10,14], [0,6,11], [0,3,10], [0,8,14]], absBar, 104);
+    for (let k = 0; k < div; k++) {
+      const idx = b * div + k;
+      if (cell.indexOf(idx) < 0) continue;
+      if (idx === lastSlot && isFill) continue;
+      const pc = (idx >= div * 2 && chance(absBar, 5, 0.5)) ? fifthPc : rootPc;
+      playBassNote(bassMidiFor(pc), slotTime(barStartBeat, idx), slotDur() * 1.5,
+                   humanize(absBar, 70 + idx, idx === 0 ? 0.5 : 0.38));
+    }
+    return;
+  }
+
+  /* Boogie:藍調的走法,一拍一顆「根—五—六—五」,八分是三連音的(slotTime 會推)。
+     六度那顆(root+9)就是 boogie 跟一般根五的差別,少了它只是在踩根音。
+     6/8 的慢藍調一小節只有兩大拍,走根音跟五度就好,再多會擠 */
+  if (mode === "boogie") {
+    /* 四顆音一直繞:根 五 六 五。八分數下去就是 C G A G | C G A G,
+       **一小節從頭數起**(格號 % 4),不是每一拍自己算——每拍各算的話會變成
+       「根五 五六 六五 五根」,同一個音連著響兩次,那就不是 boogie 了 */
+    const line = [rootPc, fifthPc, pcOf(chord.rootPc + 9), fifthPc];
+    // 墊底只走四分音符(一拍一顆),打點與推進才走滿八分
+    const eighths = beats >= 4 && styleAt(absBar) !== "pad";
+    for (let k = 0; k < div; k++) {
+      if (k && !eighths) break;
+      const idx = b * div + k;
+      if (idx === lastSlot && isFill) continue;
+      // 走四分音符的時候用「第幾拍」數,不是「第幾格」:照格號數會變成 C A C A,
+      // 跳掉中間那顆五音就聽不出 boogie 的形狀了
+      const step = eighths ? idx : b;
+      /* 三連音的後半格離下一拍只剩 1/3 拍,音再留長就會跟下一顆疊在一起
+         (尖峰會多 0.08,量過)。所以 boogie 的八分要比別的走法短 */
+      playBassNote(bassMidiFor(line[step % line.length]), slotTime(barStartBeat, idx),
+                   slotDur() * (eighths ? 0.62 : 1.8),
+                   /* boogie 是一小節八顆音,力度要比別的走法收一點——
+                      照 0.5 打下去整段的尖峰會衝到 0.87(量過),超出 0.85 那條線 */
+                   humanize(absBar, 70 + idx, k === 0 ? (b === 0 ? 0.48 : 0.42) : 0.32));
     }
     return;
   }
@@ -2949,6 +3086,8 @@ const TEMPO_QUICK = {
   latin:    { "4/4": [110, 130, 150], "3/4": [120, 150, 180], "6/8": [80, 100, 120] },
   swing:    { "4/4": [100, 140, 180], "3/4": [130, 170, 210], "6/8": [40, 55, 70] },
   funk:     { "4/4": [90, 105, 120] },
+  citypop:  { "4/4": [95, 110, 125] },
+  blues:    { "4/4": [70, 90, 110],   "6/8": [40, 55, 70] },
 };
 function tempoQuick(){
   const byFeel = TEMPO_QUICK[feelNow] || TEMPO_QUICK.straight;
@@ -2979,14 +3118,14 @@ function updateFeelSeg(){
   for (const b of seg.children) {
     const k = b.dataset.feel;
     b.setAttribute("aria-pressed", k === feelNow ? "true" : "false");
-    if (k === "funk") b.classList.toggle("dim", meterOn !== "4/4");   // 只有 4/4 有
+    b.classList.toggle("dim", !feelFitsMeter(k));   // 這個拍號沒有這種曲風的節奏型
   }
   const auto = $("feelAutoBtn");
   if (auto) auto.setAttribute("aria-pressed", feelPick === "auto" ? "true" : "false");
 }
 
 function setFeelPick(k){
-  if (k === "funk" && meterOn !== "4/4") return;   // 放克只有 4/4
+  if (!feelFitsMeter(k)) return;   // 這個拍號沒有這種曲風的節奏型
   feelPick = k;
   updateFeel();            // 重算 feelNow、建議速度、貝斯那一把
   if (playing) voicings = buildVoicings(parsed.bars);
@@ -3006,12 +3145,11 @@ function setMeter(m, quiet){
     const q = tempoQuick();
     if (bpmOn < q[0] || bpmOn > q[2]) setBpm(q[1]);
   }
-  if (feelPick === "funk" && meterOn !== "4/4") { feelPick = "auto"; updateFeel(); }
+  if (!feelFitsMeter(feelPick)) { feelPick = "auto"; updateFeel(); }
   renderTempoQuick();
   updateMeterDim();
   updateFeelSeg();
-  /* 清單跟著跳到這個拍號那一段:換成三拍就是要練三拍的東西 */
-  if (secMeter !== meterOn) { secMeter = meterOn; if (typeof renderExamples === "function") renderExamples(); }
+
   if (playing && !loopOn) endBeat = countInBeats + voicings.length * beatsInBar();
   if (!quiet) saveState();
 }
@@ -3030,6 +3168,7 @@ function updateMeterDim(){
   }
 }
 function clearFormMeter(){
+  formFeel = null;   // 自己打字/清空之後就沒有「本來是什麼曲風」可言了
   if (formMeter === null) return;
   formMeter = null;
   updateMeterDim();
@@ -3049,10 +3188,19 @@ function styleName(absBar){
 function feelAuto(){ return detectFeel(parsed.bars); }
 function updateFeel(){
   const before = typeof feelNow !== "undefined" ? bassKit() : "";
-  /* 放克只有 4/4 寫得出來,別的拍號自動退回「自動」 */
-  if (feelPick === "funk" && meterOn !== "4/4") feelPick = "auto";
+  const feelBefore = feelNow;
+  /* 這個曲風在這個拍號沒有節奏型(放克、city pop 只有 4/4,藍調沒有三拍)
+     就退回「自動」——留著會變成「格子數對不上」的靜音小節 */
+  if (!feelFitsMeter(feelPick)) feelPick = "auto";
   feelNow = feelPick === "auto" ? feelAuto() : feelPick;
   updateFeelSeg();
+  /* 曲風真的變了才把清單跳到那一頁:改成爵士和弦就是要練爵士的東西。
+     **比的是「跟剛才一樣嗎」不是「跟分頁一樣嗎」**——使用者自己切到別的分頁看,
+     打一個字就被拉回來會很煩(以前這裡跟的是拍號,分頁改成曲風之後就跟曲風) */
+  if (feelNow !== feelBefore && secFeel !== feelNow) {
+    secFeel = feelNow;
+    if (typeof renderExamples === "function") renderExamples();
+  }
   renderTempoQuick();   // 換了和弦語彙,建議速度也不一樣了
   /* 播放中把和弦改成爵士的語彙,貝斯就從電貝斯換成低音提琴——
      那一把還沒載,先在背景抓(不要 await,擋住的話下一拍就沒聲音了) */
@@ -3549,49 +3697,76 @@ function renderPalette(){
    `style` 是建議的疏密,`meter` 是這句歌的拍號。
    排的順序就是畫面上的順序:同一個拍號放一起,短的在前面 */
 const SECTIONS = [
-  /* ── 4/4:流行、搖滾、bossa、爵士 ───────────────────────── */
-  { text: "C - G - Am - F",            style: "comp",  meter: "4/4" },  // I-V-vi-IV,流行的萬用循環
-  { text: "C - Am - F - G",            style: "comp",  meter: "4/4" },  // I-vi-IV-V,五〇年代
-  { text: "C - Am - Dm - G",           style: "comp",  meter: "4/4" },  // I-vi-ii-V,turnaround
-  { text: "C - F - G - C",             style: "comp",  meter: "4/4" },  // I-IV-V-I,最基本的終止
-  { text: "Am - F - G - C",            style: "comp",  meter: "4/4" },  // vi-IV-V-I,小室進行
-  { text: "Am - F - G - Am",           style: "drive", meter: "4/4" },  // i-VI-VII-i,搖滾
-  { text: "Am - G - F - E7",           style: "drive", meter: "4/4" },  // 安達魯西亞終止
-  { text: "Cmaj7 - A7 - Dm7 - G7",     style: "comp",  meter: "4/4" },  // I-VI7-ii-V,bossa
-  { text: "Fmaj7 - E7 - Am7 - C7",     style: "comp",  meter: "4/4" },  // 丸サ進行,city pop
-  { text: "Am7 - Dm7 - E7 - Am7",      style: "comp",  meter: "4/4" },  // i-iv-V7-i
-  { text: "Dm7 - G7 - Cmaj7 - Cmaj7",  style: "comp",  meter: "4/4" },  // ii-V-I,爵士最常練的四小節
-  { text: "Dm9 - G13 - Cmaj9 - Cmaj9", style: "comp",  meter: "4/4" },  // 同一個 ii-V-I 換九度聲位
-  { text: "Am9 - Dm9 - E7b9 - Am9",    style: "pad",   meter: "4/4" },  // 爵士小調
-  { text: "C - G - Am - F - C - G - F - G",                        style: "comp",  meter: "4/4" },  // I-V-vi-IV,後半收在 V
-  { text: "C - Am - F - G - C - Am - Dm - G",                      style: "comp",  meter: "4/4" },  // 五〇年代,收在 ii-V
-  { text: "C - G - Am - Em - F - C - F - G",                       style: "comp",  meter: "4/4" },  // 卡農進行
-  { text: "F - G - Em - Am - Dm - G - C - C7",                     style: "comp",  meter: "4/4" },  // 王道進行 4536251
-  { text: "Am - F - C - G - Am - F - Dm - E7",                     style: "drive", meter: "4/4" },  // 小調流行,收在 V7
-  { text: "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",        style: "comp",  meter: "4/4" },  // 王道的七和弦聲位,city pop
-  { text: "Dm7 - G7 - Cmaj7 - Cmaj7 - Dm7 - G7 - Cmaj7 - A7",      style: "comp",  meter: "4/4" },  // ii-V-I 兩次,收在 VI7
-  { text: "Dm7 - G7 - Cmaj7 - Fmaj7 - Bm7b5 - E7 - Am7 - A7",      style: "comp",  meter: "4/4" },  // 大調 ii-V-I 接小調 ii-V-i(落葉型)
-  { text: "Cmaj9 - Cmaj9 - Dm9 - G13 - Cmaj9 - A7b9 - Dm9 - G13",  style: "comp",  meter: "4/4" },  // smooth jazz
-  { text: "Am9 - Am9 - Dm9 - Dm9 - Am9 - Am9 - Bm7b5 - E7b9",      style: "pad",   meter: "4/4" },  // 爵士小調,ii°-V 推回開頭
-  { text: "C7 - F7 - C7 - C7 - F7 - F7 - C7 - C7 - G7 - F7 - C7 - G7", style: "comp", meter: "4/4" },  // 12 小節藍調
+  /* ── Pop:八分平均的流行與搖滾 ───────────────────────────── */
+  { text: "C - G - Am - F",            feel: "straight", style: "comp",  meter: "4/4" },  // I-V-vi-IV,流行的萬用循環
+  { text: "C - Am - F - G",            feel: "straight", style: "comp",  meter: "4/4" },  // I-vi-IV-V,五〇年代
+  { text: "C - Am - Dm - G",           feel: "straight", style: "comp",  meter: "4/4" },  // I-vi-ii-V,turnaround
+  { text: "C - F - G - C",             feel: "straight", style: "comp",  meter: "4/4" },  // I-IV-V-I,最基本的終止
+  { text: "Am - F - G - C",            feel: "straight", style: "comp",  meter: "4/4" },  // vi-IV-V-I,小室進行
+  { text: "Am - F - G - Am",           feel: "straight", style: "drive", meter: "4/4" },  // i-VI-VII-i,搖滾
+  { text: "Am - G - F - E7",           feel: "straight", style: "drive", meter: "4/4" },  // 安達魯西亞終止
+  { text: "C - G - Am - F - C - G - F - G",                        feel: "straight", style: "comp",  meter: "4/4" },  // I-V-vi-IV,後半收在 V
+  { text: "C - Am - F - G - C - Am - Dm - G",                      feel: "straight", style: "comp",  meter: "4/4" },  // 五〇年代,收在 ii-V
+  { text: "C - G - Am - Em - F - C - F - G",                       feel: "straight", style: "comp",  meter: "4/4" },  // 卡農進行
+  { text: "F - G - Em - Am - Dm - G - C - C7",                     feel: "straight", style: "comp",  meter: "4/4" },  // 王道進行 4536251
+  { text: "Am - F - C - G - Am - F - Dm - E7",                     feel: "straight", style: "drive", meter: "4/4" },  // 小調流行,收在 V7
+  /* 圓舞曲:一樣是 Pop,換了拍號鼓就整套換成 oom-pah-pah */
+  { text: "C - F - G7 - C",            feel: "straight", style: "comp",  meter: "3/4" },  // I-IV-V7-I,圓舞曲最基本的終止
+  { text: "C - Am - Dm - G7",          feel: "straight", style: "comp",  meter: "3/4" },  // I-vi-ii-V7,turnaround 圓舞曲
+  { text: "Am - Dm - E7 - Am",         feel: "straight", style: "comp",  meter: "3/4" },  // i-iv-V7-i,小調圓舞曲
+  { text: "C - C - C7 - F - C - Am - G7 - C",                      feel: "straight", style: "pad",   meter: "3/4" },  // 聖歌/民謠圓舞曲的八小節一句
+  /* 6/8:抒情歌。一小節兩大拍、每拍三個八分 */
+  { text: "C - Am - F - G7",           feel: "straight", style: "comp",  meter: "6/8" },  // I-vi-IV-V7,五〇年代的 12/8 抒情
+  { text: "Am - F - C - G",            feel: "straight", style: "comp",  meter: "6/8" },  // 小調 6/8 抒情
+  { text: "C - F - C - G7",            feel: "straight", style: "comp",  meter: "6/8" },  // I-IV-I-V7,民謠 jig
+  { text: "C - Am - F - Fm - C - Am - Dm7 - G7",                   feel: "straight", style: "comp",  meter: "6/8" },  // doo-wop 抒情,IV 之後借用 iv
 
-  /* ── 3/4:圓舞曲。大鼓踩一、小鼓打二三,右手是 pah-pah ────────
-     爵士圓舞曲那兩組要用九度聲位,detectFeel 才會判成搖擺——
-     寫成 Cmaj7 - Am7 - Dm7 - G7 的話四顆裡有三顆是六七度,會被判成拉丁 */
-  { text: "C - F - G7 - C",            style: "comp",  meter: "3/4" },  // I-IV-V7-I,圓舞曲最基本的終止
-  { text: "C - Am - Dm - G7",          style: "comp",  meter: "3/4" },  // I-vi-ii-V7,turnaround 圓舞曲
-  { text: "Am - Dm - E7 - Am",         style: "comp",  meter: "3/4" },  // i-iv-V7-i,小調圓舞曲
-  { text: "Cmaj9 - Am9 - Dm9 - G13",   style: "comp",  meter: "3/4" },  // I-vi-ii-V,爵士圓舞曲
-  { text: "C - C - C7 - F - C - Am - G7 - C",                      style: "pad",   meter: "3/4" },  // I-I7-IV-I…,聖歌/民謠圓舞曲的八小節一句
-  { text: "Cmaj9 - Cmaj9 - Dm9 - G13 - Em9 - A7b9 - Dm9 - G13",    style: "comp",  meter: "3/4" },  // 爵士圓舞曲一句,收在 ii-V 推回開頭
+  /* ── City Pop:八〇年代日本 AOR。maj7 / m7 加二級屬與經過減和弦 ──
+     這幾組跟 Bossa 的和聲語彙幾乎一樣(都是 maj7、m7),差別在律動——
+     所以它們一定要自己帶 feel,靠 detectFeel 只會全部變成 bossa */
+  { text: "Fmaj7 - E7 - Am7 - C7",     feel: "citypop", style: "comp",  meter: "4/4" },  // 丸サ進行
+  { text: "Dm7 - G7 - Em7 - Am7",      feel: "citypop", style: "comp",  meter: "4/4" },  // 4-5-3-6,J-pop 的骨幹
+  { text: "Cmaj7 - C#dim7 - Dm7 - G7", feel: "citypop", style: "comp",  meter: "4/4" },  // 經過減和弦接 ii-V
+  { text: "Fmaj7 - Em7 - Dm7 - G7",    feel: "citypop", style: "comp",  meter: "4/4" },  // IV-iii-ii-V,下行
+  { text: "Cmaj7 - Bm7b5 - E7 - Am7",  feel: "citypop", style: "comp",  meter: "4/4" },  // I 接小調 ii-V-i
+  { text: "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",        feel: "citypop", style: "comp",  meter: "4/4" },  // 王道的七和弦聲位
+  { text: "Cmaj7 - Cmaj7 - Bm7b5 - E7 - Am7 - Am7 - Dm7 - G7",     feel: "citypop", style: "comp",  meter: "4/4" },  // 大調起、小調 ii-V 繞一圈
+  { text: "Fmaj7 - G7 - Em7 - Am7 - Fmaj7 - G7 - Cmaj7 - Cmaj7",   feel: "citypop", style: "comp",  meter: "4/4" },  // 4536 兩次,第二次收在 I
 
-  /* ── 6/8:一小節兩大拍、每拍三個八分。抒情歌與慢藍調 ──────── */
-  { text: "C - Am - F - G7",           style: "comp",  meter: "6/8" },  // I-vi-IV-V7,五〇年代的 12/8 抒情
-  { text: "Am - F - C - G",            style: "comp",  meter: "6/8" },  // 小調 6/8 抒情
-  { text: "C - F - C - G7",            style: "comp",  meter: "6/8" },  // I-IV-I-V7,民謠 jig
-  { text: "C - Am - F - Fm - C - Am - Dm7 - G7",                   style: "comp",  meter: "6/8" },  // doo-wop 抒情,IV 之後借用 iv
-  { text: "C7 - F7 - C7 - C7 - F7 - F7 - C7 - C7 - G7 - F7 - C7 - G7", style: "comp", meter: "6/8" },  // 12 小節慢藍調
-  { text: "C9 - F9 - C9 - C9 - F9 - F9 - C9 - C9 - G13 - F9 - C9 - G13", style: "comp", meter: "6/8" },  // 爵士的慢藍調:九度聲位,ride 走 12/8 的 shuffle
+  /* ── Bossa Nova:clave、框邊小鼓、低音提琴 ─────────────────── */
+  { text: "Cmaj7 - A7 - Dm7 - G7",     feel: "latin",   style: "comp",  meter: "4/4" },  // I-VI7-ii-V
+  { text: "Am7 - Dm7 - E7 - Am7",      feel: "latin",   style: "comp",  meter: "4/4" },  // i-iv-V7-i
+  { text: "Am7 - Bm7b5 - E7 - Am7",    feel: "latin",   style: "comp",  meter: "4/4" },  // 小調 bossa 的 i-ii°-V7-i
+  { text: "Dm7 - G7 - Cmaj7 - Am7",    feel: "latin",   style: "comp",  meter: "4/4" },  // ii-V-I 收在 vi,繞得回開頭
+  { text: "Am7 - Bm7b5 - E7 - Am7 - Dm7 - G7 - Cmaj7 - E7",        feel: "latin",   style: "comp",  meter: "4/4" },  // 小調 bossa 一整句(黑色奧菲斯型)
+  { text: "Dm7 - G7 - Cmaj7 - Cmaj7 - Dm7 - G7 - Cmaj7 - A7",      feel: "latin",   style: "comp",  meter: "4/4" },  // ii-V-I 兩次,收在 VI7
+
+  /* ── Blues:shuffle。全是屬七,八分是三連音的 ───────────────── */
+  { text: "C7 - F7 - C7 - G7",         feel: "blues",   style: "comp",  meter: "4/4" },  // 四小節的藍調 turnaround
+  { text: "C7 - F7 - C7 - C7 - F7 - F7 - C7 - G7",                 feel: "blues",   style: "comp",  meter: "4/4" },  // 8 小節藍調
+  { text: "C7 - F7 - C7 - C7 - F7 - F7 - C7 - C7 - G7 - F7 - C7 - G7", feel: "blues", style: "comp", meter: "4/4" },  // 12 小節藍調
+  { text: "C7 - F7 - C7 - G7",         feel: "blues",   style: "pad",   meter: "6/8" },  // 慢藍調的四小節
+  { text: "C7 - F7 - C7 - C7 - F7 - F7 - C7 - C7 - G7 - F7 - C7 - G7", feel: "blues", style: "comp", meter: "6/8" },  // 12/8 的慢藍調
+
+  /* ── Swing:爵士。ride、走動低音、小鼓 comping ───────────────
+     這幾組要用九度以上的聲位,detectFeel 才判得到搖擺 */
+  { text: "Dm7 - G7 - Cmaj7 - Cmaj7",  feel: "swing",   style: "comp",  meter: "4/4" },  // ii-V-I,爵士最常練的四小節
+  { text: "Dm9 - G13 - Cmaj9 - Cmaj9", feel: "swing",   style: "comp",  meter: "4/4" },  // 同一個 ii-V-I 換九度聲位
+  { text: "Am9 - Dm9 - E7b9 - Am9",    feel: "swing",   style: "pad",   meter: "4/4" },  // 爵士小調
+  { text: "Dm7 - G7 - Cmaj7 - Fmaj7 - Bm7b5 - E7 - Am7 - A7",      feel: "swing",   style: "comp",  meter: "4/4" },  // 大調 ii-V-I 接小調 ii-V-i(落葉型)
+  { text: "Cmaj9 - Cmaj9 - Dm9 - G13 - Cmaj9 - A7b9 - Dm9 - G13",  feel: "swing",   style: "comp",  meter: "4/4" },  // smooth jazz
+  { text: "Am9 - Am9 - Dm9 - Dm9 - Am9 - Am9 - Bm7b5 - E7b9",      feel: "swing",   style: "pad",   meter: "4/4" },  // 爵士小調,ii°-V 推回開頭
+  { text: "C7 - F7 - C7 - C7 - F7 - F7 - C7 - A7 - Dm7 - G7 - C7 - A7", feel: "swing", style: "comp", meter: "4/4" },  // 爵士藍調:第 9 小節走 ii-V,收在 VI7
+  { text: "Cmaj9 - Am9 - Dm9 - G13",   feel: "swing",   style: "comp",  meter: "3/4" },  // 爵士圓舞曲
+  { text: "Cmaj9 - Cmaj9 - Dm9 - G13 - Em9 - A7b9 - Dm9 - G13",    feel: "swing",   style: "comp",  meter: "3/4" },  // 爵士圓舞曲一句,收在 ii-V 推回開頭
+  { text: "C9 - F9 - C9 - C9 - F9 - F9 - C9 - C9 - G13 - F9 - C9 - G13", feel: "swing", style: "comp", meter: "6/8" },  // 爵士的慢藍調:九度聲位,ride 走 12/8 的 shuffle
+
+  /* ── Funk:十六分。和聲很少、律動很多,所以都是 vamp ───────── */
+  { text: "Am7 - Am7 - Dm9 - Dm9",     feel: "funk",    style: "comp",  meter: "4/4" },  // i-iv 兩小節一換的 vamp
+  { text: "Am7 - Dm9 - Am7 - Dm9",     feel: "funk",    style: "comp",  meter: "4/4" },  // 同一個 vamp 一小節一換
+  { text: "C9 - C9 - F9 - C9",         feel: "funk",    style: "comp",  meter: "4/4" },  // 放克藍調的頭四小節
+  { text: "Am7 - Dm9 - Am7 - Dm9 - Fmaj7 - G7 - Am7 - Am7",        feel: "funk",    style: "comp",  meter: "4/4" },  // vamp 四小節後接一句
+  { text: "C9 - F9 - C9 - C9 - F9 - F9 - C9 - C9 - G9 - F9 - C9 - G9", feel: "funk", style: "drive", meter: "4/4" },  // 12 小節的放克藍調
 ];
 
 /* ── 形式 ──────────────────────────────────────────────────────
@@ -3599,12 +3774,14 @@ const SECTIONS = [
    點兩次第一組、再點兩次第二組,就是 A A B B。
    formParts 記的是「接了哪些段落」,文字框永遠從它重新組出來;
    使用者自己動手打字就把它清掉,回到自由輸入模式,兩邊不會打架。 */
-let secMeter = "4/4";  // 段落庫現在展開的是哪一個拍號(一次只開一個)
+let secFeel = "straight";  // 段落庫現在看的是哪一個曲風(一次只開一個)
 let secRepeat = 1;     // 下一次點段落要接幾次
 let formParts = [];    // [{ text }]
 /* 這串進行「原本是幾拍子的」。從段落庫點來的才有,自己打字是 null。
    有值的時候另外兩個拍號會變暗:那是提示不是鎖,還是點得下去 */
 let formMeter = null;
+/* 「原本是什麼曲風的」。用途只有一個:接段落時擋住跨曲風亂接 */
+let formFeel = null;
 
 function formLetters(){
   const seen = [], out = [];
@@ -3638,8 +3815,8 @@ function renderExamples(){
      以前全部混在一起(36 組一路排下來)找不到自己要的那種長度;
      分頁放在最上面是因為點下去的進行真的會換掉曲子的拍號,
      先講清楚現在在看哪一種拍子 */
-  for (const b of $("secMeterSeg").children) {
-    b.setAttribute("aria-pressed", b.dataset.secmeter === secMeter ? "true" : "false");
+  for (const b of $("secFeelSeg").children) {
+    b.setAttribute("aria-pressed", b.dataset.secfeel === secFeel ? "true" : "false");
   }
   // 格子太窄時 CSS 會照最長的和弦縮字。同樣長度的進行共用同一個「最長字數」,
   // 整組才會是同一個字級——同一排字忽大忽小比小一點還難看
@@ -3648,18 +3825,26 @@ function renderExamples(){
     const cs = ex.text.split(" - ");
     widest[cs.length] = Math.max(widest[cs.length] || 0, ...cs.map(c => c.length));
   }
-  const mine = SECTIONS.filter(e => e.meter === secMeter);
+  const mine = SECTIONS.filter(e => e.feel === secFeel);
+  /* 這個曲風橫跨幾個拍號?只有一個就不用在標題上寫(Bossa 全是 4/4,寫了是廢話);
+     跨兩個以上才補上去——Pop 的三拍是圓舞曲、六八拍是抒情歌,那是兩首不同的歌 */
+  const metersHere = METER_KEYS.filter(m => mine.some(e => e.meter === m));
   for (const len of [4, 8, 12]) {
-    const items = mine.filter(e => {
-      const n = e.text.split(" - ").length;
-      return len === 4 ? n <= 4 : (len === 8 ? (n > 4 && n <= 8) : n > 8);
-    });
-    if (!items.length) continue;
-    const h = document.createElement("div");
-    h.className = "ex-group";
-    h.textContent = T("secLenGroup", { n: len });
-    box.appendChild(h);
-    for (const ex of items) renderExampleChip(box, ex, widest);
+    for (const m of metersHere) {
+      const items = mine.filter(e => {
+        if (e.meter !== m) return false;
+        const n = e.text.split(" - ").length;
+        return len === 4 ? n <= 4 : (len === 8 ? (n > 4 && n <= 8) : n > 8);
+      });
+      if (!items.length) continue;
+      const h = document.createElement("div");
+      h.className = "ex-group";
+      h.textContent = metersHere.length > 1
+        ? T("secLenMeterGroup", { n: len, m })
+        : T("secLenGroup", { n: len });
+      box.appendChild(h);
+      for (const ex of items) renderExampleChip(box, ex, widest);
+    }
   }
   refreshSecChrome();
 }
@@ -3686,15 +3871,22 @@ function renderExampleChip(box, ex, widest){
   b.setAttribute("aria-label", ex.text);
   b.title = T("secAdd", { n: secRepeat });
   b.addEventListener("click", () => {
-    /* 接上去的那一段如果是別的拍號,就當作重開一首:A 段三拍、B 段六八拍
-       的曲子基本上不存在,硬接只會得到一串要自己清掉的東西 */
-    if (formMeter && formMeter !== ex.meter) formParts = [];
+    /* 接上去的那一段如果是別的拍號**或別的曲風**,就當作重開一首:
+       A 段三拍、B 段六八拍的曲子基本上不存在,A 段 City Pop、B 段 Blues 也一樣——
+       硬接只會得到一串要自己清掉的東西,而且曲風只會留下後面那一段的 */
+    if ((formMeter && formMeter !== ex.meter) || (formFeel && formFeel !== ex.feel)) formParts = [];
     for (let i = 0; i < secRepeat; i++) formParts.push({ text: ex.text });
     setStyle(ex.style);
     /* 這句歌本來是幾拍子的,點下去就一起換過去。formMeter 記著它,
        另外兩個拍號會變暗——使用者不必自己想「這組是不是三拍的」 */
     formMeter = ex.meter;
+    formFeel = ex.feel;
     setMeter(ex.meter);
+    /* 曲風也是這組進行自己帶的:丸サ進行是 City Pop、C7-F7 是 Blues,
+       這兩件事和弦推不出來(跟 Bossa、跟 Swing 用同一套語彙),所以要跟著點下去換。
+       **一定要排在 setMeter 後面**:setFeelPick 是拿「現在的拍號」去檢查這個曲風
+       有沒有節奏型,在 3/4 點一組 4/4 的放克,順序反了就會被擋掉、整組不會換 */
+    setFeelPick(ex.feel);
     applyForm();
   });
   box.appendChild(b);
@@ -3900,9 +4092,9 @@ function updateSecToggleText(){
   $("secToggle").setAttribute("title", label);
   $("secToggle").setAttribute("aria-label", label);
 }
-for (const b of $("secMeterSeg").children) {
-  // 分頁只換清單,不動曲子的拍號——真的要換是點下面的進行
-  b.addEventListener("click", () => { secMeter = b.dataset.secmeter; renderExamples(); fitSecPanel(); });
+for (const b of $("secFeelSeg").children) {
+  // 分頁只換清單,不動現在這首的曲風與拍號——真的要換是點下面的進行
+  b.addEventListener("click", () => { secFeel = b.dataset.secfeel; renderExamples(); fitSecPanel(); });
 }
 $("secToggle").addEventListener("click", () => setSecOpen(!secOpen));
 /* 面板是浮的,點到外面或按 Esc 就收起來。點面板裡面(挑段落)不關,

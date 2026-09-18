@@ -179,7 +179,10 @@ main{
 /* 卡片最上面那一排:左邊是曲風(這首要練什麼),右邊是狀態(幾小節、形式、移調)。
    狀態字靠右、可以被壓縮,曲風膠囊不縮——那是要點的,狀態只是讀的 */
 .style-bar{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;margin-bottom:8px}
-.style-bar .seg-mini{flex-wrap:wrap;min-width:0}
+/* **膠囊那一整塊不換行**(手機另有一套格線,見下面的 @media)。
+   `flex-wrap:wrap` 的話兩欄的窄螢幕(680–720)會把第七顆擠到第二排、整頁多 26px;
+   要縮的是右邊那行狀態字,不是要點的按鈕 */
+.style-bar .seg-mini{flex-wrap:nowrap;flex:0 0 auto}
 .style-bar .seg-mini button{padding:5px 10px;font-size:var(--fs-2xs)}
 /* 窄螢幕:七顆一定排不完。**不要讓它們在同一顆膠囊裡換行**——
    接成一整塊的 seg 換行之後左右兩端是圓角、中間是直角,看起來像壞掉(手機上踩過)。
@@ -199,7 +202,17 @@ main{
   .style-bar .seg-mini button + button{border-left:1px solid var(--line)}
   .style-bar .bars{flex:1 1 auto}
 }
-.style-bar .bars{margin-left:auto;text-align:right}
+/* 狀態字(形式 ・ 小節數 ・ 移調)靠右,而且**要縮得下去**:
+   加了段落名字之後這一行會變長(「形式 主歌×2 ・ 導歌 ・ 副歌×2 ・ 20 小節」),
+   不給它 min-width:0 的話它撐著不縮,整排曲風膠囊就被擠到第二排、頁面多 26px
+   (680–720 寬剛好卡在這裡)。縮到放不下時切掉尾巴,膠囊要點所以不能縮 */
+.style-bar .bars{
+  margin-left:auto;text-align:right;
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+/* 「組一首」自己一排,貼在清單上面:它是「不想自己挑就按這個」的入口 */
+.ex-song{margin:0 0 6px}
+.ex-song .song-btn{width:100%;font-size:var(--fs-2xs);padding:6px 10px}
 /* 拍號 + 速度移調綁成一組:右欄用 space-between 分配剩下的高度,
    不綁的話這兩塊中間會被撐開一道縫,但它們講的是同一件事 */
 .tempo-group{display:flex;flex-direction:column;gap:10px}
@@ -904,6 +917,9 @@ try {
             </div>
           </div>
         </div>
+        <!-- 「組一首」:主歌 ×2 →(導歌)→ 副歌 ×2 一次接好。
+             本身就是一整首的曲風(藍調、爵士標準曲)沒有主副歌之分,這一排會收起來 -->
+        <div class="ex-song" id="secSong" hidden></div>
         <div class="examples" id="examples"></div>
       </div>
       </div>
@@ -1200,6 +1216,9 @@ const I18N = {
     loopSuffix: " ・ 循環",
     loadingSamples: "載入音色中…",
     loadingSamplesSub: "只抓這次會用到的音;鼓與貝斯第一次載會久一點",
+    roleVerse: "主歌", rolePre: "導歌", roleChorus: "副歌", roleForm: "完整形式",
+    secRoleMeterGroup: "{r} ・ {m}",
+    secBuildSong: "組一首 {f}:{seq}({n} 小節)",
     statusSynthKeys: "鍵盤是合成的(K-Pop 的 pluck),不用下載",
     statusSamples: "已載入 {n} 個取樣",
     statusSynth: "取樣載入失敗,改用合成音色",
@@ -1315,6 +1334,9 @@ const I18N = {
     loopSuffix: " · looping",
     loadingSamples: "Loading sounds…",
     loadingSamplesSub: "Only what this progression needs; drums and bass take a moment the first time",
+    roleVerse: "Verse", rolePre: "Pre-chorus", roleChorus: "Chorus", roleForm: "Full form",
+    secRoleMeterGroup: "{r} \u30fb {m}",
+    secBuildSong: "Build a {f} song: {seq} ({n} bars)",
     statusSynthKeys: "Synth keys (the K-Pop pluck) \u2014 nothing to download",
     statusSamples: "{n} samples loaded",
     statusSynth: "Samples failed to load — using a synthesized tone",
@@ -1637,9 +1659,20 @@ function updateBarCount(){
   if (!el || typeof parsed === "undefined" || !parsed) return;
   const n = parsed.bars.length;
   const parts = [];
-  if (typeof formParts !== "undefined" && formParts.length)
-    parts.push(T("barCountForm", { form: formLetters().join(" ") }));
+  /* **小節數擺前面**:這一行放不下時是從尾巴切掉(見 `.style-bar .bars` 的 ellipsis),
+     所以最該看到的要在前面。形式寫成 `主歌×2 ・ 導歌 ・ 副歌×2`,
+     不是 `主歌 主歌 導歌 副歌 副歌`——連著重複的收成一個數字才塞得下 */
   if (n) parts.push(T("barCount", { n }));
+  if (typeof formParts !== "undefined" && formParts.length) {
+    const seq = [];
+    for (const nm of formLabels()) {
+      const last = seq[seq.length - 1];
+      if (last && last.nm === nm) last.n++; else seq.push({ nm, n: 1 });
+    }
+    parts.push(T("barCountForm", {
+      form: seq.map(x => x.n > 1 ? x.nm + "×" + x.n : x.nm).join(T("barCountSep")),
+    }));
+  }
   if (transposeOn)
     parts.push(T("barCountTr", { t: (transposeOn > 0 ? "+" : "") + transposeOn }));
   el.textContent = parts.join(T("barCountSep"));
@@ -2224,7 +2257,10 @@ const PIANO_KITS = {
      和聲那一層是「疊起來的 synth stab / pluck」加 supersaw,Rhodes 是九〇年代 R&B 的聲音,
      放在 808 與十六分 hi-hat 上面會整個年代錯亂(被回報「聽起來不像 K-Pop」)。
      兩顆失諧的鋸齒過一顆會關起來的低通,就是那個「叮」——沒有檔案要下載 */
-  pluck:    { synth: "pluck", gain: 0.70, tau: 1 },
+  /* **音量要壓得比想像中低**。被回報過「K-Pop 的 lead synth 聽起來太突出」:
+     pluck 的音頭很亮、又掛著殘響,在一堆 808 與十六分 hi-hat 之間很容易跳出來。
+     它是**和聲層不是主旋律**——真的 K-Pop 裡這一層是墊在人聲底下的 */
+  pluck:    { synth: "pluck", gain: 0.42, tau: 1 },
   /* Rhodes 的音管衰減比平台鋼琴慢,tau 放長一點才像在延音。
      gain **要往下收**:同一個 peak 參數下這組取樣比 Salamander 大一倍
      (量過:四個音的和弦 Salamander 1.17、Rhodes 2.37),
@@ -2290,11 +2326,14 @@ function ensureSamples(midis){
 let ctx = null, masterGain = null, limiter = null, outGain = null, softClip = null;
 let reverbBus = null, drumBus = null, bassBus = null;
 /* 伴奏團的其他成員:吉他、鍵盤鋪底(風琴/弦樂)、打擊小物 */
-let combBus = null, padBus = null, percBus = null, drumGlue = null;
+let combBus = null, padBus = null, percBus = null, drumGlue = null, roomBus = null;
 const BASS_BUS_LEVEL = 0.95;
 /* 上一顆 808 低音彈到哪個音、什麼時候彈的。滑音要靠它 */
 const last808 = { midi: -1, at: -99 };
 const PAD_BUS_LEVEL = 0.58;
+/* 空間麥克風的量。這是「鼓聽起來多大一間」的旋鈕,
+   開太大鼓會糊掉、拍點就抓不到了(這個工具是拿來跟著彈的) */
+const ROOM_BUS_LEVEL = 0.42;
 let slowLfo = null;
 
 /* 殘響用程式合成的脈衝響應,不外掛音檔,維持單檔架構。
@@ -2423,6 +2462,12 @@ function ensureAudio(){
     pSend.gain.value = 0.42;
     padBus.connect(pSend); pSend.connect(reverbBus);
 
+    /* 鼓的空間麥克風。走自己的 bus 再進黏著壓縮,所以它跟近麥一起被壓——
+       真的錄音就是這樣混的(房間麥被壓得越多,鼓聽起來越大越有空氣) */
+    roomBus = ctx.createGain();
+    roomBus.gain.value = ROOM_BUS_LEVEL;
+    roomBus.connect(drumGlue);
+
     percBus = ctx.createGain();
     percBus.gain.value = 0.66;
     percBus.connect(masterGain);
@@ -2539,9 +2584,13 @@ function playClick(when, strong){
      mf 力度。每三個半音收一顆,中間用 playbackRate 補,最遠差 1.5 個半音
    先走 jsDelivr(有 CDN 快取),失敗再退 raw.githubusercontent —— 兩邊同一份檔案。
    FLAC 走 decodeAudioData 的支援度不如 mp3,所以每個鼓件都留一份合成備援。 */
+/* **網址停在 `Samples/` 就好**,麥克風位置(`mid/` 或 `room/`)由呼叫端接上去。
+   原本寫到 `Samples/mid/`,加空間麥克風之後路徑會變成 `Samples/mid/mid/...`,
+   整組鼓靜悄悄地一個都載不到——而且 `loadDrumLayer` 的 catch 是空的,
+   完全不會報錯,只會退到合成鼓。踩過一次 */
 const SRC_DRUMS = [
-  "https://cdn.jsdelivr.net/gh/sfzinstruments/virtuosity_drums@master/Samples/mid/",
-  "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/master/Samples/mid/",
+  "https://cdn.jsdelivr.net/gh/sfzinstruments/virtuosity_drums@master/Samples/",
+  "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/master/Samples/",
 ];
 /* 貝斯有兩把,照感覺換:爵士與 bossa 用低音提琴(撥弦),流行搖滾用電貝斯。
    兩把都是 D. Smolken 錄的(Karoryfer),音色調性一致。
@@ -2567,25 +2616,47 @@ function fetchDecode(bases, path){
   return attempt();
 }
 
-const DRUM_FILES = {
-  kick:  ["kick/mid_kick_snon_vl3_rr1.flac", "kick/mid_kick_snon_vl3_rr2.flac"],
-  snare: ["snare/mid_snare_center_vl24.flac", "snare/mid_snare_center_vl28.flac"],
-  hihat: ["hh/mid_hh_closed_vl3_rr1.flac", "hh/mid_hh_closed_vl3_rr2.flac", "hh/mid_hh_closed_vl3_rr3.flac"],
+/* ── 鼓:真的力度層,不是把音量調小 ────────────────────────────
+   Virtuosity Drums 每一顆鼓都錄了好幾層力度(小鼓 32 層、大鼓與 hi-hat 4 層、
+   框邊與 tom 16 層、ride 與 crash 3 層),每層還有 4 個 round robin。
+   原本只取一層、靠 gain 調大小聲——那是**最像 MIDI 的地方**:
+   真的鼓打輕不只是小聲,音色整個不一樣(泛音少、殼的共振少、越輕越悶)。
+   改成照力度挑那一層,音色就跟著力度變。
+
+   `vl` 越大越用力。下面每一顆挑 3–4 層平均鋪在那顆鼓的力度範圍上,
+   `lo`/`hi` 是這一層負責的力度區間(0–1)。
+   **`rr` 是那一層有幾個 round robin**,同一層連打不會是同一份取樣。 */
+const DRUM_LAYERS = {
+  kick:   { dir: "kick",  name: "kick_snon",         rr: 4, vl: [1, 2, 3, 4] },
+  snare:  { dir: "snare", name: "snare_center",      rr: 0, vl: [5, 12, 19, 25, 30] },
+  hihat:  { dir: "hh",    name: "hh_closed",         rr: 4, vl: [1, 2, 3, 4] },
+  xstick: { dir: "snare", name: "snare_crossstick",  rr: 0, vl: [3, 7, 11, 15] },
+  /* **ride 與 crash 一個檔案就 1MB**(長的鈸,FLAC 也壓不下來)。
+     全部力度層 × 全部 round robin × 兩支麥克風 = 26MB,而且 `ensureDrums` 會**等**
+     ride(換成合成音就不是爵士了)——按下播放要等十幾秒,搖擺根本播不起來(踩過)。
+     所以它們標 `heavy`:第一批只抓一個 round robin,其餘背景補 */
+  ride:   { dir: "ride",  name: "ride_ride",         rr: 4, vl: [1, 2, 3], heavy: true },
+  hhped:  { dir: "hh",    name: "hh_pedal",          rr: 4, vl: [1, 2, 3] },
+  htom:   { dir: "htom",  name: "htom_center",       rr: 0, vl: [6, 11, 15] },
+  ltom:   { dir: "ltom",  name: "ltom_center",       rr: 0, vl: [6, 11, 15] },
+  crash:  { dir: "crash", name: "crash_crash",       rr: 4, vl: [1, 2, 3], heavy: true },
 };
-/* 過門才用得到的鼓件。這幾顆加起來兩百多 MB 的十分之一,但也有 2MB 出頭,
-   等它們載完才開始播太久了,所以背景載:還沒到位的那幾次過門先用合成音頂著 */
-const DRUM_EXTRA_FILES = {
-  htom:  ["htom/mid_htom_center_vl14.flac"],
-  ltom:  ["ltom/mid_ltom_center_vl14.flac"],
-  crash: ["crash/mid_crash_crash_vl1_rr1.flac"],
-};
-/* 感覺不同,用到的鼓件就不同:bossa 的 clave 是框邊敲擊(cross stick)不是小鼓,
-   爵士靠 ride 與 hi-hat 踏鈸。這幾顆只在那個感覺真的會用到時才載 */
-const DRUM_FEEL_FILES = {
-  xstick: ["snare/mid_snare_crossstick_vl8.flac", "snare/mid_snare_crossstick_vl11.flac"],
-  ride:   ["ride/mid_ride_ride_vl2_rr1.flac", "ride/mid_ride_ride_vl2_rr2.flac"],
-  hhped:  ["hh/mid_hh_pedal_vl2_rr1.flac", "hh/mid_hh_pedal_vl2_rr2.flac"],
-};
+/* 一顆鼓的一層要抓哪幾個檔案。`mic` 是 "mid"(近) 或 "room"(空間)。
+   有 round robin 的檔名帶 `_rrN`,沒有的(小鼓、框邊、tom)就靠力度層本身變化 */
+function drumLayerFiles(piece, vl, mic, maxRR){
+  const L = DRUM_LAYERS[piece];
+  if (!L) return [];
+  const out = [];
+  const n = L.rr ? Math.min(L.rr, maxRR || L.rr) : 0;
+  if (n) for (let r = 1; r <= n; r++) out.push(`${L.dir}/${mic}_${L.name}_vl${vl}_rr${r}.flac`);
+  else out.push(`${L.dir}/${mic}_${L.name}_vl${vl}.flac`);
+  return out;
+}
+/* 一開始一定要有的三顆。**先抓中間那一層讓它能出聲**,其餘力度層背景補
+   (`DRUM_CORE_FIRST` 是第一批)。等四層全載完才開始播,iPad 上會等太久 */
+const DRUM_CORE = ["kick", "snare", "hihat"];
+/* 過門才用得到的鼓件,一樣背景載;還沒到位時 `synthDrum` 會頂著 */
+const DRUM_EXTRA = ["htom", "ltom", "crash"];
 const FEEL_PIECES = { straight: [], latin: ["xstick"], swing: ["ride", "hhped"],
                       funk: [], citypop: [], blues: [], kpop: [] };
 
@@ -2602,38 +2673,102 @@ function drumKit(){
   return (FEELS[feelNow] || FEELS.straight).drums || "acoustic";
 }
 
-const drumBuffers = { kick: [], snare: [], hihat: [], htom: [], ltom: [], crash: [], xstick: [], ride: [], hhped: [] };
-const drumRR = { kick: 0, snare: 0, hihat: 0, htom: 0, ltom: 0, crash: 0, xstick: 0, ride: 0, hhped: 0 };
+/* `drumBuffers[piece]` 是一個陣列,每一格是一層力度:`{ vl, mid:[...], room:[...] }`。
+   `mid` 是近麥克風、`room` 是空間麥克風(同一次演奏的另一支麥,不是殘響)。
+   載到哪一層就有哪一層,沒載到的那幾層 `playDrum` 會自己挑最近的 */
+const drumBuffers = {};
+const drumRR = {};
+for (const k of Object.keys(DRUM_LAYERS)) { drumBuffers[k] = []; drumRR[k] = 0; }
 let drumsLoading = null, drumExtraLoading = null;
 const feelPieceLoading = {};
-
-function loadDrumSet(files){
-  const jobs = [];
-  for (const piece of Object.keys(files)) {
-    for (const path of files[piece]) {
-      jobs.push(fetchDecode(SRC_DRUMS, path)
-        .then(b => { drumBuffers[piece].push(b); })
-        .catch(() => {}));   // 這一顆載不到就少一個 round-robin,不影響其他鼓件
-    }
+const drumLayerLoaded = {};          // "piece:vl:mic" -> true,不要重複抓
+/* **鼓載不到要看得見**。原本 catch 是空的,整組鼓一個都沒到也只是默默退到合成音,
+   使用者只會覺得「怎麼每個曲風都一樣」——查不到原因。狀態列要講 */
+let drumLoadFails = 0;
+/* ── 補完整組鼓要等到「已經在播了」才開始 ──────────────────────
+   全部力度層 + 空間麥克風加起來十幾 MB。它們是背景載沒錯,但**瀏覽器的連線是共用的**:
+   一按播放就開始灌,會把同時在抓的鋼琴與貝斯擠掉,第一次按播放要等很久
+   (踩過:有些曲風七秒還沒開始播)。
+   所以開一個閘門,`startPlayback` 真的開始之後才放行;沒人按播放就八秒後自己放行 */
+let fillGo = null;
+function drumFillGate(){
+  if (!fillGo) {
+    let open;
+    fillGo = new Promise(r => { open = r; });
+    fillGo.open = open;
+    setTimeout(() => open(), 8000);
   }
-  return Promise.all(jobs);
+  return fillGo;
+}
+function openDrumFill(){ drumFillGate().open(); }
+function drumsReady(){
+  let n = 0;
+  for (const k of DRUM_CORE) if ((drumBuffers[k] || []).some(x => x.mid.length)) n++;
+  return n;
+}
+
+/* 載一顆鼓的一層。`mic` 分開存,所以空間麥克風可以晚一點到、到了就自動加進來 */
+function loadDrumLayer(piece, vl, mic, maxRR){
+  const key = piece + ":" + vl + ":" + mic + ":" + (maxRR || "all");
+  if (drumLayerLoaded[key]) return Promise.resolve();
+  drumLayerLoaded[key] = true;
+  const files = drumLayerFiles(piece, vl, mic, maxRR);
+  if (!files.length) return Promise.resolve();
+  return Promise.all(files.map(path =>
+    fetchDecode(SRC_DRUMS, mic + "/" + path)
+      .then(b => {
+        let slot = drumBuffers[piece].find(x => x.vl === vl);
+        if (!slot) { slot = { vl, mid: [], room: [] }; drumBuffers[piece].push(slot);
+                     drumBuffers[piece].sort((a, b2) => a.vl - b2.vl); }
+        slot[mic].push(b);
+      })
+      .catch(() => { drumLoadFails++; })));   // 少一個 round robin 不影響其他的,但要記一筆
+}
+
+/* 一顆鼓的所有力度層。`first` 只抓中間那一層(讓它馬上能出聲),其餘回傳第二個 promise */
+function loadDrumPiece(piece, withRoom){
+  const L = DRUM_LAYERS[piece];
+  if (!L) return { core: Promise.resolve(), rest: Promise.resolve() };
+  const mid = Math.floor(L.vl.length / 2);
+  /* **擋住播放的只有「中間那一層的一兩個 round robin」**。
+     其餘力度層、其餘 round robin、整組空間麥克風全部背景補——
+     還沒到位的時候 `pickDrumLayer` 會自己退到最近的那一層,聽得出來的差別只有
+     「前幾秒的力度變化少一點」,不會沒聲音 */
+  const firstRR = L.heavy ? 1 : 2;
+  const core = loadDrumLayer(piece, L.vl[mid], "mid", firstRR);
+  const rest = core.then(() => drumFillGate()).then(() => {
+    const jobs = [loadDrumLayer(piece, L.vl[mid], "mid")];   // 補滿這一層的 round robin
+    L.vl.forEach((vl, i) => { if (i !== mid) jobs.push(loadDrumLayer(piece, vl, "mid")); });
+    /* 空間麥克風**只抓中間那一層**:它是拿來給空氣感的,力度層的差別在近麥已經有了,
+       再乘一輪等於把下載量翻倍(ride 一個檔案就 1MB) */
+    if (withRoom) jobs.push(loadDrumLayer(piece, L.vl[mid], "room", L.heavy ? 1 : 2));
+    return Promise.all(jobs);
+  });
+  return { core, rest };
+}
+function loadDrumSet(pieces, withRoom){
+  const cores = [], rests = [];
+  for (const piece of pieces) {
+    const { core, rest } = loadDrumPiece(piece, withRoom);
+    cores.push(core); rests.push(rest);
+  }
+  // 背景補完整力度層與空間麥克風,不擋播放
+  Promise.all(rests).catch(() => {});
+  return Promise.all(cores);
 }
 
 function ensureDrums(){
   // 808 是合成的,一個檔案都不用抓(也不要順手把爵士鼓組載下來佔頻寬)
   if (drumKit() === "e808") return Promise.resolve();
   if (!drumsLoading) {
-    drumsLoading = loadDrumSet(DRUM_FILES);
+    drumsLoading = loadDrumSet(DRUM_CORE, true);
     // 過門那幾顆不放進回傳的 promise 裡,播放不必等它
-    if (!drumExtraLoading) drumExtraLoading = loadDrumSet(DRUM_EXTRA_FILES);
+    if (!drumExtraLoading) drumExtraLoading = loadDrumSet(DRUM_EXTRA, true);
   }
   // 這次的感覺要用到的鼓件要等:ride 換成合成音就不是爵士了
   const jobs = [drumsLoading];
   for (const piece of (FEEL_PIECES[feelNow] || [])) {
-    if (!feelPieceLoading[piece]) {
-      const one = {}; one[piece] = DRUM_FEEL_FILES[piece];
-      feelPieceLoading[piece] = loadDrumSet(one);
-    }
+    if (!feelPieceLoading[piece]) feelPieceLoading[piece] = loadDrumSet([piece], true);
     jobs.push(feelPieceLoading[piece]);
   }
   return Promise.all(jobs);
@@ -2731,30 +2866,74 @@ function velFilter(vel){
   return f;
 }
 
+/* 這一下該用哪一層力度。`DRUM_LAYERS[piece].vl` 裡的層平均鋪在 0–1 上,
+   所以 vel 0.2 會拿到最輕那幾層、1.0 拿到最重的。
+   那一層沒載到就退到最近的(載入是漸進的,前幾秒可能只有中間那層) */
+function pickDrumLayer(piece, vel){
+  const list = drumBuffers[piece];
+  if (!list || !list.length) return null;
+  const L = DRUM_LAYERS[piece];
+  const n = L ? L.vl.length : list.length;
+  const wantVl = L ? L.vl[Math.max(0, Math.min(n - 1, Math.round(vel * (n - 1))))] : 0;
+  let best = list[0];
+  for (const slot of list) {
+    if (!slot.mid.length) continue;
+    if (!best.mid.length || Math.abs(slot.vl - wantVl) < Math.abs(best.vl - wantVl)) best = slot;
+  }
+  return best && best.mid.length ? best : null;
+}
+
 function playDrum(piece, when, gain, vel){
   if (drumKit() === "e808") { synth808(piece, when, gain); return; }
-  const list = drumBuffers[piece];
-  if (!list || !list.length) { synthDrum(piece, when, gain); return; }
-  const src = ctx.createBufferSource();
-  src.buffer = list[drumRR[piece]++ % list.length];
-  const g = ctx.createGain();
-  g.gain.value = gain;
   /* 沒特別給 vel 的話就拿音量當力度。鼓件自己的基準音量差很多
      (hi-hat 的 0.3 已經是很用力了、小鼓的 0.3 是幽靈音),
      所以要除掉那個基準才是真的「打多用力」 */
   const ref = piece === "hihat" || piece === "hhped" || piece === "ride" ? 0.34
             : piece === "kick" ? 0.9 : 0.7;
-  const f = velFilter(vel === undefined ? Math.min(1, gain / ref) : vel);
+  const v = Math.max(0, Math.min(1, vel === undefined ? gain / ref : vel));
+  const slot = pickDrumLayer(piece, v);
+  if (!slot) { synthDrum(piece, when, gain); return; }
+
+  const rr = drumRR[piece]++;
   const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
-  let node = src;
-  if (f) { src.connect(f); node = f; }
-  node.connect(g);
+  const g = ctx.createGain();
+  /* **力度層已經帶著音色差了,所以 gain 要往回補**:輕的那層本來就錄得小聲,
+     再照 gain 打一次會輕到聽不見。這裡把「層自己的相對音量」除掉一部分,
+     讓 gain 主要負責平衡、層負責音色 */
+  const L = DRUM_LAYERS[piece];
+  const idx = L ? L.vl.indexOf(slot.vl) : 0;
+  const steps = L ? Math.max(1, L.vl.length - 1) : 1;
+  const layerNorm = 1 + (0.5 - idx / steps) * 0.55;   // 輕的層補一點、重的層收一點
+  g.gain.value = gain * layerNorm;
   if (pan) { pan.pan.value = DRUM_PAN[piece] || 0; g.connect(pan); pan.connect(drumBus); }
   else g.connect(drumBus);
+
+  const src = ctx.createBufferSource();
+  src.buffer = slot.mid[rr % slot.mid.length];
+  src.connect(g);
   src.start(when);
   activeSources.add(src);
   src.onended = () => { activeSources.delete(src);
-    try { src.disconnect(); if (f) f.disconnect(); g.disconnect(); if (pan) pan.disconnect(); } catch (e) {} };
+    try { src.disconnect(); g.disconnect(); if (pan) pan.disconnect(); } catch (e) {} };
+
+  /* **空間麥克風**:同一次演奏的另一支麥,不是殘響。
+     人造殘響給的是「一個空間」,房間麥給的是「這一組鼓真的在那個房間裡」——
+     鼓皮的餘韻、其他鼓件的共鳴、地板的反射全都在裡面,那是合成不出來的。
+     它自己走一條 bus(`roomBus`),所以量可以獨立調 */
+  /* 空間麥克風只抓了中間那一層(見 loadDrumPiece),所以這裡要從整顆鼓裡找一個有的。
+     力度層的差別在近麥已經有了,空間麥只是給空氣感,借哪一層都行 */
+  const roomSlot = slot.room.length ? slot : (drumBuffers[piece] || []).find(x => x.room.length);
+  if (roomSlot && roomBus) {
+    const rsrc = ctx.createBufferSource();
+    rsrc.buffer = roomSlot.room[rr % roomSlot.room.length];
+    const rg = ctx.createGain();
+    rg.gain.value = gain * layerNorm;
+    rsrc.connect(rg); rg.connect(roomBus);
+    rsrc.start(when);
+    activeSources.add(rsrc);
+    rsrc.onended = () => { activeSources.delete(rsrc);
+      try { rsrc.disconnect(); rg.disconnect(); } catch (e) {} };
+  }
 }
 
 /* 取樣載不到時的備援鼓:大鼓是往下掉的正弦、小鼓是雜訊加一點中頻、hi-hat 是高通雜訊 */
@@ -3066,8 +3245,11 @@ function synthKeyNote(midi, when, dur, peak){
   const g = ctx.createGain();
   const lp = ctx.createBiquadFilter();
   lp.type = "lowpass";
-  lp.Q.value = 5;
-  const hi = Math.min(9000, f * 14), lo = Math.max(420, f * 1.9);
+  /* Q 收到 3.2、開口也收窄:開太大那個「叮」會變成刺耳的尖點,
+     在 808 上面整個跳出來(被回報「lead synth 太突出」)。
+     pluck 要有形狀但不要有存在感 */
+  lp.Q.value = 3.2;
+  const hi = Math.min(6200, f * 9), lo = Math.max(380, f * 1.6);
   lp.frequency.setValueAtTime(hi, when);
   lp.frequency.exponentialRampToValueAtTime(lo, when + 0.17);
   lp.connect(g);
@@ -3076,9 +3258,9 @@ function synthKeyNote(midi, when, dur, peak){
     pan.pan.value = Math.max(-0.3, Math.min(0.3, (midi - 64) / 90));
     g.connect(pan); pan.connect(masterGain);
   } else g.connect(masterGain);
-  // pluck 要濕:K-Pop 的和聲層一定掛著殘響與延遲
+  // pluck 要濕:K-Pop 的和聲層一定掛著殘響。濕一點也是把它推遠的手段
   const send = ctx.createGain();
-  send.gain.value = 0.42;
+  send.gain.value = 0.52;
   (pan || g).connect(send); send.connect(reverbBus);
 
   g.gain.setValueAtTime(0.0001, when);
@@ -3687,9 +3869,11 @@ const FEELS = {
     swing: 0.66, push: true,
     kickGain: 0.78,
     snarePiece: "snare", snareGain: 0.6,
-    /* shuffle 的 hi-hat 一小節八下、後半拍又擠在下一拍前面,
-       跟 Pop 一樣大聲會吵(被回報過)。整體收一階,後半拍再收(見下面 acc) */
-    cym: "hihat", cymGain: 0.24,
+    /* shuffle 的 hi-hat 一小節八下、後半拍又擠在下一拍前面,一樣大聲會吵。
+       但**收太多就聽不出是 shuffle 了**——那是藍調唯一的身分,
+       收到 0.24 的時候整個曲風分辨不出來(被回報過)。0.32 是「聽得到三連音的擺動、
+       但不搶 backbeat」的位置;強弱差(後半拍 0.45)照舊,吵不吵靠那個差不是靠總量 */
+    cym: "hihat", cymGain: 0.32,
     bass: "boogie", kit: "electric", meters: ["4/4", "6/8"],
     /* 藍調加的是 **Hammond 風琴**,不是吉他:鋼琴已經在走 boogie 了,
        再加一把吉他切音會把中頻塞死。風琴撐長音、填在鋼琴的縫裡,
@@ -3700,14 +3884,18 @@ const FEELS = {
   latin: {
     swing: 0.5, push: false,
     kickGain: 0.5,
-    snarePiece: "xstick", snareGain: 0.42,
-    cym: "hihat", cymGain: 0.26,
+    snarePiece: "xstick", snareGain: 0.54,
+    /* **hi-hat 要讓開**。bossa 的招牌是 clave 與吉他的切分,但 hi-hat 一小節打八下、
+       cabasa 又打同樣八下,十六顆平均分布的高頻蓋在三顆 clave 上面——
+       clave 就聽不出是 clave 了(被回報「除了 City Pop,其他連風格都聽不出來」)。
+       真的 bossa 錄音裡 hi-hat 幾乎只是氣音,主角是框邊敲擊與吉他 */
+    cym: "hihat", cymGain: 0.13,
     bass: "bossa", kit: "upright",
     /* **尼龍弦吉他是 bossa 的主角**,不是配菜:João Gilberto 那個切分
        跟 cross stick 打的是同一組 clave 格子(共用 `GROOVES.latin` 的 clave),
        兩層疊起來才是 bossa。cabasa 走八分當空氣 */
-    parts: { guitar: "bossa", gtone: "nylon", glevel: 0.48,
-             perc: { kind: "cabasa", on: "sub", lvl: 0.26 } },
+    parts: { guitar: "bossa", gtone: "nylon", glevel: 0.58,
+             perc: { kind: "cabasa", on: "sub", lvl: 0.15 } },
   },
   /* 放克:十六分的律動(`sub:2`,一拍四格)。hi-hat 走滿十六分、正拍重反拍輕,
      小鼓照樣踩二四但四周都是幽靈音,大鼓與貝斯咬在十六分的切分上。
@@ -3724,9 +3912,12 @@ const FEELS = {
     /* 悶音切音吉他是放克的第二個律動來源(Nile Rodgers 那種),
        風琴很輕地墊在底下,鈴鼓走八分。三件都刻意很小聲——
        放克的空隙比音符重要 */
-    parts: { guitar: "chop", gtone: "chop", glevel: 0.12,
+    /* 鈴鼓改打 backbeat(跟 Pop 一樣),不要跟十六分 hi-hat 打同一排八分:
+       兩層平均分布的高頻疊在一起,十六分的強弱差就聽不出來了,
+       而那個強弱差正是放克的律動來源 */
+    parts: { guitar: "chop", gtone: "chop", glevel: 0.14,
              keys: "organ", klevel: 0.05,
-             perc: { kind: "tamb", on: "sub", lvl: 0.12 } },
+             perc: { kind: "tamb", on: "back", lvl: 0.2 } },
   },
   /* K-Pop:half-time 的十六分 R&B / trap。**三件事同時跟別人不一樣**:
      - **拍子是半速的**:小鼓(其實是拍手)整小節只打第 3 拍一下,不是二四。
@@ -3759,9 +3950,11 @@ const FEELS = {
     swing: 0.58, push: true,
     kickGain: 0.16, feather: true,
     snarePiece: "snare", snareGain: 0.36, compSnare: true,
-    /* ride 的量收在 0.30:它一小節要打六下,而且取樣是長的,
-       跟 hi-hat 一樣大聲會整片糊成一團(被回報「很吵」) */
-    cym: "ride", cymGain: 0.30,
+    /* ride 一小節打六下、取樣又長,太大聲會糊成一團;
+       但**它就是搖擺的聲音**,收太多就只剩「有點搖的流行樂」。
+       0.40 配上 skip note 收到 0.46 的強弱差,是「聽得出 ding ding-da ding」
+       又不糊的位置。真的力度層進來之後輕的那幾下本來就比較暗,比以前更不吵 */
+    cym: "ride", cymGain: 0.40,
     hhpedGain: 0.26,
     bass: "jazz", kit: "upright",
     /* **Freddie Green**:archtop 的四分音符 comping,很短、很悶、每一拍都有。
@@ -4823,6 +5016,8 @@ function startPlayback(){
     else setStatus(T("statusSamples", { n: pianoBanks[kitNow].size }), false);
 
     playing = true;
+    // 已經在播了,這時候才放行「補完整組鼓」那一大包(見 drumFillGate)
+    openDrumFill();
     spb = 60 / bpmOn;
     countInBeats = countInOn ? beatsInBar() * 2 : 0;
     endBeat = loopOn ? Infinity : countInBeats + voicings.length * beatsInBar();
@@ -4951,6 +5146,18 @@ function setFeelPick(k){
   }
   feelPick = k;
   updateFeel();            // 重算 feelNow、建議速度、貝斯那一把
+  /* **點曲風就把速度帶過去**(點「自動」不算,那不是在指定曲風)。
+     原本的規則是「不會自己去動使用者打的數字」,那是只有三種曲風、
+     速度範圍差不多的時候訂的。現在七種曲風橫跨 55–180:
+     同一個數字下 Bossa、Swing、Blues、Funk 聽起來會像同一件事,
+     被回報過「除了 City Pop,其他連風格都聽不出來」——
+     **速度是曲風的一部分**,Swing 在 100 就不是 swing。
+     點膠囊是明確的「我要這個曲風」,所以連速度一起換;
+     和弦改變導致的自動判斷不會動速度(那不是使用者在指定) */
+  if (k !== "auto") {
+    const q = tempoQuick();
+    if (q && q.length) setBpm(q[1]);      // 那個曲風的中速
+  }
   if (playing) voicings = buildVoicings(barsNow());
   saveState();
 }
@@ -5635,80 +5842,80 @@ function renderPalette(){
    排的順序就是畫面上的順序:同一個拍號放一起,短的在前面 */
 const SECTIONS = [
   /* ── Pop:八分平均的流行與搖滾 ───────────────────────────── */
-  { text: "C - G - Am - F",            feel: "straight", meter: "4/4" },  // I-V-vi-IV,流行的萬用循環
-  { text: "C - Am - F - G",            feel: "straight", meter: "4/4" },  // I-vi-IV-V,五〇年代
-  { text: "C - Am - Dm - G",           feel: "straight", meter: "4/4" },  // I-vi-ii-V,turnaround
-  { text: "C - F - G - C",             feel: "straight", meter: "4/4" },  // I-IV-V-I,最基本的終止
-  { text: "Am - F - G - C",            feel: "straight", meter: "4/4" },  // vi-IV-V-I,小室進行
-  { text: "Am - F - G - Am",           feel: "straight", meter: "4/4" },  // i-VI-VII-i,搖滾
-  { text: "Am - G - F - E7",           feel: "straight", meter: "4/4" },  // 安達魯西亞終止
-  { text: "Am - F - C - G",            feel: "straight", meter: "4/4" },  // vi-IV-I-V,另一個轉位的四和弦循環
-  { text: "C - E7 - F - Fm",           feel: "straight", meter: "4/4" },  // I-III7-IV-iv,借用小調下屬的那一下
-  { text: "C Am | F G",                feel: "straight", meter: "4/4" },  // 五〇年代進行,一小節兩顆(和聲走一倍快)
-  { text: "C - G - Am - F - C - G - F - G",                        feel: "straight", meter: "4/4" },  // I-V-vi-IV,後半收在 V
-  { text: "C - Am - F - G - C - Am - Dm - G",                      feel: "straight", meter: "4/4" },  // 五〇年代,收在 ii-V
-  { text: "C - G - Am - Em - F - C - F - G",                       feel: "straight", meter: "4/4" },  // 卡農進行
+  { text: "C - G - Am - F",            feel: "straight", meter: "4/4", role: "chorus" },  // I-V-vi-IV,流行的萬用循環
+  { text: "C - Am - F - G",            feel: "straight", meter: "4/4", role: "verse" },  // I-vi-IV-V,五〇年代
+  { text: "C - Am - Dm - G",           feel: "straight", meter: "4/4", role: "verse" },  // I-vi-ii-V,turnaround
+  { text: "C - F - G - C",             feel: "straight", meter: "4/4", role: "chorus" },  // I-IV-V-I,最基本的終止
+  { text: "Am - F - G - C",            feel: "straight", meter: "4/4", role: "chorus" },  // vi-IV-V-I,小室進行
+  { text: "Am - F - G - Am",           feel: "straight", meter: "4/4", role: "verse" },  // i-VI-VII-i,搖滾
+  { text: "Am - G - F - E7",           feel: "straight", meter: "4/4", role: "verse" },  // 安達魯西亞終止
+  { text: "Am - F - C - G",            feel: "straight", meter: "4/4", role: "chorus" },  // vi-IV-I-V,另一個轉位的四和弦循環
+  { text: "C - E7 - F - Fm",           feel: "straight", meter: "4/4", role: "pre" },  // I-III7-IV-iv,借用小調下屬的那一下
+  { text: "C Am | F G",                feel: "straight", meter: "4/4", role: "verse" },  // 五〇年代進行,一小節兩顆(和聲走一倍快)
+  { text: "C - G - Am - F - C - G - F - G",                        feel: "straight", meter: "4/4", role: "chorus" },  // I-V-vi-IV,後半收在 V
+  { text: "C - Am - F - G - C - Am - Dm - G",                      feel: "straight", meter: "4/4", role: "verse" },  // 五〇年代,收在 ii-V
+  { text: "C - G - Am - Em - F - C - F - G",                       feel: "straight", meter: "4/4", role: "chorus" },  // 卡農進行
   /* 王道進行(4536251)整組搬去 City Pop 了:它配七和弦就是 city pop 的聲音,
      兩邊各放一組只是同一句話講兩次(被指出「POP 那組實際上就是 City Pop 那組」)。
      這一格改放下行低音的卡農——低音 C-B-A-G-F-E-D-G 一路走下來,
      轉位在這裡是結構的一部分,不是裝飾 */
-  { text: "C - G/B - Am - Am/G - F - C/E - Dm7 - G7",              feel: "straight", meter: "4/4" },  // 下行低音(卡農的低音線版)
-  { text: "Am - F - C - G - Am - F - Dm - E7",                     feel: "straight", meter: "4/4" },  // 小調流行,收在 V7
+  { text: "C - G/B - Am - Am/G - F - C/E - Dm7 - G7",              feel: "straight", meter: "4/4", role: "verse" },  // 下行低音(卡農的低音線版)
+  { text: "Am - F - C - G - Am - F - Dm - E7",                     feel: "straight", meter: "4/4", role: "verse" },  // 小調流行,收在 V7
   /* 圓舞曲:一樣是 Pop,換了拍號鼓就整套換成 oom-pah-pah */
-  { text: "C - F - G7 - C",            feel: "straight", meter: "3/4" },  // I-IV-V7-I,圓舞曲最基本的終止
-  { text: "C - Am - Dm - G7",          feel: "straight", meter: "3/4" },  // I-vi-ii-V7,turnaround 圓舞曲
-  { text: "Am - Dm - E7 - Am",         feel: "straight", meter: "3/4" },  // i-iv-V7-i,小調圓舞曲
-  { text: "C - C - C7 - F - C - Am - G7 - C",                      feel: "straight", meter: "3/4" },  // 聖歌/民謠圓舞曲的八小節一句
+  { text: "C - F - G7 - C",            feel: "straight", meter: "3/4", role: "chorus" },  // I-IV-V7-I,圓舞曲最基本的終止
+  { text: "C - Am - Dm - G7",          feel: "straight", meter: "3/4", role: "verse" },  // I-vi-ii-V7,turnaround 圓舞曲
+  { text: "Am - Dm - E7 - Am",         feel: "straight", meter: "3/4", role: "verse" },  // i-iv-V7-i,小調圓舞曲
+  { text: "C - C - C7 - F - C - Am - G7 - C",                      feel: "straight", meter: "3/4", role: "chorus" },  // 聖歌/民謠圓舞曲的八小節一句
   /* 6/8:抒情歌。一小節兩大拍、每拍三個八分 */
-  { text: "C - Am - F - G7",           feel: "straight", meter: "6/8" },  // I-vi-IV-V7,五〇年代的 12/8 抒情
-  { text: "Am - F - C - G",            feel: "straight", meter: "6/8" },  // 小調 6/8 抒情
-  { text: "C - F - C - G7",            feel: "straight", meter: "6/8" },  // I-IV-I-V7,民謠 jig
-  { text: "C - Am - F - Fm - C - Am - Dm7 - G7",                   feel: "straight", meter: "6/8" },  // doo-wop 抒情,IV 之後借用 iv
+  { text: "C - Am - F - G7",           feel: "straight", meter: "6/8", role: "verse" },  // I-vi-IV-V7,五〇年代的 12/8 抒情
+  { text: "Am - F - C - G",            feel: "straight", meter: "6/8", role: "chorus" },  // 小調 6/8 抒情
+  { text: "C - F - C - G7",            feel: "straight", meter: "6/8", role: "chorus" },  // I-IV-I-V7,民謠 jig
+  { text: "C - Am - F - Fm - C - Am - Dm7 - G7",                   feel: "straight", meter: "6/8", role: "verse" },  // doo-wop 抒情,IV 之後借用 iv
 
   /* ── City Pop:八〇年代日本 AOR。maj7 / m7 加二級屬與經過減和弦 ──
      這幾組跟 Bossa 的和聲語彙幾乎一樣(都是 maj7、m7),差別在律動——
      所以它們一定要自己帶 feel,靠 detectFeel 只會全部變成 bossa */
-  { text: "Fmaj7 - E7 - Am7 - C7",     feel: "citypop", meter: "4/4" },  // 丸サ進行
-  { text: "Dm7 - G7 - Em7 - Am7",      feel: "citypop", meter: "4/4" },  // 4-5-3-6,J-pop 的骨幹
-  { text: "Cmaj7 - C#dim7 - Dm7 - G7", feel: "citypop", meter: "4/4" },  // 經過減和弦接 ii-V
-  { text: "Fmaj7 - Em7 - Dm7 - G7",    feel: "citypop", meter: "4/4" },  // IV-iii-ii-V,下行
-  { text: "Cmaj7 - C7 - Fmaj7 - Fm7", feel: "citypop", meter: "4/4" },  // I-I7-IV-iv,先副屬化再借小調下屬
-  { text: "Am7 - D7 - Dm7 - G7",       feel: "citypop", meter: "4/4" },  // vi-II7-ii-V,先用副屬再落回 ii
-  { text: "Cmaj7 - Em7 - Fmaj7 - G7",  feel: "citypop", meter: "4/4" },  // I-iii-IV-V,一路往上走
-  { text: "Fmaj7 - Fm7 - Em7 - A7",    feel: "citypop", meter: "4/4" },  // IV-iv-iii-VI7,借用 iv 接 turnaround
-  { text: "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",        feel: "citypop", meter: "4/4" },  // 王道的七和弦聲位
-  { text: "Cmaj7 - Fmaj7 - Bm7b5 - E7 - Am7 - D7 - Dm7 - G7",      feel: "citypop", meter: "4/4" },  // 一小節一顆一路走,小調 ii-V 只是經過
-  { text: "Fmaj7 - G7 - Em7 - Am7 - Fmaj7 - G7 - Cmaj7 - Cmaj7",   feel: "citypop", meter: "4/4" },  // 4536 兩次,第二次收在 I
+  { text: "Fmaj7 - E7 - Am7 - C7",     feel: "citypop", meter: "4/4", role: "chorus" },  // 丸サ進行
+  { text: "Dm7 - G7 - Em7 - Am7",      feel: "citypop", meter: "4/4", role: "verse" },  // 4-5-3-6,J-pop 的骨幹
+  { text: "Cmaj7 - C#dim7 - Dm7 - G7", feel: "citypop", meter: "4/4", role: "verse" },  // 經過減和弦接 ii-V
+  { text: "Fmaj7 - Em7 - Dm7 - G7",    feel: "citypop", meter: "4/4", role: "pre" },  // IV-iii-ii-V,下行
+  { text: "Cmaj7 - C7 - Fmaj7 - Fm7", feel: "citypop", meter: "4/4", role: "verse" },  // I-I7-IV-iv,先副屬化再借小調下屬
+  { text: "Am7 - D7 - Dm7 - G7",       feel: "citypop", meter: "4/4", role: "pre" },  // vi-II7-ii-V,先用副屬再落回 ii
+  { text: "Cmaj7 - Em7 - Fmaj7 - G7",  feel: "citypop", meter: "4/4", role: "pre" },  // I-iii-IV-V,一路往上走
+  { text: "Fmaj7 - Fm7 - Em7 - A7",    feel: "citypop", meter: "4/4", role: "pre" },  // IV-iv-iii-VI7,借用 iv 接 turnaround
+  { text: "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",        feel: "citypop", meter: "4/4", role: "chorus" },  // 王道的七和弦聲位
+  { text: "Cmaj7 - Fmaj7 - Bm7b5 - E7 - Am7 - D7 - Dm7 - G7",      feel: "citypop", meter: "4/4", role: "verse" },  // 一小節一顆一路走,小調 ii-V 只是經過
+  { text: "Fmaj7 - G7 - Em7 - Am7 - Fmaj7 - G7 - Cmaj7 - Cmaj7",   feel: "citypop", meter: "4/4", role: "chorus" },  // 4536 兩次,第二次收在 I
 
   /* ── K-Pop:half-time 的十六分 R&B。808 大鼓、拍手打第 3 拍、Rhodes ──
      和聲是全世界流行歌共用的那幾條(vi-IV-I-V、4536、Canon),
      所以**一定要自己帶 feel**——光看和弦跟 Pop、City Pop 分不出來,
      差別全在律動與音色。全部 4/4:half-time 要四拍才有「第 3 拍」可以打 */
-  { text: "Am7 - Fmaj7 - Cmaj7 - G",   feel: "kpop",    meter: "4/4" },  // vi-IV-I-V,全世界流行歌最常見的那一圈
-  { text: "Fmaj7 - G - Em7 - Am7",     feel: "kpop",    meter: "4/4" },  // 4536,K-Pop 抒情的骨幹
-  { text: "Am7 - Em7 - Fmaj7 - G",     feel: "kpop",    meter: "4/4" },  // vi-iii-IV-V
-  { text: "Dm7 - Em7 - Fmaj7 - G7",    feel: "kpop",    meter: "4/4" },  // ii-iii-IV-V,一路往上推的副歌前
-  { text: "Am7 - G - Fmaj7 - E7",      feel: "kpop",    meter: "4/4" },  // 安達魯西亞終止,小調 hook 常用
-  { text: "Am7 - Fmaj7 - Cmaj7 - G - Am7 - Fmaj7 - Dm7 - G7",      feel: "kpop",    meter: "4/4" },  // vi-IV-I-V 兩次,後半走 ii-V
-  { text: "Cmaj7 - G - Am7 - Em7 - Fmaj7 - Cmaj7 - Dm7 - G7",      feel: "kpop",    meter: "4/4" },  // 卡農進行,K-Pop 抒情的整句
+  { text: "Am7 - Fmaj7 - Cmaj7 - G",   feel: "kpop",    meter: "4/4", role: "chorus" },  // vi-IV-I-V,全世界流行歌最常見的那一圈
+  { text: "Fmaj7 - G - Em7 - Am7",     feel: "kpop",    meter: "4/4", role: "verse" },  // 4536,K-Pop 抒情的骨幹
+  { text: "Am7 - Em7 - Fmaj7 - G",     feel: "kpop",    meter: "4/4", role: "verse" },  // vi-iii-IV-V
+  { text: "Dm7 - Em7 - Fmaj7 - G7",    feel: "kpop",    meter: "4/4", role: "pre" },  // ii-iii-IV-V,一路往上推的副歌前
+  { text: "Am7 - G - Fmaj7 - E7",      feel: "kpop",    meter: "4/4", role: "verse" },  // 安達魯西亞終止,小調 hook 常用
+  { text: "Am7 - Fmaj7 - Cmaj7 - G - Am7 - Fmaj7 - Dm7 - G7",      feel: "kpop",    meter: "4/4", role: "chorus" },  // vi-IV-I-V 兩次,後半走 ii-V
+  { text: "Cmaj7 - G - Am7 - Em7 - Fmaj7 - Cmaj7 - Dm7 - G7",      feel: "kpop",    meter: "4/4", role: "chorus" },  // 卡農進行,K-Pop 抒情的整句
 
   /* ── Bossa Nova:clave、框邊小鼓、低音提琴 ─────────────────── */
-  { text: "Cmaj7 - A7 - Dm7 - G7",     feel: "latin",   meter: "4/4" },  // I-VI7-ii-V
-  { text: "Am7 - Dm7 - E7 - Am7",      feel: "latin",   meter: "4/4" },  // i-iv-V7-i
-  { text: "Am7 - Bm7b5 - E7 - Am7",    feel: "latin",   meter: "4/4" },  // 小調 bossa 的 i-ii°-V7-i
-  { text: "Dm7 - G7 - Cmaj7 - Am7",    feel: "latin",   meter: "4/4" },  // ii-V-I 收在 vi,繞得回開頭
-  { text: "Am7 - Bm7b5 - E7 - Am7 - Dm7 - G7 - Cmaj7 - E7",        feel: "latin",   meter: "4/4" },  // 小調 bossa 一整句(黑色奧菲斯型)
-  { text: "Cmaj7 - Dm7 - G7 - Em7 - A7 - Dm7 - G7 - Cmaj7",        feel: "latin",   meter: "4/4" },  // I-ii-V-iii-VI7-ii-V-I(Laufey「From the Start」那一句)
-  { text: "Am7 - Am7 - Dm7 - Dm7 - Bm7b5 - E7 - Am7 - Am7",        feel: "latin",   meter: "4/4" },  // 小調 i-iv-ii°-V-i(Blue Bossa 的前八小節)
-  { text: "Dm7 - G7 - Cmaj7 - Cmaj7 - Dm7 - G7 - Cmaj7 - A7",      feel: "latin",   meter: "4/4" },  // ii-V-I 兩次,收在 VI7
+  { text: "Cmaj7 - A7 - Dm7 - G7",     feel: "latin",   meter: "4/4", role: "verse" },  // I-VI7-ii-V
+  { text: "Am7 - Dm7 - E7 - Am7",      feel: "latin",   meter: "4/4", role: "verse" },  // i-iv-V7-i
+  { text: "Am7 - Bm7b5 - E7 - Am7",    feel: "latin",   meter: "4/4", role: "verse" },  // 小調 bossa 的 i-ii°-V7-i
+  { text: "Dm7 - G7 - Cmaj7 - Am7",    feel: "latin",   meter: "4/4", role: "chorus" },  // ii-V-I 收在 vi,繞得回開頭
+  { text: "Am7 - Bm7b5 - E7 - Am7 - Dm7 - G7 - Cmaj7 - E7",        feel: "latin",   meter: "4/4", role: "verse" },  // 小調 bossa 一整句(黑色奧菲斯型)
+  { text: "Cmaj7 - Dm7 - G7 - Em7 - A7 - Dm7 - G7 - Cmaj7",        feel: "latin",   meter: "4/4", role: "chorus" },  // I-ii-V-iii-VI7-ii-V-I(Laufey「From the Start」那一句)
+  { text: "Am7 - Am7 - Dm7 - Dm7 - Bm7b5 - E7 - Am7 - Am7",        feel: "latin",   meter: "4/4", role: "verse" },  // 小調 i-iv-ii°-V-i(Blue Bossa 的前八小節)
+  { text: "Dm7 - G7 - Cmaj7 - Cmaj7 - Dm7 - G7 - Cmaj7 - A7",      feel: "latin",   meter: "4/4", role: "chorus" },  // ii-V-I 兩次,收在 VI7
 
   /* ── Blues:shuffle。全是屬七,八分是三連音的 ───────────────── */
-  { text: "C7 - F7 - C7 - G7",         feel: "blues",   meter: "4/4" },  // 四小節的藍調 turnaround
-  { text: "C7 - F7 - C7 - C7 - F7 - F7 - C7 - G7",                 feel: "blues",   meter: "4/4" },  // 8 小節藍調
-  { text: "C7 - G7 - F7 - F7 - C7 - G7 - C7 - G7",                 feel: "blues",   meter: "4/4" },  // 另一種 8 小節藍調(Key to the Highway 型)
-  { text: "C7 - F7 - C7 - C7 - F7 - F7 - C7 - C7 - G7 - F7 - C7 - G7", feel: "blues", meter: "4/4" },  // 12 小節藍調
-  { text: "C7 - F7 - C7 - G7",         feel: "blues",   meter: "6/8" },  // 慢藍調的四小節
-  { text: "C7 - F7 - C7 - C7 - F7 - F7 - C7 - C7 - G7 - F7 - C7 - G7", feel: "blues", meter: "6/8" },  // 12/8 的慢藍調
+  { text: "C7 - F7 - C7 - G7",         feel: "blues",   meter: "4/4", role: "verse" },  // 四小節的藍調 turnaround
+  { text: "C7 - F7 - C7 - C7 - F7 - F7 - C7 - G7",                 feel: "blues",   meter: "4/4", role: "form" },  // 8 小節藍調
+  { text: "C7 - G7 - F7 - F7 - C7 - G7 - C7 - G7",                 feel: "blues",   meter: "4/4", role: "form" },  // 另一種 8 小節藍調(Key to the Highway 型)
+  { text: "C7 - F7 - C7 - C7 - F7 - F7 - C7 - C7 - G7 - F7 - C7 - G7", feel: "blues", meter: "4/4", role: "form" },  // 12 小節藍調
+  { text: "C7 - F7 - C7 - G7",         feel: "blues",   meter: "6/8", role: "verse" },  // 慢藍調的四小節
+  { text: "C7 - F7 - C7 - C7 - F7 - F7 - C7 - C7 - G7 - F7 - C7 - G7", feel: "blues", meter: "6/8", role: "form" },  // 12/8 的慢藍調
 
   /* ── Swing:爵士。ride、走動低音、小鼓 comping ───────────────
      這幾組要用九度以上的聲位,detectFeel 才判得到搖擺 */
@@ -5717,30 +5924,30 @@ const SECTIONS = [
      (試過 `Em9 - A7b9 - Dm9 - G13`,但那一串從頭到尾沒有出現主和弦,
      `keyOf` 會判成 G 大調、整組代理規則跟著錯位;而且 Em9 帶 F♯,
      那個音不在 C 大調裡——大調的 iii 級是 Em7 不是 Em9) */
-  { text: "Bm7b5 - E7b9 - Am9 - Am9",  feel: "swing",   meter: "4/4" },  // 小調 ii°-V7-i,爵士最常練的小調終止
+  { text: "Bm7b5 - E7b9 - Am9 - Am9",  feel: "swing",   meter: "4/4", role: "verse" },  // 小調 ii°-V7-i,爵士最常練的小調終止
   /* Satin Doll 的 A 段。只取前四小節的話整串都是 ii-V、從頭到尾沒出現主和弦,
      `keyOf` 會判成 G 大調(G7 與 Em7 都指向 G),整組代理規則跟著錯位——
      要收到 Cmaj7 它才站得住。A♭m7-D♭7 是 V7 的三全音代理,那是這首的招牌 */
-  { text: "Dm7 G7 | Dm7 G7 | Em7 A7 | Em7 A7 | Am7 D7 | Abm7 Db7 | Cmaj7 | Cmaj7", feel: "swing", meter: "4/4" },  // Satin Doll 的 A 段,一小節兩顆
-  { text: "Cmaj7 Am7 | Dm7 G7 | Em7 A7 | Dm7 G7",                  feel: "swing",   meter: "4/4" },  // rhythm changes 的 A 段,一小節兩顆
-  { text: "Am7 - Dm7 - G7 - Cmaj7 - Fmaj7 - Bm7b5 - E7 - Am7",     feel: "swing",   meter: "4/4" },  // 一路下行五度(Fly Me to the Moon 的 A 段)
-  { text: "Cmaj7 - Cmaj7 - D7 - D7 - Dm7 - G7 - Cmaj7 - Cmaj7",    feel: "swing",   meter: "4/4" },  // I-II7-ii-V-I(Take the A Train 的 A 段)
-  { text: "Dm9 - G13 - Cmaj9 - Cmaj9", feel: "swing",   meter: "4/4" },  // 同一個 ii-V-I 換九度聲位
-  { text: "Am9 - Dm9 - E7b9 - Am9",    feel: "swing",   meter: "4/4" },  // 爵士小調
-  { text: "Dm7 - G7 - Cmaj7 - Fmaj7 - Bm7b5 - E7 - Am7 - A7",      feel: "swing",   meter: "4/4" },  // 大調 ii-V-I 接小調 ii-V-i(落葉型)
-  { text: "Cmaj9 - Cmaj9 - Dm9 - G13 - Cmaj9 - A7b9 - Dm9 - G13",  feel: "swing",   meter: "4/4" },  // smooth jazz
-  { text: "Am9 - Am9 - Dm9 - Dm9 - Am9 - Am9 - Bm7b5 - E7b9",      feel: "swing",   meter: "4/4" },  // 爵士小調,ii°-V 推回開頭
-  { text: "C7 - F7 - C7 - C7 - F7 - F7 - C7 - A7 - Dm7 - G7 - C7 - A7", feel: "swing", meter: "4/4" },  // 爵士藍調:第 9 小節走 ii-V,收在 VI7
-  { text: "Cmaj9 - Am9 - Dm9 - G13",   feel: "swing",   meter: "3/4" },  // 爵士圓舞曲
-  { text: "Cmaj9 - Cmaj9 - Dm9 - G13 - Em9 - A7b9 - Dm9 - G13",    feel: "swing",   meter: "3/4" },  // 爵士圓舞曲一句,收在 ii-V 推回開頭
-  { text: "C9 - F9 - C9 - C9 - F9 - F9 - C9 - C9 - G13 - F9 - C9 - G13", feel: "swing", meter: "6/8" },  // 爵士的慢藍調:九度聲位,ride 走 12/8 的 shuffle
+  { text: "Dm7 G7 | Dm7 G7 | Em7 A7 | Em7 A7 | Am7 D7 | Abm7 Db7 | Cmaj7 | Cmaj7", feel: "swing", meter: "4/4", role: "form" },  // Satin Doll 的 A 段,一小節兩顆
+  { text: "Cmaj7 Am7 | Dm7 G7 | Em7 A7 | Dm7 G7",                  feel: "swing",   meter: "4/4", role: "form" },  // rhythm changes 的 A 段,一小節兩顆
+  { text: "Am7 - Dm7 - G7 - Cmaj7 - Fmaj7 - Bm7b5 - E7 - Am7",     feel: "swing",   meter: "4/4", role: "form" },  // 一路下行五度(Fly Me to the Moon 的 A 段)
+  { text: "Cmaj7 - Cmaj7 - D7 - D7 - Dm7 - G7 - Cmaj7 - Cmaj7",    feel: "swing",   meter: "4/4", role: "form" },  // I-II7-ii-V-I(Take the A Train 的 A 段)
+  { text: "Dm9 - G13 - Cmaj9 - Cmaj9", feel: "swing",   meter: "4/4", role: "verse" },  // 同一個 ii-V-I 換九度聲位
+  { text: "Am9 - Dm9 - E7b9 - Am9",    feel: "swing",   meter: "4/4", role: "verse" },  // 爵士小調
+  { text: "Dm7 - G7 - Cmaj7 - Fmaj7 - Bm7b5 - E7 - Am7 - A7",      feel: "swing",   meter: "4/4", role: "form" },  // 大調 ii-V-I 接小調 ii-V-i(落葉型)
+  { text: "Cmaj9 - Cmaj9 - Dm9 - G13 - Cmaj9 - A7b9 - Dm9 - G13",  feel: "swing",   meter: "4/4", role: "chorus" },  // smooth jazz
+  { text: "Am9 - Am9 - Dm9 - Dm9 - Am9 - Am9 - Bm7b5 - E7b9",      feel: "swing",   meter: "4/4", role: "verse" },  // 爵士小調,ii°-V 推回開頭
+  { text: "C7 - F7 - C7 - C7 - F7 - F7 - C7 - A7 - Dm7 - G7 - C7 - A7", feel: "swing", meter: "4/4", role: "form" },  // 爵士藍調:第 9 小節走 ii-V,收在 VI7
+  { text: "Cmaj9 - Am9 - Dm9 - G13",   feel: "swing",   meter: "3/4", role: "verse" },  // 爵士圓舞曲
+  { text: "Cmaj9 - Cmaj9 - Dm9 - G13 - Em9 - A7b9 - Dm9 - G13",    feel: "swing",   meter: "3/4", role: "chorus" },  // 爵士圓舞曲一句,收在 ii-V 推回開頭
+  { text: "C9 - F9 - C9 - C9 - F9 - F9 - C9 - C9 - G13 - F9 - C9 - G13", feel: "swing", meter: "6/8", role: "form" },  // 爵士的慢藍調:九度聲位,ride 走 12/8 的 shuffle
 
   /* ── Funk:十六分。和聲很少、律動很多,所以都是 vamp ───────── */
-  { text: "Am7 - Am7 - Dm9 - Dm9",     feel: "funk",    meter: "4/4" },  // i-iv 兩小節一換的 vamp
-  { text: "Am7 - Dm9 - Am7 - Dm9",     feel: "funk",    meter: "4/4" },  // 同一個 vamp 一小節一換
-  { text: "C9 - C9 - F9 - C9",         feel: "funk",    meter: "4/4" },  // 放克藍調的頭四小節
-  { text: "Am7 - Dm9 - Am7 - Dm9 - Fmaj7 - G7 - Am7 - Am7",        feel: "funk",    meter: "4/4" },  // vamp 四小節後接一句
-  { text: "C9 - F9 - C9 - C9 - F9 - F9 - C9 - C9 - G9 - F9 - C9 - G9", feel: "funk", meter: "4/4" },  // 12 小節的放克藍調
+  { text: "Am7 - Am7 - Dm9 - Dm9",     feel: "funk",    meter: "4/4", role: "verse" },  // i-iv 兩小節一換的 vamp
+  { text: "Am7 - Dm9 - Am7 - Dm9",     feel: "funk",    meter: "4/4", role: "verse" },  // 同一個 vamp 一小節一換
+  { text: "C9 - C9 - F9 - C9",         feel: "funk",    meter: "4/4", role: "verse" },  // 放克藍調的頭四小節
+  { text: "Am7 - Dm9 - Am7 - Dm9 - Fmaj7 - G7 - Am7 - Am7",        feel: "funk",    meter: "4/4", role: "chorus" },  // vamp 四小節後接一句
+  { text: "C9 - F9 - C9 - C9 - F9 - F9 - C9 - C9 - G9 - F9 - C9 - G9", feel: "funk", meter: "4/4", role: "form" },  // 12 小節的放克藍調
 ];
 
 /* ── 形式 ──────────────────────────────────────────────────────
@@ -5756,15 +5963,38 @@ let formMeter = null;
 /* 「原本是什麼曲風的」。用途只有一個:接段落時擋住跨曲風亂接 */
 let formFeel = null;
 
-function formLetters(){
+/* ── 段落的角色:主歌 / 導歌 / 副歌 / 完整形式 ───────────────────
+   一段四小節的循環繞二十次是拿來練句子的,但要練「一首歌」就得有段落的起伏:
+   主歌兩次 → 副歌兩次。所以每一組進行都帶一個 `role`,
+   段落庫照角色分區,再加一顆「組一首」把整個循環一次接起來。
+
+   **角色是這組進行本身的性質,不是使用者選的**:
+   `C - G - Am - F`(Axis)天生是副歌的形狀、`Am - G - F - E7`(安達魯西亞)
+   天生是主歌的形狀。跟曲風、拍號一樣寫在 `SECTIONS` 裡。
+   `form` 是「它本身就是一整首」(12 小節藍調、爵士標準曲的 A 段),
+   那種不進「組一首」的公式,點下去就是完整的一輪 */
+const SEC_ROLES = ["verse", "pre", "chorus", "form"];
+const ROLE_I18N = { verse: "roleVerse", pre: "rolePre", chorus: "roleChorus", form: "roleForm" };
+
+/* 形式那一行寫的是段落名字不是 A B C:`主歌 ・ 主歌 ・ 副歌 ・ 副歌` 一看就懂,
+   `A A B B` 還要自己回想 A 是什麼。同一個角色出現兩次以上就編號 */
+function formLabels(){
   const seen = [], out = [];
   for (const p of formParts) {
     let i = seen.indexOf(p.text);
     if (i < 0) { seen.push(p.text); i = seen.length - 1; }
-    out.push(String.fromCharCode(65 + (i % 26)));
+    out.push({ i, role: p.role || "verse" });
   }
-  return out;
+  // 同一個角色有幾種不同的進行,才需要編號(主歌1 / 主歌2)
+  const kinds = {};
+  for (const o of out) (kinds[o.role] = kinds[o.role] || new Set()).add(o.i);
+  return out.map(o => {
+    const name = T(ROLE_I18N[o.role] || "roleVerse");
+    if (kinds[o.role].size < 2) return name;
+    return name + ([...kinds[o.role]].indexOf(o.i) + 1);
+  });
 }
+function formLetters(){ return formLabels(); }
 
 /* 接段落:每一段先切成「每一格一串和弦」,再一起組回文字。
    **不能直接用「-」串起來**——只要有一段裡面有 `|`,整串就會被當成小節線的寫法,
@@ -5814,25 +6044,81 @@ function renderExamples(){
   /* 這個曲風橫跨幾個拍號?只有一個就不用在標題上寫(Bossa 全是 4/4,寫了是廢話);
      跨兩個以上才補上去——Pop 的三拍是圓舞曲、六八拍是抒情歌,那是兩首不同的歌 */
   const metersHere = METER_KEYS.filter(m => mine.some(e => e.meter === m));
-  for (const len of [4, 8, 12]) {
+  /* **先按角色分,再按拍號**。原本是按「4 / 8 / 12 小節」分,
+     但使用者要的是「先挑主歌再挑副歌」,長度是挑完才看的事
+     (而且長度已經寫在膠囊上了——一排幾顆和弦就是幾小節) */
+  for (const role of SEC_ROLES) {
     for (const m of metersHere) {
-      const items = mine.filter(e => {
-        if (e.meter !== m) return false;
-        // 分組看的是「幾小節」,不是「幾顆和弦」——一小節兩顆的進行不能算成兩小節
-        const n = partGroups(e.text).length;
-        return len === 4 ? n <= 4 : (len === 8 ? (n > 4 && n <= 8) : n > 8);
-      });
+      const items = mine.filter(e => (e.role || "verse") === role && e.meter === m);
       if (!items.length) continue;
       const h = document.createElement("div");
       h.className = "ex-group";
       h.textContent = metersHere.length > 1
-        ? T("secLenMeterGroup", { n: len, m })
-        : T("secLenGroup", { n: len });
+        ? T("secRoleMeterGroup", { r: T(ROLE_I18N[role]), m })
+        : T(ROLE_I18N[role]);
       box.appendChild(h);
       for (const ex of items) renderExampleChip(box, ex, widest);
     }
   }
+  renderSongBtn();
   refreshSecChrome();
+}
+
+/* ── 組一首:主歌 ×2 → (導歌) → 副歌 ×2 ────────────────────────
+   一次把一整個循環接起來,不用自己點四次。挑的是這個曲風、同一個拍號裡
+   **第一組**主歌與副歌(清單是固定順序的,所以每次點結果一樣、可預期);
+   有導歌就夾在中間一次。
+   藍調與爵士那種「本身就是一整首」的曲風沒有主副歌之分,那就不顯示這顆 */
+function songPlan(){
+  const mine = SECTIONS.filter(e => e.feel === feelNow);
+  const pick = (role, m) => mine.find(e => (e.role || "verse") === role && e.meter === m);
+  // 拍號跟著主歌走:一首歌不會主歌四拍、副歌六八拍
+  for (const m of METER_KEYS) {
+    const v = pick("verse", m), c = pick("chorus", m);
+    if (!v || !c) continue;
+    const plan = [v, v];
+    const pre = pick("pre", m);
+    if (pre) plan.push(pre);
+    plan.push(c, c);
+    return plan;
+  }
+  return null;
+}
+function renderSongBtn(){
+  const host = $("secSong");
+  if (!host) return;
+  host.innerHTML = "";
+  const plan = songPlan();
+  if (!plan) { host.hidden = true; return; }
+  host.hidden = false;
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "btn song-btn";
+  /* 字樣要照**真的會接出來的那一串**寫,不要寫死「主歌×2 → 副歌×2」:
+     有導歌的曲風接出來是五段,寫成四段就對不上按下去的結果 */
+  const seq = [];
+  for (const e of plan) {
+    const name = T(ROLE_I18N[e.role] || "roleVerse");
+    const last = seq[seq.length - 1];
+    if (last && last.name === name) last.n++;
+    else seq.push({ name, n: 1 });
+  }
+  b.textContent = T("secBuildSong", {
+    f: T(FEEL_I18N[feelNow] || "feelStraight"),
+    seq: seq.map(x => x.n > 1 ? x.name + "×" + x.n : x.name).join(" → "),
+    n: plan.reduce((a, e) => a + partGroups(e.text).length, 0),
+  });
+  b.addEventListener("click", () => {
+    pushUndo();
+    formParts = plan.map(e => ({ text: e.text, role: e.role }));
+    formMeter = plan[0].meter;
+    formFeel = plan[0].feel;
+    setMeter(plan[0].meter);
+    setFeelPick(plan[0].feel);
+    applyForm();
+    renderExamples();
+  });
+  host.appendChild(b);
 }
 
 /* 一顆膠囊。點下去:接到形式後面 + 換曲風 + 換拍號。
@@ -5865,7 +6151,7 @@ function renderExampleChip(box, ex, widest){
        A 段三拍、B 段六八拍的曲子基本上不存在,A 段 City Pop、B 段 Blues 也一樣——
        硬接只會得到一串要自己清掉的東西,而且曲風只會留下後面那一段的 */
     if ((formMeter && formMeter !== ex.meter) || (formFeel && formFeel !== ex.feel)) formParts = [];
-    for (let i = 0; i < secRepeat; i++) formParts.push({ text: ex.text });
+    for (let i = 0; i < secRepeat; i++) formParts.push({ text: ex.text, role: ex.role });
     /* 這句歌本來是幾拍子的,點下去就一起換過去。formMeter 記著它,
        另外兩個拍號會變暗——使用者不必自己想「這組是不是三拍的」 */
     formMeter = ex.meter;

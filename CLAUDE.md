@@ -355,8 +355,23 @@ C-F-G-F 套 Bossa)。「要用哪種感覺」本來就是和弦決定的,所以*
   曲風跟拍號一樣是推不出來的:丸サ進行是 City Pop 不是 Bossa、`C7 - F7` 是 Blues
   不是「直的屬七」,和弦看不出差別。所以 `SECTIONS` 的每一筆都要填 `feel`,
   漏填的那組點下去曲風不會換,而且**不會報錯**——很難發現
-- 目前 54 組,按曲風分頁:Pop 20、City Pop 8、Bossa 6、Blues 5、Swing 10、Funk 5。
+- 目前 67 組,按曲風分頁:Pop 23、City Pop 11、Bossa 8、Blues 6、Swing 14、Funk 5。
   同一個曲風裡再按「長度 · 拍號」分區
+- **分組看的是「幾小節」不是「幾顆和弦」**(`partGroups(e.text).length`):
+  Satin Doll 那組是 8 小節 16 顆和弦,照顆數算會被丟進「4 小節」那一區
+- **接段落不能直接用「-」串起來**(`applyForm` 走 `partGroups` + `groupsToText`):
+  只要有一段裡面有 `|`,整串就會被當成小節線的寫法,前面那幾段的 `-`
+  會變成「同一小節裡的和弦」,四小節被擠成一小節
+- **有幾組是真的曲子的和聲**,改到它們之前先知道那是什麼:
+  Swing 的 `Am7 - Dm7 - G7 - Cmaj7 - Fmaj7 - Bm7b5 - E7 - Am7` 是 Fly Me to the Moon 的 A 段、
+  `Cmaj7 - Cmaj7 - D7 - D7 - Dm7 - G7 - Cmaj7 - Cmaj7` 是 Take the A Train、
+  `Dm7 G7 | …` 是 Satin Doll、`Cmaj7 Am7 | Dm7 G7 | …` 是 rhythm changes 的 A 段;
+  Bossa 的 `Cmaj7 - Dm7 - G7 - Em7 - A7 - …` 是 Laufey「From the Start」那一句、
+  `Am7 - Am7 - Dm7 - Dm7 - Bm7b5 - E7 - …` 是 Blue Bossa 的前八小節;
+  Swing 的 `Dm7 - G7 - Cmaj7 - Fmaj7 - Bm7b5 - E7 - Am7 - A7` 是 Autumn Leaves 的 A 段
+- **整串都是 ii-V、從頭到尾沒出現主和弦的進行不能單獨收**:`keyOf` 會判錯調
+  (Satin Doll 只取前四小節會判成 G 大調),整組代理規則跟著錯位。
+  要收到主和弦它才站得住
 - **同一個曲風裡不可以有兩組「只差聲位」的進行**。差別如果是「和弦變化」自己會做的
   (七度 vs 九度、Am vs A7、G vs G/F),那就不是兩組進行,是同一組的兩種彈法,
   只該留一組——**留七和弦那一版**(被指出「POP 那組實際上就是 City Pop 那組」)。

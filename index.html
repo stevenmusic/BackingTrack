@@ -4285,6 +4285,9 @@ const SECTIONS = [
   { text: "Am - F - G - C",            feel: "straight", meter: "4/4" },  // vi-IV-V-I,小室進行
   { text: "Am - F - G - Am",           feel: "straight", meter: "4/4" },  // i-VI-VII-i,搖滾
   { text: "Am - G - F - E7",           feel: "straight", meter: "4/4" },  // 安達魯西亞終止
+  { text: "Am - F - C - G",            feel: "straight", meter: "4/4" },  // vi-IV-I-V,另一個轉位的四和弦循環
+  { text: "C - E7 - F - Fm",           feel: "straight", meter: "4/4" },  // I-III7-IV-iv,借用小調下屬的那一下
+  { text: "C Am | F G",                feel: "straight", meter: "4/4" },  // 五〇年代進行,一小節兩顆(和聲走一倍快)
   { text: "C - G - Am - F - C - G - F - G",                        feel: "straight", meter: "4/4" },  // I-V-vi-IV,後半收在 V
   { text: "C - Am - F - G - C - Am - Dm - G",                      feel: "straight", meter: "4/4" },  // 五〇年代,收在 ii-V
   { text: "C - G - Am - Em - F - C - F - G",                       feel: "straight", meter: "4/4" },  // 卡農進行
@@ -4313,6 +4316,9 @@ const SECTIONS = [
   { text: "Cmaj7 - C#dim7 - Dm7 - G7", feel: "citypop", meter: "4/4" },  // 經過減和弦接 ii-V
   { text: "Fmaj7 - Em7 - Dm7 - G7",    feel: "citypop", meter: "4/4" },  // IV-iii-ii-V,下行
   { text: "Cmaj7 - Bm7b5 - E7 - Am7",  feel: "citypop", meter: "4/4" },  // I 接小調 ii-V-i
+  { text: "Am7 - D7 - Dm7 - G7",       feel: "citypop", meter: "4/4" },  // vi-II7-ii-V,先用副屬再落回 ii
+  { text: "Cmaj7 - Em7 - Fmaj7 - G7",  feel: "citypop", meter: "4/4" },  // I-iii-IV-V,一路往上走
+  { text: "Fmaj7 - Fm7 - Em7 - A7",    feel: "citypop", meter: "4/4" },  // IV-iv-iii-VI7,借用 iv 接 turnaround
   { text: "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",        feel: "citypop", meter: "4/4" },  // 王道的七和弦聲位
   { text: "Cmaj7 - Cmaj7 - Bm7b5 - E7 - Am7 - Am7 - Dm7 - G7",     feel: "citypop", meter: "4/4" },  // 大調起、小調 ii-V 繞一圈
   { text: "Fmaj7 - G7 - Em7 - Am7 - Fmaj7 - G7 - Cmaj7 - Cmaj7",   feel: "citypop", meter: "4/4" },  // 4536 兩次,第二次收在 I
@@ -4323,11 +4329,14 @@ const SECTIONS = [
   { text: "Am7 - Bm7b5 - E7 - Am7",    feel: "latin",   meter: "4/4" },  // 小調 bossa 的 i-ii°-V7-i
   { text: "Dm7 - G7 - Cmaj7 - Am7",    feel: "latin",   meter: "4/4" },  // ii-V-I 收在 vi,繞得回開頭
   { text: "Am7 - Bm7b5 - E7 - Am7 - Dm7 - G7 - Cmaj7 - E7",        feel: "latin",   meter: "4/4" },  // 小調 bossa 一整句(黑色奧菲斯型)
+  { text: "Cmaj7 - Dm7 - G7 - Em7 - A7 - Dm7 - G7 - Cmaj7",        feel: "latin",   meter: "4/4" },  // I-ii-V-iii-VI7-ii-V-I(Laufey「From the Start」那一句)
+  { text: "Am7 - Am7 - Dm7 - Dm7 - Bm7b5 - E7 - Am7 - Am7",        feel: "latin",   meter: "4/4" },  // 小調 i-iv-ii°-V-i(Blue Bossa 的前八小節)
   { text: "Dm7 - G7 - Cmaj7 - Cmaj7 - Dm7 - G7 - Cmaj7 - A7",      feel: "latin",   meter: "4/4" },  // ii-V-I 兩次,收在 VI7
 
   /* ── Blues:shuffle。全是屬七,八分是三連音的 ───────────────── */
   { text: "C7 - F7 - C7 - G7",         feel: "blues",   meter: "4/4" },  // 四小節的藍調 turnaround
   { text: "C7 - F7 - C7 - C7 - F7 - F7 - C7 - G7",                 feel: "blues",   meter: "4/4" },  // 8 小節藍調
+  { text: "C7 - G7 - F7 - F7 - C7 - G7 - C7 - G7",                 feel: "blues",   meter: "4/4" },  // 另一種 8 小節藍調(Key to the Highway 型)
   { text: "C7 - F7 - C7 - C7 - F7 - F7 - C7 - C7 - G7 - F7 - C7 - G7", feel: "blues", meter: "4/4" },  // 12 小節藍調
   { text: "C7 - F7 - C7 - G7",         feel: "blues",   meter: "6/8" },  // 慢藍調的四小節
   { text: "C7 - F7 - C7 - C7 - F7 - F7 - C7 - C7 - G7 - F7 - C7 - G7", feel: "blues", meter: "6/8" },  // 12/8 的慢藍調
@@ -4340,6 +4349,13 @@ const SECTIONS = [
      `keyOf` 會判成 G 大調、整組代理規則跟著錯位;而且 Em9 帶 F♯,
      那個音不在 C 大調裡——大調的 iii 級是 Em7 不是 Em9) */
   { text: "Bm7b5 - E7b9 - Am9 - Am9",  feel: "swing",   meter: "4/4" },  // 小調 ii°-V7-i,爵士最常練的小調終止
+  /* Satin Doll 的 A 段。只取前四小節的話整串都是 ii-V、從頭到尾沒出現主和弦,
+     `keyOf` 會判成 G 大調(G7 與 Em7 都指向 G),整組代理規則跟著錯位——
+     要收到 Cmaj7 它才站得住。A♭m7-D♭7 是 V7 的三全音代理,那是這首的招牌 */
+  { text: "Dm7 G7 | Dm7 G7 | Em7 A7 | Em7 A7 | Am7 D7 | Abm7 Db7 | Cmaj7 | Cmaj7", feel: "swing", meter: "4/4" },  // Satin Doll 的 A 段,一小節兩顆
+  { text: "Cmaj7 Am7 | Dm7 G7 | Em7 A7 | Dm7 G7",                  feel: "swing",   meter: "4/4" },  // rhythm changes 的 A 段,一小節兩顆
+  { text: "Am7 - Dm7 - G7 - Cmaj7 - Fmaj7 - Bm7b5 - E7 - Am7",     feel: "swing",   meter: "4/4" },  // 一路下行五度(Fly Me to the Moon 的 A 段)
+  { text: "Cmaj7 - Cmaj7 - D7 - D7 - Dm7 - G7 - Cmaj7 - Cmaj7",    feel: "swing",   meter: "4/4" },  // I-II7-ii-V-I(Take the A Train 的 A 段)
   { text: "Dm9 - G13 - Cmaj9 - Cmaj9", feel: "swing",   meter: "4/4" },  // 同一個 ii-V-I 換九度聲位
   { text: "Am9 - Dm9 - E7b9 - Am9",    feel: "swing",   meter: "4/4" },  // 爵士小調
   { text: "Dm7 - G7 - Cmaj7 - Fmaj7 - Bm7b5 - E7 - Am7 - A7",      feel: "swing",   meter: "4/4" },  // 大調 ii-V-I 接小調 ii-V-i(落葉型)
@@ -4381,8 +4397,18 @@ function formLetters(){
   return out;
 }
 
+/* 接段落:每一段先切成「每一格一串和弦」,再一起組回文字。
+   **不能直接用「-」串起來**——只要有一段裡面有 `|`,整串就會被當成小節線的寫法,
+   前面那幾段的 `-` 就變成「同一小節裡的和弦」,四小節會被擠成一小節 */
+function partGroups(text){
+  return text.indexOf("|") >= 0
+    ? text.split("|").map(seg => seg.split(/[\s,\-－]+/).filter(Boolean)).filter(a => a.length)
+    : text.split(/[\s,\-－]+/).filter(Boolean).map(t => [t]);
+}
 function applyForm(){
-  chordInput.value = formParts.map(p => p.text).join(" - ");
+  const groups = [];
+  for (const p of formParts) for (const g of partGroups(p.text)) groups.push(g);
+  chordInput.value = groupsToText(groups);
   reparse();
 }
 
@@ -4407,8 +4433,9 @@ function renderExamples(){
   // 整組才會是同一個字級——同一排字忽大忽小比小一點還難看
   const widest = {};
   for (const ex of SECTIONS) {
-    const cs = ex.text.split(" - ");
-    widest[cs.length] = Math.max(widest[cs.length] || 0, ...cs.map(c => c.length));
+    const gs = partGroups(ex.text);
+    // 一格兩顆時那一格要放得下兩個名字,所以字數算整格的
+    widest[gs.length] = Math.max(widest[gs.length] || 0, ...gs.map(g => g.join(" ").length));
   }
   /* 列的一定是「現在這個曲風」的進行:上面那排就是選單,這裡不用再選一次。
      每個曲風的進行本來就不一樣(Pop 20 組、Funk 5 組),全部列出來只會找不到 */
@@ -4422,7 +4449,8 @@ function renderExamples(){
     for (const m of metersHere) {
       const items = mine.filter(e => {
         if (e.meter !== m) return false;
-        const n = e.text.split(" - ").length;
+        // 分組看的是「幾小節」,不是「幾顆和弦」——一小節兩顆的進行不能算成兩小節
+        const n = partGroups(e.text).length;
         return len === 4 ? n <= 4 : (len === 8 ? (n > 4 && n <= 8) : n > 8);
       });
       if (!items.length) continue;
@@ -4444,7 +4472,7 @@ function renderExamples(){
    選了「混合」再挑一組進行,混合就被換成「打點」,聽起來就像混合壞了(被回報過)。
    曲風與拍號是這首歌的事實,疏密不是 */
 function renderExampleChip(box, ex, widest){
-  const chords = ex.text.split(" - ");
+  const chords = partGroups(ex.text).map(g => g.join(" "));
   const b = document.createElement("button");
   b.type = "button";
   b.className = "ex-btn" + (chords.length > 4 ? " long" : "") + (chords.length > 8 ? " xlong" : "")

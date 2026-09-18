@@ -156,7 +156,7 @@ I-VI7-ii-V）和 `Fmaj7 - E7 - Am7 - C7`（city pop）都剛好是 2/4，兩個�
 | 兩格同一顆就補 ii | G7 G7 → Dm7 G7 | Bossa、Swing、City Pop |
 | 經過減和弦 | Cmaj7 Cmaj7 Dm7 → Cmaj7 C♯dim7 Dm7 | Pop、City Pop、Swing |
 | ♯IV 減七 | F7 F7 C7 → F7 F♯dim7 C7 | Blues、Swing、City Pop |
-| 轉位 | C → C/E、G → G/B、G7 → G7/F | 全部 |
+| 轉位 | C → C/E、G → G/B、G7 → G7/F（**只在低音因此級進時才給**） | 全部 |
 | 加色彩音（墊底用） | C → Cmaj7、G7 → G13 | 全部 |
 
 代理是講級數的事，所以要先知道調。判調只看和弦的**骨架音**（根音、三度、五度、大七），

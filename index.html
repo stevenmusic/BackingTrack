@@ -181,6 +181,22 @@ main{
 .style-bar{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;margin-bottom:8px}
 .style-bar .seg-mini{flex-wrap:wrap;min-width:0}
 .style-bar .seg-mini button{padding:5px 10px;font-size:var(--fs-2xs)}
+/* 窄螢幕:六顆一定排不完。**不要讓它們在同一顆膠囊裡換行**——
+   接成一整塊的 seg 換行之後左右兩端是圓角、中間是直角,看起來像壞掉(手機上踩過)。
+   改成一排三顆的格線,每一顆自己有邊框,跟音名那幾排同一個長相。
+   「自動」與狀態字一起掉到下面那行,右邊對齊 */
+@media (max-width:679px){
+  .style-bar{flex-wrap:wrap;gap:6px}
+  .style-bar .seg-mini{
+    flex:1 1 100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;
+    border:0;border-radius:0;overflow:visible;
+  }
+  .style-bar .seg-mini button{
+    border:1px solid var(--line);border-radius:var(--radius-pill);padding:6px 4px;
+  }
+  .style-bar .seg-mini button + button{border-left:1px solid var(--line)}
+  .style-bar .bars{flex:1 1 auto}
+}
 .style-bar .bars{margin-left:auto;text-align:right}
 /* 拍號 + 速度移調綁成一組:右欄用 space-between 分配剩下的高度,
    不綁的話這兩塊中間會被撐開一道縫,但它們講的是同一件事 */
@@ -396,7 +412,8 @@ main{
   width:100%;min-height:42px;padding:6px 5px;cursor:pointer;
   background:var(--surface-inset);border:1px solid var(--line);border-radius:var(--radius-md);
   font-family:"Noto Serif TC",serif;font-size:var(--fs-lg);font-weight:600;
-  color:var(--ivory);letter-spacing:.02em;text-align:center;word-break:break-all;
+  color:var(--ivory);letter-spacing:.02em;text-align:center;
+  container-type:inline-size;
   transition:background-color .12s,border-color .12s,color .12s;
 }
 .bar-chip:hover,.bar-chip:focus-visible{border-color:var(--gold);outline:none}
@@ -412,12 +429,15 @@ main{
 .bars-grid.dense .bar-chip .num{top:1px;left:4px;font-size:9px}
 /* 接成 A A B B 之後動不動就 24、32 小節(八小節的段落接四次就 32 格)。
    四欄的話 32 格要排八列,整頁就被撐開了,所以再密一階:六欄或八欄、字再小一號 */
-.bars-grid.denser .bar-chip{min-height:24px;font-size:var(--fs-xs);padding:2px 1px;line-height:1.25;container-type:inline-size}
+.bars-grid.denser .bar-chip{min-height:24px;font-size:var(--fs-xs);padding:2px 1px;line-height:1.25}
 .bars-grid.denser .bar-chip .num{top:0;left:3px;font-size:8px}
-/* 六欄、八欄時一格只剩三、四十 px,Cmaj7 放不下。跟範例膠囊同一招:
-   字級 = 格子寬 ÷ 字數,再跟原本的字級取小的,寧可小一號也不要斷字 */
-.bars-grid.denser .bar-name{
-  font-size:min(var(--fs-xs), calc((100cqi - 4px) / (0.76 * var(--len,3))));
+/* 放不下就縮字,**絕對不要斷行**。`B♭m7/D♭` 斷成兩行會被看成兩個和弦
+   (手機上四格的時候就會踩到,不是只有很多格的時候)。
+   `1em` 是這一格自己的字級,所以同一條規則就涵蓋 42 / 28 / 24 px 三階,
+   `100cqi` 是格子的內容寬(不含內距),再扣 6px 留餘裕 */
+.bar-name{
+  white-space:nowrap;
+  font-size:min(1em, calc((100cqi - 6px) / (0.76 * var(--len,3))));
 }
 .bar-chip .num{
   position:absolute;top:3px;left:7px;
@@ -1736,6 +1756,13 @@ function qualOf(c){
   return "other";                                // sus 之類的不動
 }
 function nameOf(pc, suffix){ return PAL_ROOTS[((pc % 12) + 12) % 12] + (suffix || ""); }
+/* 把 bass 放到低音之後,低音線走到下一格是不是級進(一或兩個半音)。
+   轉位存在的理由就是接低音線,不級進的轉位只是把和弦的重心弄歪 */
+function stepToNext(x, bassPc){
+  if (!x.next) return false;
+  const d = Math.abs(((bassPc - x.nextBassPc) % 12 + 12) % 12);
+  return d === 1 || d === 2 || d === 10 || d === 11;
+}
 
 /* 加色彩音那一條(墊底用的)。查的是原本寫的性質,查不到就不動 */
 const EXT_TABLE = {
@@ -1779,7 +1806,7 @@ const ALL_FEELS = ["straight", "citypop", "latin", "blues", "swing", "funk"];
 const SUB_RULES = [
   /* I → vi / iii:最基本的三度代理,同一個功能換一個顏色 */
   { id: "I→vi",  feels: ["straight", "citypop", "latin", "swing"],
-    ok: x => x.d === 0 && x.q === "maj", to: x => nameOf(x.key + 9, "m7") },
+    ok: x => x.d === 0 && x.q === "maj" && x.nd !== 9, to: x => nameOf(x.key + 9, "m7") },
   { id: "I→iii", feels: ["straight", "citypop", "latin", "swing"],
     ok: x => x.d === 0 && x.q === "maj" && x.nd !== 4, to: x => nameOf(x.key + 4, "m7") },
   /* IV ↔ ii:也是三度代理,下屬功能的兩張臉 */
@@ -1787,8 +1814,11 @@ const SUB_RULES = [
     ok: x => x.d === 5 && x.q === "maj" && x.nd !== 2, to: x => nameOf(x.key + 2, "m7") },
   { id: "ii→IV", feels: ["straight", "citypop", "latin"],
     ok: x => x.d === 2 && x.q === "min" && x.nd !== 5, to: x => nameOf(x.key + 5, "maj7") },
+  /* vi → I。**這首要真的出現過 I 才給**:`Am - F - G - Am` 的 Am 是主和弦,
+     把它換成 Cmaj7 等於把主音抽掉,整段的重心就沒了 */
   { id: "vi→I",  feels: ["straight", "citypop"],
-    ok: x => x.d === 9 && x.q === "min" && x.nd !== 0, to: x => nameOf(x.key, "maj7") },
+    ok: x => x.d === 9 && x.q === "min" && x.nd !== 0 && x.hasTonic,
+    to: x => nameOf(x.key, "maj7") },
   /* 借用小調的 iv:F → Fm,流行歌最愛的那一下(「借來的憂傷」) */
   { id: "IV→iv", feels: ["straight", "citypop"],
     ok: x => x.d === 5 && x.q === "maj", to: x => nameOf(x.key + 5, "m") },
@@ -1819,13 +1849,18 @@ const SUB_RULES = [
   { id: "pass°",  feels: ["straight", "citypop", "swing"],
     ok: x => x.prevSame && x.next && ((x.rootPc + 2) % 12) === x.nextRootPc,
     to: x => nameOf(x.rootPc + 1, "dim7") },
-  /* 一轉:低音走三音,整排低音線就順了(C → C/E、G → G/B) */
+  /* 一轉:低音走三音(C → C/E、G → G/B)。
+     **只有在低音因此走到下一格是級進時才成立**——轉位的用處就是把低音線接順,
+     隨便把三音丟到低音只會得到一條亂跳的低音線(被回報「很多 slash chord 很難聽」)。
+     `C G/B Am` 的 B→A 是級進 ✓;`Cmaj7/E` 後面接 Cmaj7 的 E→C 是三度 ✗ */
   { id: "轉位",  feels: ALL_FEELS,
-    ok: x => x.q === "maj" || x.q === "min",
+    ok: x => (x.q === "maj" || x.q === "min") && stepToNext(x, x.rootPc + (x.q === "min" ? 3 : 4)),
     to: x => x.full + "/" + nameOf(x.rootPc + (x.q === "min" ? 3 : 4)) },
-  /* 屬七的三轉:G → G7/F,低音下行接到 I 的三音 */
+  /* 屬七的三轉:G → G7/F,低音下行接到下一格(王道的 Fmaj7 - G/F - Em7 就是它,
+     F→E 級進)。一樣要級進才給 */
   { id: "V7/4",  feels: ALL_FEELS,
-    ok: x => (x.q === "maj" || x.q === "dom") && x.next && ((x.rootPc + 5) % 12) === x.nextRootPc,
+    ok: x => (x.q === "maj" || x.q === "dom") && x.next &&
+             ((x.rootPc + 5) % 12) === x.nextRootPc && stepToNext(x, x.rootPc + 10),
     to: x => nameOf(x.rootPc, "7") + "/" + nameOf(x.rootPc + 10) },
   /* 墊底的那條:只加色彩音。上面都不成立時至少換個聲位 */
   { id: "加色彩音", feels: ALL_FEELS, ext: true,
@@ -1845,10 +1880,14 @@ function subCandidates(bars, i, key, pcs){
     full: c.text,        // 整串(含性質)。轉位要用它,只拿根音會把 Dm7 變成 D/F
     next: next && next.ok ? next : null,
     nextRootPc: next && next.ok ? next.chord.rootPc : -1,
+    nextBassPc: next && next.ok ? next.chord.bassPc : -1,
     nd: next && next.ok ? ((next.chord.rootPc - key) % 12 + 12) % 12 : -1,
     nq: next && next.ok ? qualOf(next.chord) : "",
     nextSame: !!(next && next.ok && next.chord.text === c.text) && bars.length > 1,
     prevSame: !!(prev && prev.ok && prev.chord.text === c.text) && bars.length > 1,
+    // 這首有沒有真的出現過主和弦(I)。小調的進行常常從頭到尾沒有 I
+    hasTonic: bars.some(bb => bb.ok && bb.chord.rootPc === key &&
+                              (qualOf(bb.chord) === "maj" || qualOf(bb.chord) === "dom")),
   };
   if (x.q === "other" || x.q === "dim") return [];
   const out = [];

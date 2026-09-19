@@ -272,6 +272,31 @@ main{
 .examples::-webkit-scrollbar{width:8px}
 .examples::-webkit-scrollbar-thumb{background:var(--muted);border-radius:4px}
 .examples::-webkit-scrollbar-thumb:hover{background:var(--gold)}
+/* 小節數是**下拉**不是膠囊。原本是 [4 小節][8 小節][12 小節] 三顆,
+   那是照「練習循環」訂的;但拿來練別人的歌時常常是 16 / 24 / 32 小節,
+   三顆蓋不住,只能自己在文字框貼一長串。
+   選單反而比三顆按鈕窄,旁邊的段落庫與清空不會被擠到第二排。
+   外觀照抄 `.seg-mini`(同樣的邊框、圓角、字級、顏色變數),不要另外發明一套 */
+.len-wrap{position:relative;display:inline-flex;align-items:center;flex:0 0 auto}
+/* 箭頭自己用邊框畫,不要塞 data-URI 的 SVG:那裡面的顏色沒辦法走變數,
+   淺色主題就會變成看不見的一團 */
+.len-wrap::after{
+  content:"";position:absolute;right:9px;top:50%;width:5px;height:5px;
+  border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);
+  transform:translateY(-70%) rotate(45deg);pointer-events:none;
+}
+.len-sel{
+  appearance:none;-webkit-appearance:none;
+  border:1px solid var(--line);border-radius:var(--radius-pill);
+  background:var(--surface-inset);color:var(--muted-bright);
+  font-family:inherit;font-size:var(--fs-2xs);line-height:1.35;
+  padding:4px 23px 4px 10px;cursor:pointer;
+  transition:color .15s,border-color .15s;
+}
+.len-sel:hover,.len-sel:focus-visible{color:var(--ivory);border-color:var(--gold);outline:none}
+/* **展開的那張清單不要自己上色**:它是作業系統畫的,`background` 給半透明的
+   `--surface-inset` 只會合成出一片髒的底。兩個主題都已經宣告了 `color-scheme`
+   (dark / light),原生選單本來就會跟著換 —— 那正是 `color-scheme` 的用途 */
 .seg-mini{display:flex;border:1px solid var(--line);border-radius:var(--radius-pill);overflow:hidden}
 .seg-mini button{
   border:none;background:transparent;color:var(--muted-bright);
@@ -891,12 +916,11 @@ try {
       <!-- 段落庫:預設收起來,點開才佔版面。挑長度、挑要接幾次,點一下就接到形式後面 -->
       <div class="ex-wrap">
       <div class="ex-head">
-        <!-- 先決定幾小節,再一格一格填。這一排也順手決定段落庫要看哪一組 -->
-        <div class="seg-mini" id="lenSeg">
-          <button type="button" data-len="4" aria-pressed="false" data-i18n="len4">4 小節</button>
-          <button type="button" data-len="8" aria-pressed="false" data-i18n="len8">8 小節</button>
-          <button type="button" data-len="12" aria-pressed="false" data-i18n="len12">12 小節</button>
-        </div>
+        <!-- 先決定幾小節,再一格一格填。選項是 4 的倍數到 40,見 `updateLenSeg` -->
+        <span class="len-wrap">
+          <select class="len-sel" id="lenSel" data-i18n-attr="aria-label:barsLabel"
+                  aria-label="小節數"></select>
+        </span>
         <button class="btn ghost ex-toggle" id="secToggle" type="button" aria-expanded="false" aria-controls="exPanel">
           <svg class="caret" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
           <span id="secToggleText">段落庫</span>
@@ -1146,8 +1170,6 @@ const I18N = {
     barCountSep: " ・ ",
     barCountTr: "下面是移調 {t} 的和弦",
     styleLabel: "伴奏樣式",
-    len4: "4 小節",
-    len8: "8 小節",
     formClear: "清空",
     secAdd: "接上去 ×{n}",
     stylePad: "墊底",
@@ -1165,7 +1187,6 @@ const I18N = {
     countInLabel: "先數兩小節",
     loopLabel: "循環播放",
     palDel: "刪一格",
-    len12: "12 小節",
     repLabel: "接幾次",
     secLenGroup: "{n} 小節",
     secLenMeterGroup: "{n} 小節 ・ {m}",
@@ -1266,8 +1287,6 @@ const I18N = {
     barCountSep: " \u00b7 ",
     barCountTr: "chords below are transposed {t}",
     styleLabel: "Comping style",
-    len4: "4 bars",
-    len8: "8 bars",
     formClear: "Clear",
     secAdd: "Append ×{n}",
     stylePad: "Sustained",
@@ -1285,7 +1304,6 @@ const I18N = {
     countInLabel: "Two-bar count-in",
     loopLabel: "Loop",
     palDel: "Delete bar",
-    len12: "12 bars",
     repLabel: "Repeat",
     secLenGroup: "{n} bars",
     secLenMeterGroup: "{n} bars \u30fb {m}",
@@ -6642,7 +6660,7 @@ function palQual(suffix){
   selectBar(i);
 }
 
-/* 小節數:先決定 4 / 8 / 12 格,再一格一格填。
+/* 小節數:先決定幾格(下拉,4 的倍數到 40),再一格一格填。
    變多就把現有的進行重複貼滿(4 → 8 就是同一句唱兩次),變少就截掉;
    一格都沒有的話開一排 C 出來讓人改 */
 function setBarCount(n){
@@ -6715,14 +6733,35 @@ function splitBar(){
   selectBar(targetBar());
 }
 
-/* 小節數那一排亮的是「現在幾小節」,不是「要看哪一組段落」 */
+/* 小節數:**4 的倍數,到 40**。選的是「現在幾小節」,不是「要看哪一組段落」。
+   為什麼是 4 的倍數:樂句就是四小節一句,小節格也是一排四格
+   (超過 12 格才變一排八格),所以 4 的倍數永遠排得整齊。
+   為什麼停在 40:一排八格就是五排,再往上版面收不住;
+   `MAX_BARS` 是 64,但那已經不是「一首歌的長度」而是把整首曲子打進來了 */
+const LEN_STEP = 4, LEN_MAX = 40;
 function updateLenSeg(){
-  const seg = document.getElementById("lenSeg");
-  if (!seg) return;
+  const sel = document.getElementById("lenSel");
+  if (!sel) return;
   const n = parsed.bars.length;
-  for (const btn of seg.children) {
-    btn.setAttribute("aria-pressed", +btn.dataset.len === n ? "true" : "false");
+  const vals = [];
+  for (let v = LEN_STEP; v <= LEN_MAX; v += LEN_STEP) vals.push(v);
+  /* **自己打字打得出不是 4 的倍數的長度**(貼一段 5 小節的進行、刪掉一格),
+     那時候選單還是要講實話:把現在這個數字插進去排好。
+     漏掉的話它會停在別的數字上,看起來就像「我明明是 5 小節,它寫 4」 */
+  if (n > 0 && vals.indexOf(n) < 0) { vals.push(n); vals.sort((a, b) => a - b); }
+  /* 清單沒變就不要重畫:重畫會把展開中的選單收掉,而且切語言時才需要換字 */
+  const key = vals.join(",") + "/" + currentLang;
+  if (sel.dataset.key !== key) {
+    sel.innerHTML = "";
+    for (const v of vals) {
+      const o = document.createElement("option");
+      o.value = String(v);
+      o.textContent = T("secLenGroup", { n: v });
+      sel.appendChild(o);
+    }
+    sel.dataset.key = key;
   }
+  sel.value = n > 0 ? String(n) : "";
 }
 
 function updateBarTools(){
@@ -7247,9 +7286,10 @@ $("loopToggle").addEventListener("click", () => {
   saveState();
 });
 
-for (const btn of $("lenSeg").children) {
-  btn.addEventListener("click", () => setBarCount(+btn.dataset.len));
-}
+$("lenSel").addEventListener("change", (e) => {
+  const n = +e.target.value;
+  if (n > 0) setBarCount(n);
+});
 for (const btn of $("repSeg").children) {
   btn.addEventListener("click", () => { secRepeat = +btn.dataset.rep; renderExamples(); });
 }

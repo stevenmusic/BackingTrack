@@ -451,6 +451,31 @@ main{
 }
 .pal-foot{display:flex;align-items:center;justify-content:space-between;gap:7px 10px;margin-top:5px;flex-wrap:wrap}
 .pal-hint{font-size:var(--fs-2xs);color:var(--muted);line-height:1.6;text-wrap:pretty}
+/* ── 小節的格線編輯條 ──────────────────────────────────────────
+   **它接的是原本那行提示字的位置**,不是自己多一排:那一列本來就在,
+   換成它整列高度不變(量過 1280×720 還是 35px)——
+   而版面是照「剛好塞進一個畫面」量過的,多一排就要重量十四種尺寸 */
+.bar-lane{
+  flex:1 1 150px;min-width:0;display:grid;gap:0;
+  height:26px;border:1px solid var(--line);border-radius:var(--radius-sm);
+  background:var(--surface-inset);overflow:hidden;
+}
+.lane-cell{
+  position:relative;min-width:0;border:0;padding:0;cursor:pointer;
+  background:transparent;font:inherit;color:var(--muted-bright);
+  font-size:var(--fs-2xs);font-family:"Noto Serif TC",serif;
+  display:flex;align-items:center;justify-content:center;
+  white-space:nowrap;overflow:hidden;
+}
+/* 一顆和弦的第一格才畫左邊那條線,所以看到的就是「和弦在哪裡換」 */
+.lane-cell.start{border-left:2px solid var(--gold);color:var(--ivory)}
+.lane-cell.start:first-child{border-left:0}
+/* 拍點的格線畫淡一點:看得到拍子在哪,但不跟和弦的分界搶 */
+.lane-cell.beat:not(.start){border-left:1px solid var(--line)}
+.lane-cell.sel{background:var(--surface-inset-hi);color:var(--gold-bright)}
+.lane-cell:hover:not(:disabled){background:var(--card-tint)}
+.lane-cell:disabled{cursor:default}
+.lane-empty{flex:1 1 150px;font-size:var(--fs-2xs);color:var(--muted);line-height:1.6}
 
 /* ── 小節格:每格一個和弦,播到哪一格就亮哪一格 ───────────── */
 .bars-grid{
@@ -1014,12 +1039,14 @@ try {
         <!-- 底列就是「這一格要怎麼改」:左邊講選了哪一格,右邊是搬移、插入、刪掉、復原。
              跟調色盤擺在一起,因為它們動到的是同一格 -->
         <div class="pal-foot">
-          <span class="pal-hint" id="palHint"></span>
+          <!-- **正在改的那一小節攤成格線**(像 DAW 的軌道)。
+               點格線就切一刀、再點同一條就併回去——加減和弦與「和弦換在哪裡」
+               變成同一個動作,不必去文字框打「/」「.」 -->
+          <div class="bar-lane" id="barLane" role="group"></div>
           <div class="bar-tools-btns">
             <button class="tool-btn" id="barDup" type="button" data-i18n="barDupBtn">插一格</button>
             <button class="tool-btn" id="barDel" type="button" data-i18n="barDelBtn">刪一格</button>
             <!-- 一小節切成兩顆和弦 / 合併回一顆。沒有它就只能自己在文字框打「|」 -->
-            <button class="tool-btn" id="barSplit" type="button" data-i18n="barSplitBtn">切兩顆</button>
             <button class="tool-btn" id="barUndo" type="button" data-i18n="barUndoBtn">復原</button>
           </div>
         </div>
@@ -1233,9 +1260,14 @@ const I18N = {
     barsLabel: "小節數",
     secToggle: "段落庫 {n} 組",
     secToggleOpen: "收起段落庫",
-    barSplitBtn: "切兩顆",
-    barSplitLabel: "把這一格切成兩顆和弦(各佔半小節)",
-    barMergeLabel: "把這一格合併回一顆和弦",
+    barSplitBtn: "加一顆",
+    barSplitLabel: "在這一格裡再加一顆和弦(最多 {n} 顆,加完平分)",
+    lenMinusLabel: "這一顆縮短一格(時間讓給隔壁那一顆)",
+    lenPlusLabel: "這一顆加長一格(跟隔壁那一顆借)",
+    lenBeats: "{n} 拍",
+    laneCut: "在這裡換和弦(切一刀)",
+    laneMerge: "把這裡的和弦併回前一顆",
+    laneLocked: "這裡切不下去(每顆至少一拍,一小節最多幾拍就幾顆)",
     barDupBtn: "插一格",
     barDelBtn: "刪一格",
     barUndoBtn: "復原",
@@ -1350,9 +1382,14 @@ const I18N = {
     barsLabel: "Bars",
     secToggle: "Sections ({n})",
     secToggleOpen: "Hide sections",
-    barSplitBtn: "Split",
-    barSplitLabel: "Split this bar into two chords (half a bar each)",
-    barMergeLabel: "Merge this bar back into one chord",
+    barSplitBtn: "Add chord",
+    barSplitLabel: "Add another chord to this bar (up to {n}; splits evenly)",
+    lenMinusLabel: "Shorten this chord by one step (gives the time to its neighbour)",
+    lenPlusLabel: "Lengthen this chord by one step (takes it from its neighbour)",
+    lenBeats: "{n} beats",
+    laneCut: "Change chord here (cut)",
+    laneMerge: "Merge this chord back into the previous one",
+    laneLocked: "Can't cut here (each chord needs a beat; at most one chord per beat)",
     barDupBtn: "Insert",
     barDelBtn: "Delete",
     barUndoBtn: "Undo",
@@ -7227,18 +7264,10 @@ function targetBar(){
   return n ? 0 : -1;
 }
 
-function updatePalHint(){
-  const el = $("palHint");
-  const flat = flatChords(parsed.bars);
-  const i = selectedBar;
-  if (i >= 0 && i < flat.length) {
-    el.textContent = T("palHintSel", {
-      n: flat[i].bar + 1, chord: chordDisplay(flat[i].chord) || flat[i].text });
-  } else {
-    el.textContent = T("palHintIdle");
-  }
-  updateBarTools();
-}
+/* 原本這裡是一行字寫「正在改第幾格的哪一顆」。那行字被**格線編輯條**取代了
+   ——它把同一件事畫出來(選到的那一顆整段反白),而且還可以點。
+   `updateBarTools()` 裡會重畫它,所以這裡只要轉手過去 */
+function updatePalHint(){ updateBarTools(); }
 
 /* 點音名:換掉正在編輯那一格的根音,性質與轉位低音都留著。
    **不會自己往後跳一格**——改完第 3 格還是停在第 3 格,要改下一格就點下一格。
@@ -7330,15 +7359,188 @@ function dupBar(){
    做不到:除了自己在文字框打 `|`,沒有別的路可以把一小節變成兩顆和弦。
    切:把正在編輯那一格複製成兩顆(再去改第二顆);
    合:兩顆變回一顆(留第一顆) */
-function splitBar(){
+/* ── 在這一格裡**再加一顆和弦** ────────────────────────────────
+   原本這顆按鈕是「切兩顆 / 合併」的二選一切換,所以**三顆與四顆永遠做不到**
+   ——一小節四拍最多四顆,但 UI 只給得到兩顆,要三顆只能自己去文字框打。
+
+   改成「加一顆」之後跟**刪一格**正好成對:刪一格在多和弦的小節裡本來就是
+   刪掉那一顆(不是整格),所以一個加一個減,1↔4 之間都走得到,
+   而且不必為了「合併」再多一顆按鈕。
+
+   加完**整格平分**(清掉原本的時值),長度再用旁邊的增減去調——
+   先決定幾顆、再決定各佔多久,那是兩件事 */
+function addChordToBar(){
   const g = barGroups(), p = posOf(targetBar());
   if (!p) return;
-  pushUndo();
   const cap = Math.max(1, beatsInBar());
-  if (g[p.bar].length > 1) g[p.bar] = [g[p.bar][0]];        // 合併
-  else if (cap > 1) g[p.bar] = [g[p.bar][0], g[p.bar][0]];  // 切成兩顆
+  const bar = parsed.bars[p.bar];
+  const now = bar ? bar.chords.length : 1;
+  if (now >= cap) return;                       // 四拍最多四顆
+  pushUndo();
+  const texts = bar.chords.map(c => c.text);
+  texts.splice(Math.min(texts.length, chordIndexAt(p) + 1), 0, texts[chordIndexAt(p)] || "C");
+  g[p.bar] = texts;                             // 平分:不帶任何延長記號
   setGroups(g);
   selectBar(targetBar());
+}
+
+/* token 串裡的位置 → 這是第幾顆**和弦**(跳過延長記號) */
+function chordIndexAt(p){
+  const raw = (parsed.bars[p.bar] && parsed.bars[p.bar].raw) || [];
+  let ci = 0;
+  for (let j = 0; j < p.idx && j < raw.length; j++) if (!isHold(raw[j])) ci++;
+  return ci;
+}
+
+/* 把「這一顆佔幾格」寫回 token。一顆和弦本身就是一拍,
+   多出來的用 `/`(一拍)與 `.`(一格)補上去 */
+function lenTokens(text, units){
+  const cd = chordDiv(), out = [text];
+  let extra = Math.max(0, units - cd);
+  while (extra >= cd) { out.push("/"); extra -= cd; }
+  while (extra > 0) { out.push("."); extra--; }
+  return out;
+}
+
+/* ── 正在改的那一顆和弦加長/縮短一格 ──────────────────────────
+   一格 = 八分音符(4/4 與 3/4 是半拍、6/8 是三分之一拍)。
+   **借的是隔壁那一顆的時間**(有下一顆就跟下一顆借,沒有就跟上一顆),
+   所以整格的總長度永遠不變——不然調一顆會把整首的小節長度弄亂。
+
+   **下限是不對稱的**,而且那是文字語法決定的不是我挑的:
+   一顆和弦寫出來的起跳就是**一拍**(`C` 本身 = 一拍,`/` `.` 只能往上加),
+   所以**前面那幾顆最少一拍**;但**最後一顆是負責把小節補滿的那顆**,
+   它的長度是「整格減掉前面」算出來的,所以可以短到**一格**。
+
+   第一版把下限一律訂成一拍,結果 6/8 兩顆和弦(兩大拍)完全動不了、
+   4/4 四顆也全部鎖死——那正是最需要調的情況。
+   照語法真正寫得出來的範圍訂,才不會寫出存檔之後讀不回來的東西 */
+function minUnits(i, n){ return i === n - 1 ? 1 : chordDiv(); }
+function nudgeLen(d){
+  const i = targetBar(), p = posOf(i);
+  if (!p) return;
+  const bar = parsed.bars[p.bar];
+  if (!bar || bar.chords.length < 2) return;    // 一格一顆沒有長度可調
+  const sp = spansOf(bar), ci = chordIndexAt(p), cd = chordDiv();
+  const n = sp.length;
+  const other = ci + 1 < n ? ci + 1 : ci - 1;
+  if (other < 0) return;
+  const mine = sp[ci].w + d, theirs = sp[other].w - d;
+  if (mine < minUnits(ci, n) || theirs < minUnits(other, n)) return;
+  sp[ci].w = mine; sp[other].w = theirs;
+  pushUndo();
+  const g = barGroups();
+  g[p.bar] = sp.reduce((acc, x) => acc.concat(lenTokens(x.text, x.w)), []);
+  setGroups(g);
+  selectBar(i);
+}
+
+/* ── 點一條格線:沒有和弦在那裡就**切一刀**,有就**併回去** ──────
+   這是整個編輯的核心動作,像 DAW 在軌道上切 region:
+   一個動作同時做到「加一顆和弦」「刪一顆和弦」與「換和弦的位置」,
+   而且**看得到拍子在哪**,不必先懂 `/` `.` 那套文字語法。
+
+   合法性**要在畫的時候就算好**(`laneAction`),不能等按下去才擋:
+   按鈕亮著卻按不動比停用還難懂。兩條限制:
+   - 顆數不能超過拍數(四拍最多四顆)
+   - **除了最後一顆,每一顆至少一拍**(見 `minUnits`:文字語法寫不出
+     比一拍短的非結尾和弦,切出來會存不回去) */
+function laneAction(k){
+  const p = posOf(targetBar());
+  const bar = p && parsed.bars[p.bar];
+  if (!bar || k <= 0) return null;                    // 小節開頭本來就是分界
+  const cd = chordDiv(), cap = Math.max(1, beatsInBar());
+  const sp = spansOf(bar);
+  const starts = sp.map(x => Math.round(x.fromBeat * cd));
+  const at = starts.indexOf(k);
+  if (at > 0) return { kind: "merge", at };           // 這裡有分界 → 併回前一顆
+  if (sp.length >= cap) return null;                  // 滿了,不能再切
+  let ci = 0;
+  for (let j = 0; j < starts.length; j++) if (starts[j] < k) ci = j;
+  const before = k - starts[ci], after = sp[ci].w - before;
+  const n2 = sp.length + 1;
+  // 切完之後 ci 一定不是最後一顆;ci+1 只有在原本 ci 是最後一顆時才是
+  if (before < minUnits(ci, n2) || after < minUnits(ci + 1, n2)) return null;
+  return { kind: "cut", ci, before, after };
+}
+function toggleBoundary(k){
+  const act = laneAction(k);
+  if (!act) return;
+  const p = posOf(targetBar());
+  const bar = parsed.bars[p.bar], sp = spansOf(bar);
+  const lens = sp.map(x => x.w), texts = sp.map(x => x.text);
+  let sel;
+  if (act.kind === "merge") {
+    lens[act.at - 1] += lens[act.at];
+    lens.splice(act.at, 1); texts.splice(act.at, 1);
+    sel = act.at - 1;
+  } else {
+    lens[act.ci] = act.before;
+    lens.splice(act.ci + 1, 0, act.after);
+    texts.splice(act.ci + 1, 0, texts[act.ci]);
+    sel = act.ci + 1;
+  }
+  pushUndo();
+  const g = barGroups();
+  g[p.bar] = lens.reduce((acc, L, j) => acc.concat(lenTokens(texts[j], L)), []);
+  setGroups(g);
+  // 選到剛剛動到的那一顆(切完要停在新的那一顆上,接著就能改它)
+  let flat = 0;
+  for (let bi = 0; bi < p.bar; bi++) flat += parsed.bars[bi].chords.length;
+  const cnt = (parsed.bars[p.bar] || { chords: [] }).chords.length;
+  selectBar(flat + Math.max(0, Math.min(sel, cnt - 1)));
+}
+
+/* 畫格線條。一格 = 一個八分音符(4/4 八格、3/4 與 6/8 六格) */
+function renderBarLane(){
+  const lane = $("barLane");
+  if (!lane) return;
+  lane.innerHTML = "";
+  const p = posOf(targetBar());
+  const bar = p && parsed.bars[p.bar];
+  if (!bar) {
+    lane.classList.add("lane-empty");
+    lane.textContent = T("palHintIdle");
+    lane.style.gridTemplateColumns = "";
+    return;
+  }
+  lane.classList.remove("lane-empty");
+  const cd = chordDiv(), N = chordUnits(), sp = spansOf(bar);
+  const starts = sp.map(x => Math.round(x.fromBeat * cd));
+  const selCi = chordIndexAt(p);
+  lane.style.gridTemplateColumns = "repeat(" + N + ",minmax(0,1fr))";
+  const wide = (lane.clientWidth || 0) / N >= 34;
+  for (let k = 0; k < N; k++) {
+    const at = starts.indexOf(k);
+    let ci = 0;
+    for (let j = 0; j < starts.length; j++) if (starts[j] <= k) ci = j;
+    const cell = document.createElement("button");
+    cell.type = "button";
+    cell.className = "lane-cell"
+      + (at >= 0 ? " start" : "")
+      + (k % cd === 0 ? " beat" : "")
+      + (ci === selCi ? " sel" : "");
+    /* 只有一顆和弦的第一格寫名字,後面的格子留白——那就是「這顆撐到這裡」。
+       **格子太窄就不要寫**:量到有些尺寸整條只有 174px、一格 21px,
+       `Fmaj7` 只會被切成一個字母,那比不寫還糟(和弦名被切掉會被看成別的和弦,
+       那是這份文件自己訂的規則)。名字在上面的小節格本來就看得到,
+       這一條的工作是「和弦在哪裡換」 */
+    if (at >= 0 && wide) cell.textContent = sp[at].text;
+    const act = laneAction(k);
+    cell.disabled = !act;
+    cell.setAttribute("title", act ? T(act.kind === "merge" ? "laneMerge" : "laneCut")
+                                   : T("laneLocked"));
+    cell.setAttribute("aria-label", cell.getAttribute("title"));
+    if (act) cell.addEventListener("click", () => toggleBoundary(k));
+    lane.appendChild(cell);
+  }
+}
+
+/* 「1½ 拍」那串字。6/8 一格是三分之一拍,所以分母要跟著拍號走 */
+function lenLabel(units){
+  const cd = chordDiv(), whole = Math.floor(units / cd), r = units % cd;
+  const frac = r === 0 ? "" : cd === 3 ? (r === 1 ? "⅓" : "⅔") : "½";
+  return (whole || !frac ? String(whole) : "") + frac;
 }
 
 /* 小節數:**4 的倍數,到 40**。選的是「現在幾小節」,不是「要看哪一組段落」。
@@ -7387,10 +7589,14 @@ function updateBarTools(){
   set("barDel",   !n,                   T("barDelLabel"));
   {
     const p = posOf(i >= 0 ? i : 0);
-    const two = !!(p && parsed.bars[p.bar] && parsed.bars[p.bar].chords.length > 1);
-    set("barSplit", !n || beatsInBar() < 2, two ? T("barMergeLabel") : T("barSplitLabel"));
-    const el = $("barSplit");
-    if (el) el.classList.toggle("on", two);
+    const bar = p && parsed.bars[p.bar];
+    const cnt = bar ? bar.chords.length : 1;
+    /* 原本這裡還有一顆「切兩顆 / 合併」。**格線編輯條把它涵蓋掉了**
+       (點格線就是切、再點同一條就是併),照「加按鈕之前先問沒有它做不做得到」
+       那條規則它就該收掉——順便把那 60px 的寬度讓給格線條 */
+    /* 長度增減:一格一顆的時候沒有東西可以調(整格就是它),所以停用。
+       數字顯示的是**算完的時值**不是寫的權重 */
+    renderBarLane();
   }
   set("barUndo",  !undoStack.length,    undoStack.length ? T("barUndoLabel") : T("barUndoNone"));
 }
@@ -7913,7 +8119,7 @@ $("formClear").addEventListener("click", () => {
 /* 小節工具列 */
 $("barDup").addEventListener("click", dupBar);
 $("barDel").addEventListener("click", palDelete);
-$("barSplit").addEventListener("click", splitBar);
+
 $("barUndo").addEventListener("click", undoEdit);
 
 /* 段落庫的開關。收起來是預設:清單佔掉左邊將近一半的版面,
@@ -8031,6 +8237,9 @@ document.addEventListener("keydown", (e) => {
   if (!n) return;
   if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
     e.preventDefault();
+    /* **Shift + 左右是改長度**,不是換選取。一格一顆的時候 `nudgeLen` 自己會回頭,
+       所以不必在這裡判斷 */
+    if (e.shiftKey) { nudgeLen(e.key === "ArrowRight" ? 1 : -1); return; }
     const cur = targetBar();
     selectBar(Math.max(0, Math.min(n - 1, cur + (e.key === "ArrowRight" ? 1 : -1))));
     return;

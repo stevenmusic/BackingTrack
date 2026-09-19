@@ -2397,6 +2397,7 @@ let ctx = null, masterGain = null, limiter = null, outGain = null, softClip = nu
 let reverbBus = null, drumBus = null, bassBus = null;
 /* 伴奏團的其他成員:吉他、鍵盤鋪底(風琴/弦樂)、打擊小物 */
 let combBus = null, padBus = null, percBus = null, drumGlue = null, roomBus = null;
+let masterHp = null, masterGlue = null, masterSat = null;
 const BASS_BUS_LEVEL = 0.95;
 /* 上一顆 808 低音彈到哪個音、什麼時候彈的。滑音要靠它 */
 const last808 = { midi: -1, at: -99 };
@@ -2464,7 +2465,11 @@ function ensureAudio(){
     limiter.attack.value = 0.001;
     limiter.release.value = 0.25;
     outGain = ctx.createGain();
-    outGain.gain.value = 1.25;
+    /* 1.08 不是 1.25:母帶鏈補上黏著壓縮與飽和之後,同一個 outGain
+       量到的 RMS 從 −12.4 跳到 −10.2——那已經是商業母帶的密度,
+       但這是**拿來跟著彈**的伴奏,壓到那麼平會沒有呼吸。
+       收回 1.3dB 之後落在 −11～−12.5,波峰因數 9–11dB(商業流行是 8–11、爵士 12–14) */
+    outGain.gain.value = 1.08;
     /* **最後一關:軟削波**。限幅器的 attack 是 1 毫秒,比它還快的東西
        (鼓的音頭、撥弦、雜訊)本來就穿得過去;而且「把某一層調小」常常讓尖峰**更高**
        ——限幅器踩得少了,撐著的那幾層就爬上來(實測 K-Pop 調小 808 之後 0.98 → 1.04)。
@@ -2489,7 +2494,51 @@ function ensureAudio(){
       return c;
     })();
     softClip.oversample = "none";
-    masterGain.connect(limiter);
+    /* ══ 母帶鏈 ═══════════════════════════════════════════════════
+       原本只有「限幅 → 補音量 → 天花板」三段。真的母帶處理在限幅**之前**
+       還有三件事,而且順序是固定的:
+
+       1. **超低頻高通(24Hz)**。20Hz 以下人聽不到,但它照樣佔動態範圍、
+          照樣推限幅器——808 的正弦尾巴與大鼓的音頭都有一堆。切掉之後
+          同樣的響度可以少推限幅器一點,整首會更乾淨(這是母帶第一件事,不是選項)
+       2. **黏著壓縮**(2:1、起音 30ms、放開 250ms、只壓 1–2dB)。
+          它不是拿來壓音量的,跟鼓的 `drumGlue` 同一個道理:
+          讓七八層各自獨立的樂器聽起來像**一次演奏**。
+          起音一定要慢(30ms)——快了會把鼓的音頭吃掉,整首就軟了
+       3. **飽和**。真的母帶都會過一點膠帶或電子管:偶次諧波讓中低頻聽起來更密,
+          而且它把最尖的那幾個點先磨圓,限幅器就不必那麼用力。
+          用三次多項式(`x - x³/3`,在小訊號時完全是線性的),量很輕(drive 1.25)
+
+       這三段**動了就要整組重量響度**,跟原本那四段是同一條規則 */
+    masterHp = ctx.createBiquadFilter();
+    masterHp.type = "highpass";
+    masterHp.frequency.value = 24;
+    masterHp.Q.value = 0.5;
+    masterGlue = ctx.createDynamicsCompressor();
+    masterGlue.threshold.value = -16;
+    masterGlue.knee.value = 8;
+    masterGlue.ratio.value = 2;
+    masterGlue.attack.value = 0.03;
+    masterGlue.release.value = 0.25;
+    /* 飽和曲線:`y = x - x³/3` 正規化之後。|x| 很小的時候它就是 y = x
+       (所以安靜的段落一點都沒被動到),大的時候慢慢彎——那就是偶次諧波的來源。
+       **不要用 tanh**:那條曲線在中間就開始彎,會把整首的動態壓掉 */
+    masterSat = ctx.createWaveShaper();
+    masterSat.curve = (() => {
+      const n = 4096, c = new Float32Array(n), drive = 1.25;
+      const norm = 1 / (1 - 1 / 3);
+      for (let i = 0; i < n; i++) {
+        let x = ((i / (n - 1)) * 2 - 1) * drive;
+        if (x > 1) x = 1; else if (x < -1) x = -1;
+        c[i] = (x - (x * x * x) / 3) * norm / drive;
+      }
+      return c;
+    })();
+    masterSat.oversample = "none";
+    masterGain.connect(masterHp);
+    masterHp.connect(masterGlue);
+    masterGlue.connect(masterSat);
+    masterSat.connect(limiter);
     limiter.connect(outGain);
     outGain.connect(softClip);
     softClip.connect(ctx.destination);
@@ -2596,7 +2645,18 @@ function playNote(midi, when, dur, peak){
   const g = ctx.createGain();
   const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
   // 低音偏左一點點、高音偏右一點點,跟真的坐在鋼琴前面一樣,和弦才不會擠成一個點
-  if (pan) pan.pan.value = Math.max(-0.35, Math.min(0.35, (midi - 60) / 100));
+  /* 低音在左、高音在右,那是真的鋼琴(低音弦在彈的人左手邊)。
+     **但支點不是 C4**:左手的根音在 midi 36–48、右手的聲位在 55–72,
+     以 60 當中心的話整台琴的能量全部落在左邊——量過整個 Bossa 的混音
+     偏左 1.74dB,那是聽得出來的。支點壓到 54(伴奏真正的重心)才居中 */
+  /* **低頻一律往中間收**。這是混音與母帶的通則(不只為了單聲道相容,
+     刻黑膠時偏一邊的低頻會直接把針推出溝):50 以下把偏移收到三成五。
+     鋼琴左手是撐兩拍的長音、又是整台琴最有能量的一層,
+     不收的話整個 Bossa 偏左 1.5dB——量出來的,不是猜的 */
+  if (pan) {
+    const tilt = (midi - 54) / 110 * (midi < 50 ? 0.35 : 1);
+    pan.pan.value = Math.max(-0.32, Math.min(0.32, tilt));
+  }
   const out = pan || g;
   if (pan) g.connect(pan);
   out.connect(masterGain);
@@ -3122,6 +3182,8 @@ function pickDrumLayer(piece, vel){
 }
 
 function playDrum(piece, when, gain, vel){
+  // 實錄鼓組的大鼓也要能觸發側鏈(原本只有 808 的大鼓會);給不給看 FEELS[x].duck
+  if (piece === "kick") duckBass(when);
   if (drumKit() === "e808") { synth808(piece, when, gain); return; }
   /* 沒特別給 vel 的話就拿音量當力度。鼓件自己的基準音量差很多
      (hi-hat 的 0.3 已經是很用力了、小鼓的 0.3 是幽靈音),
@@ -3599,6 +3661,19 @@ function playKeysChord(midis, when, dur, gain, kind){
   const saw = kind === "supersaw" || low;
   const wave = organ ? waveOf("organ", ORGAN_PARTS)
              : saw ? waveOf("saw", SAW_PARTS) : waveOf("pad", PAD_PARTS);
+  /* ── supersaw 要**寬**,不是只要厚 ───────────────────────────
+     K-Pop 的招牌就是那一片又寬又厚的鋸齒。三顆失諧的鋸齒全部擺在正中間
+     只會變厚不會變寬——量過 K-Pop 的左右相關係數是 **0.993**(幾乎是單聲道),
+     對一個以 supersaw 為招牌的曲風來說那是錯的。
+     失諧的那兩顆各自推到左右(±0.62)、中間那顆留在正中間,
+     這就是 supersaw 的立體聲寬度真正的來源(不是殘響也不是 chorus)。
+     一顆和弦只多三個節點(不是一個音三個),便宜 */
+  const spread = (kind === "supersaw" && ctx.createStereoPanner) ? [-0.62, 0, 0.62].map(v => {
+    const sp = ctx.createStereoPanner();
+    sp.pan.value = v;
+    sp.connect(lp);
+    return sp;
+  }) : null;
   const oscs = [];
   for (const m of midis) {
     const f = 440 * Math.pow(2, (m - 69) / 12);
@@ -3609,11 +3684,12 @@ function playKeysChord(midis, when, dur, gain, kind){
        會變成一秒抖兩下的嗡嗡聲(supersaw 的 ±13 在這個音域完全不能用);
        既然失諧要收到聽不出來,那就不要疊——省下來的節點正好是它的成本 */
     const voices = organ || low ? [0] : saw ? [-13, 0, 13] : [-5, 5];
-    for (const cents of voices) {
+    for (let vi = 0; vi < voices.length; vi++) {
+      const cents = voices[vi];
       const o = ctx.createOscillator();
       o.setPeriodicWave(wave);
       o.frequency.value = f * Math.pow(2, cents / 1200);
-      o.connect(lp);
+      o.connect(spread ? spread[vi % spread.length] : lp);
       o.start(when); o.stop(stopAt);
       oscs.push(o);
       activeSources.add(o);
@@ -3627,6 +3703,7 @@ function playKeysChord(midis, when, dur, gain, kind){
       if (--left === 0) {
         try { if (slowLfo && !low) slowLfo.disconnect(lfoAmt); } catch (e) {}
         try { lfoAmt.disconnect(); lp.disconnect(); if (head !== lp) head.disconnect();
+              if (spread) for (const sp of spread) sp.disconnect();
               g.disconnect(); if (pan) pan.disconnect(); } catch (e) {}
       }
     };
@@ -3712,19 +3789,38 @@ const E808_TRIM = { kick: 0.056, snare: 0.30, clap: 1.05, xstick: 1.05,
    對的做法是**側鏈**:大鼓落下的那一瞬間把低音壓掉三分之二,110 毫秒後放回來。
    這不是為了修 bug 才加的補丁——真的 K-Pop / trap 混音一定會做這件事,
    那個「一呼一吸」就是這個曲風的味道。只有 808 低音的曲風才套 */
+/* ── 側鏈:深度寫在 `FEELS[x].duck` 裡,不是寫死給 808 ─────────────
+   **哪些曲風要側鏈是有答案的,而且不是「全部都要」**:
+
+   - **K-Pop 要而且要深**(bass 0.22 / pad 0.45):808 的大鼓與 808 的低音
+     是同一顆音色,都是四五十赫茲的正弦,波峰因數是 1(能量全在尖峰上),
+     相位一對上就直接相加。那個「一呼一吸」就是這個曲風的味道
+   - **Funk 要但要很淺**(0.70):真的放克混音會管一下大鼓與貝斯的重疊,
+     但放克的身分是**大鼓跟貝斯互相咬合**——壓深了律動就死了。
+     而且它們的格子本來就刻意錯開(`[0,3,10]` vs `[0,6,10,14]`),很少真的撞上
+   - **Pop 給一點點**(0.80):現代流行混音會讓貝斯在大鼓下面稍微退一步,
+     低頻才收得緊
+   - **City Pop 不給**:它是 1980 年的日本 AOR,那個年代的混音沒有這種
+     「打氣」的聲音。這是年代的事不是技術的事——加了就變成現代流行
+   - **Bossa / Swing / Blues 一律不給**。低音提琴在 feathering 的大鼓下面
+     一呼一吸,聽起來是壞掉不是混音。**acoustic 的曲風不側鏈**,這條沒有例外 */
 function duckBass(when){
-  if (!bassBus || bassKit() !== "sub808") return;
-  const g = bassBus.gain;
-  g.cancelScheduledValues(when);
-  g.setTargetAtTime(BASS_BUS_LEVEL * 0.22, when, 0.006);
-  g.setTargetAtTime(BASS_BUS_LEVEL, when + 0.13, 0.06);
+  const d = (FEELS[feelNow] || {}).duck;
+  if (!d) return;
+  if (bassBus && d.bass) {
+    const g = bassBus.gain;
+    g.cancelScheduledValues(when);
+    g.setTargetAtTime(BASS_BUS_LEVEL * d.bass, when, 0.006);
+    g.setTargetAtTime(BASS_BUS_LEVEL, when + (d.rel || 0.13), 0.06);
+  }
   /* 鋪底也一起讓。trap 的「一呼一吸」是整個混音在動不是只有低音,
-     而且鋪底是撐著的那一層——限幅器在大鼓的空隙裡放手時就是它爬上來 */
-  if (padBus && (FEELS[feelNow] || {}).drums === "e808") {
+     而且鋪底是撐著的那一層——限幅器在大鼓的空隙裡放手時就是它爬上來。
+     K-Pop 的 `klow` 住在 110–420Hz,正好疊在大鼓的身體上,所以它一定要跟著讓 */
+  if (padBus && d.pad) {
     const pg = padBus.gain;
     pg.cancelScheduledValues(when);
-    pg.setTargetAtTime(PAD_BUS_LEVEL * 0.45, when, 0.008);
-    pg.setTargetAtTime(PAD_BUS_LEVEL, when + 0.13, 0.07);
+    pg.setTargetAtTime(PAD_BUS_LEVEL * d.pad, when, 0.008);
+    pg.setTargetAtTime(PAD_BUS_LEVEL, when + (d.rel || 0.13), 0.07);
   }
 }
 
@@ -3742,7 +3838,8 @@ function synth808(piece, when, gain){
      那條尾巴就是 808 跟真大鼓最大的差別——真大鼓是「咚」,808 是「咚——」。
      前面再疊一顆極短的高頻點擊,不然在小喇叭上只剩空氣 */
   if (piece === "kick") {
-    duckBass(when);
+    // 側鏈已經在 `playDrum` 開頭觸發過了(它是 synth808 唯一的呼叫端),
+    // 這裡不要再排一次——同一個 gain 上疊兩組 setTargetAtTime 只會互相打斷
     const o = ctx.createOscillator();
     o.type = "sine";
     o.frequency.setValueAtTime(110, when);
@@ -4150,6 +4247,8 @@ const FEELS = {
     snarePiece: "snare", snareGain: 0.7,
     cym: "hihat", cymGain: 0.33,
     bass: "root5", kit: "electric",
+    // 一點點就好:現代流行的低頻是收緊的,但不該聽得出在打氣
+    duck: { bass: 0.80, rel: 0.09 },
     /* 木吉他刷弦 + 鈴鼓疊在 backbeat 上。流行歌的節奏組本來就不只鼓貝鍵,
        那把刷弦的木吉他是「歌手自彈自唱」那一層 */
     /* `gdouble` 是**第二軌吉他**:流行唱片的木吉他一定錄兩遍、左右各一把。
@@ -4229,6 +4328,8 @@ const FEELS = {
     snarePiece: "snare", snareGain: 0.72,
     cym: "hihat", cymGain: 0.3,
     bass: "funk", kit: "electric", meters: ["4/4"],
+    /* 很淺。放克的身分是大鼓跟貝斯互相咬合,壓深了律動就死了 */
+    duck: { bass: 0.70, rel: 0.075 },
     // 放克的鍵盤也是電鋼琴(Stevie Wonder、Herbie 那條線),鼓與貝斯維持實錄
     piano: "rhodes",
     /* 悶音切音吉他是放克的第二個律動來源(Nile Rodgers 那種),
@@ -4262,6 +4363,8 @@ const FEELS = {
        hi-hat 會滾奏,808 低音會滑音——這四件事加起來才是現在的 K-Pop。
        Rhodes + 弦樂那一版被回報「聽起來不像 K-Pop」,因為那是九〇年代 R&B 的配器 */
     piano: "pluck", drums: "e808", lh: 0.3, roll: true,
+    // 808 的大鼓與低音是同一顆音色,不壓就直接相加(peak 0.98 → 1.04 踩過)
+    duck: { bass: 0.22, pad: 0.45, rel: 0.13 },
     /* **不給吉他**:現在的 K-Pop 骨架是 808 加合成器,吉他不是那個聲音。
        supersaw 鋪底 + 沙鈴 + 指響(指響疊在拍手上,那是 R&B 的招牌) */
     /* `vox` 是**人聲切片**:現在的 K-Pop 幾乎每首都有那一層「啊——」的切片,

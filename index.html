@@ -514,7 +514,19 @@ main{
   display:flex;align-items:center;justify-content:center;touch-action:none;
 }
 .be-grip::before{content:"";width:2px;height:100%;background:var(--gold);opacity:.75}
+/* **中間那顆小握把**:只有一條線看不出來可以拖(被問過「一拍半要怎麼做」)。
+   5×14 的圓角條就是所有工具都在用的「拉這裡」的樣子,而且只蓋住 5px,
+   和弦名還是看得到 */
+.be-grip::after{
+  content:"";position:absolute;width:5px;height:14px;border-radius:3px;
+  background:var(--gold);box-shadow:0 0 0 1.5px var(--bg);
+}
 .be-grip:hover::before,.be-grip.drag::before{opacity:1;width:3px}
+.be-grip:hover::after,.be-grip.drag::after{height:18px}
+/* 兩邊都已經在下限上(四拍四顆),那根線就只是分界不是把手 */
+.be-grip.fixed{cursor:default}
+.be-grip.fixed::before{opacity:.4}
+.be-grip.fixed::after{display:none}
 .be-op{
   flex:0 0 auto;min-width:30px;padding:0 6px;
   border:1px solid var(--line);border-radius:var(--radius-sm);
@@ -555,10 +567,15 @@ main{
 /* 兩顆和弦中間畫一條線,一眼看得出「這一格有兩顆」。
    第一顆左邊要留出小節號的位置,不然數字會壓在和弦名上 */
 .bar-chip.multi .bar-ch + .bar-ch{border-left:1px solid var(--line)}
-.bar-chip.multi .bar-ch{padding:0 2px}
-.bar-chip.multi .bar-ch:first-of-type{padding-left:13px}
-.bars-grid.dense .bar-chip.multi .bar-ch:first-of-type{padding-left:10px}
-.bars-grid.denser .bar-chip.multi .bar-ch:first-of-type{padding-left:9px}
+/* **小節號讓出來的位置要整格一起讓,不可以只從第一顆身上扣**。
+   原本是 `.bar-ch:first-of-type{padding-left:13px}`,而 `100cqi` 是內容寬——
+   第一顆的可用寬度被扣掉 13px 之後,手機上四顆和弦時只剩 2px,
+   算出來的字級是 **1.7px**(量過,那已經不是「小很」而是看不見)。
+   改成加在小節格自己身上,四顆就各讓 3px */
+.bar-chip.multi{padding-left:15px}
+.bars-grid.dense .bar-chip.multi{padding-left:12px}
+.bars-grid.denser .bar-chip.multi{padding-left:10px}
+.bar-chip.multi .bar-ch{padding:0 1px;border-radius:3px}
 .bar-ch.bad{color:var(--danger)}
 .bar-ch:hover,.bar-ch:focus-visible{outline:none}
 .bar-chip:hover,.bar-chip:focus-within{border-color:var(--gold)}
@@ -580,10 +597,22 @@ main{
 /* 放不下就縮字,**絕對不要斷行**。`B♭m7/D♭` 斷成兩行會被看成兩個和弦
    (手機上四格的時候就會踩到,不是只有很多格的時候)。
    `1em` 是這一格自己的字級,所以同一條規則就涵蓋 42 / 28 / 24 px 三階,
-   `100cqi` 是格子的內容寬(不含內距),再扣 6px 留餘裕 */
+   `100cqi` 是格子的內容寬(不含內距),再扣 2px 留餘裕。
+   **餘裕原本扣 6px,那在一格一顆時無所謂、一格四顆時是一半的寬度**——
+   0.76 這個常數本來就比實際字寬(0.73)多 4%,餘裕不必再扣那麼多 */
 .bar-name{
   white-space:nowrap;
-  font-size:min(1em, calc((100cqi - 6px) / (0.76 * var(--len,3))));
+  font-size:min(1em, calc((100cqi - 2px) / (0.76 * var(--len,3))));
+}
+/* **窄到連最小字級都放不下就不要寫名字**,畫一顆點代表「這裡有一顆和弦」。
+   手機四欄一格 77px、一小節四顆時一顆只有 14px,`Cmaj7` 再怎麼縮都是一團黑;
+   而「和弦名字被切掉比字小一號嚴重得多」這條規則的另一半就是
+   **看不懂的一團比不寫更糟**。名字在下面那排編輯條裡是看得清楚的,
+   小節格這時候的工作只剩「這一格有幾顆、各佔多寬」 */
+.bar-chip.no-name .bar-name{display:none}
+.bar-chip.no-name .bar-ch::after{
+  content:"";width:4px;height:4px;border-radius:50%;
+  background:currentColor;opacity:.45;
 }
 .bar-chip .num{
   position:absolute;top:3px;left:7px;
@@ -1323,8 +1352,10 @@ const I18N = {
     secToggle: "段落庫 {n} 組",
     secToggleOpen: "收起段落庫",
     beNumLabel: "正在改第 {n} 小節",
-    beBlockLabel: "選這一顆({chord}):點下面的鍵盤改它",
-    beGripLabel: "拖曳:改和弦換在哪裡(拖得到拍子中間)",
+    lenBeats: "{n} 拍",
+    beBlockLabel: "選這一顆({chord},{len}):點下面的鍵盤改它",
+    beGripLabel: "拖曳:改和弦換在哪裡,一次半拍(拖得到拍子中間,例如一拍半)",
+    beGripFixed: "這裡動不了:除了一小節的最後一顆,每一顆至少一拍",
     beAddLabel: "把選到的那一顆切成兩半(一小節最多 {n} 顆)",
     beAddFull: "這一顆切不下去(每顆至少一拍,一小節最多 {n} 顆)",
     beDelLabel: "把選到的那一顆併回前一顆",
@@ -1442,8 +1473,10 @@ const I18N = {
     secToggle: "Sections ({n})",
     secToggleOpen: "Hide sections",
     beNumLabel: "Editing bar {n}",
-    beBlockLabel: "Select {chord} — change it with the keys below",
-    beGripLabel: "Drag to move where the chord changes (off-beat is fine)",
+    lenBeats: "{n}",
+    beBlockLabel: "Select {chord} ({len} beats) — change it with the keys below",
+    beGripLabel: "Drag to move where the chord changes, half a beat at a time",
+    beGripFixed: "Can't move: every chord but the last in a bar needs a full beat",
     beAddLabel: "Split the selected chord in half (up to {n} per bar)",
     beAddFull: "This chord can't be split (one beat each, at most {n} per bar)",
     beDelLabel: "Merge the selected chord into the previous one",
@@ -6953,6 +6986,22 @@ function paintPlayhead(){
   rafId = requestAnimationFrame(paintPlayhead);
 }
 
+/* ── 名字放不下就不要寫 ────────────────────────────────────────
+   字級是 CSS 用容器查詢算的(`.bar-name`),所以**這裡不要把公式抄第二遍**,
+   直接讀算完的結果:低於 `NAME_MIN` 就整格不寫名字、改畫一顆點。
+   一格一顆的時候永遠不會低於門檻(整格都是它的),所以只掃多顆的那幾格。
+   **先把上一輪的判斷清掉再量**:`display:none` 之後的 `100cqi` 不一定還算得出來 */
+const NAME_MIN = 8;
+function fitBarNames(){
+  const chips = [].slice.call(barsGrid.querySelectorAll(".bar-chip.multi"));
+  if (!chips.length) return;
+  for (const c of chips) c.classList.remove("no-name");
+  const hide = chips.filter(c =>
+    [].slice.call(c.querySelectorAll(".bar-name"))
+      .some(nm => parseFloat(getComputedStyle(nm).fontSize) < NAME_MIN));
+  for (const c of hide) c.classList.add("no-name");
+}
+
 function renderBars(){
   barsGrid.innerHTML = "";
   // 整段用同一個字母走法,才不會一格 D♭maj7 一格 F♯maj7
@@ -7025,11 +7074,24 @@ function renderBars(){
      1280×720 的 16 小節反而從兩排變四排、超出 12px。
      430 才切在對的地方:手機與窄平板四欄、桌機與寬平板八欄 */
   const roomW = barsGrid.clientWidth;
-  const cols = (n > 12 && (roomW === 0 || roomW >= 430)) ? 8 : 4;
-  barsGrid.style.gridTemplateColumns = "repeat(" + cols + ",minmax(0,1fr))";
-  barsGrid.classList.toggle("dense", n > 4);
-  barsGrid.classList.toggle("denser", n > 12);
-  barsGrid.classList.toggle("eight", cols === 8);
+  const setCols = c => {
+    barsGrid.style.gridTemplateColumns = "repeat(" + c + ",minmax(0,1fr))";
+    barsGrid.classList.toggle("dense", n > 4);
+    barsGrid.classList.toggle("denser", n > 12);
+    barsGrid.classList.toggle("eight", c === 8);
+    fitBarNames();
+  };
+  setCols((n > 12 && (roomW === 0 || roomW >= 430)) ? 8 : 4);
+  /* **欄窄又放不下名字就退成一排兩格**。判斷的是「真的放不下」不是「幾顆和弦」:
+     `Cmaj7 A7` 兩顆就已經擠不下了,`D7 D7 D7 D7` 四顆反而放得下。
+     所以先照四欄畫、量一次,真的有一格寫不出名字才退。
+     **兩欄不會把樂句數壞**:第 5 格還是排頭(2 是 4 的因數)——
+     「不要用六欄」那條擋的是第 5 格跑到排中間,兩欄沒有這個問題。
+     只給**八小節以內**(練習循環):再長就是在打一整首歌了,
+     那時候多一倍的排數放不下,名字看下面那排編輯條 */
+  if (n <= 8 && roomW && barsGrid.querySelector(".bar-chip.no-name")) {
+    setCols(2);
+  }
   updatePalHint();
 
   const bad = parsed.bars.find(b => !b.ok);
@@ -7565,13 +7627,18 @@ function beGrip(ev, i, sp, p){
     blocks[i].style.left = pct(at);
     blocks[i].style.width = pct(end - at);
     grip.style.left = pct(at);
+    /* **拖的時候方塊寫的是時值不是和弦名**:一拍半跟兩拍畫出來只差幾 px,
+       看寬度猜不出來。名字放開就回來(整排重畫) */
+    blocks[i - 1].textContent = lenLabel(at - starts[i - 1]);
+    blocks[i].textContent = lenLabel(end - at);
+    blocks[i - 1].style.fontSize = blocks[i].style.fontSize = "";
   };
   const up = () => {
     grip.classList.remove("drag");
     window.removeEventListener("pointermove", move);
     window.removeEventListener("pointerup", up);
     window.removeEventListener("pointercancel", up);
-    if (at === starts[i]) { renderBarEdit(); return; }   // 沒動就重畫回去
+    if (at === starts[i]) { renderBarEdit(); return; }   // 沒動也要重畫:方塊上還寫著時值
     lens[i - 1] = at - starts[i - 1];
     lens[i] = end - at;
     writeSpans(p, lens, sp.map(x => x.text), i);
@@ -7629,7 +7696,7 @@ function renderBarEdit(){
       btn.textContent = label;
       if (fs < 13) btn.style.fontSize = fs.toFixed(1) + "px";
     }
-    btn.title = T("beBlockLabel", { chord: label });
+    btn.title = T("beBlockLabel", { chord: label, len: lenLabel(x.w) });
     btn.setAttribute("aria-label", btn.title);
     let flat = 0;
     for (let bi = 0; bi < p.bar; bi++) flat += parsed.bars[bi].chords.length;
@@ -7637,13 +7704,19 @@ function renderBarEdit(){
     btn.addEventListener("click", () => selectBar(pick));
     lane.appendChild(btn);
     if (i > 0) {
+      /* **動不動得了要在畫的時候就算好**(跟 ＋ × 同一條規則):
+         拖了沒反應比停用還難懂。四顆和弦的 4/4 只有最後一根把手動得了——
+         **除了最後一顆,每一顆至少一拍**(`minUnits`),
+         所以前面那幾根兩邊都已經在下限上了 */
+      const free = my - sp[i - 1].w + minUnits(i - 1, sp.length)
+                 <= my + x.w - minUnits(i, sp.length) - 1;
       const grip = document.createElement("button");
       grip.type = "button";
-      grip.className = "be-grip";
+      grip.className = "be-grip" + (free ? "" : " fixed");
       grip.style.left = (my / N * 100) + "%";
-      grip.title = T("beGripLabel");
+      grip.title = T(free ? "beGripLabel" : "beGripFixed");
       grip.setAttribute("aria-label", grip.title);
-      grip.addEventListener("pointerdown", ev => beGrip(ev, i, sp, p));
+      if (free) grip.addEventListener("pointerdown", ev => beGrip(ev, i, sp, p));
       grips.push(grip);
     }
     u += x.w;
@@ -7661,6 +7734,13 @@ function renderBarEdit(){
     del.title = mergeOK ? T("beDelLabel") : T("beDelNone");
     del.setAttribute("aria-label", del.title);
   }
+}
+
+/* 「1½ 拍」那串字。6/8 一格是三分之一拍,所以分母要跟著拍號走 */
+function lenLabel(units){
+  const cd = chordDiv(), whole = Math.floor(units / cd), r = units % cd;
+  const frac = r === 0 ? "" : cd === 3 ? (r === 1 ? "⅓" : "⅔") : "½";
+  return T("lenBeats", { n: (whole || !frac ? String(whole) : "") + frac });
 }
 
 /* 小節數:**4 的倍數,到 40**。選的是「現在幾小節」,不是「要看哪一組段落」。
@@ -8444,8 +8524,9 @@ document.addEventListener("keydown", (e) => {
   $("examples").addEventListener("scroll", updateExFade, { passive: true });
   window.addEventListener("resize", () => {
   placeSecPanel(); fitSecPanel(); updateExFade();
-  /* 編輯條的方塊是 %,但「名字縮到多小、縮不下去就不寫」是照 px 算的 */
-  renderBarEdit();
+  /* 編輯條的方塊是 %,但「名字縮到多小、縮不下去就不寫」是照 px 算的。
+     小節格同理:欄寬一變,放不放得下名字就跟著變 */
+  renderBars();
 });
   secInlineMQ.addEventListener("change", placeSecPanel);
 })();

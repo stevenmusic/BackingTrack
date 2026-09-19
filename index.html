@@ -2954,6 +2954,113 @@ function ensureBass(midis){
   return core;
 }
 
+/* ══ 真的吉他取樣 ═══════════════════════════════════════════════
+   **KS 合成的吉他被回報「聽起來很不真實」**,所以和聲那一層的吉他改成實錄取樣。
+   這跟「新樂器全部是算出來的」那條牴觸,是**刻意的取捨**:撥弦位置、梳狀濾波、
+   迴圈低通全部做對之後,KS 還是少了「木頭箱體的共鳴」與「手指摩擦弦的聲音」——
+   那兩件事合成不出來,只能錄。
+
+   **KS 不刪,它退成備援**(跟 `synthDrum` 一模一樣的位置):取樣載不到、
+   還沒到位、或這一顆音超出錄音的音域時,`pluck` 自己掉回 KS,
+   聽起來音色不對但不會沒聲音。
+
+   三把琴(Tone.js instruments,mp3——比 FLAC 好解,舊 iOS 也吃得下):
+   - `acoustic` 鋼弦木吉他:D2–D5 **整整三個八度每個半音都有**,Pop 的刷弦
+   - `nylon` 尼龍弦:B1–A♯5,Bossa
+   - `electric` 乾淨電吉他:C♯2–C6 每三個半音一顆,City Pop 的切音、
+     Swing 的 Freddie Green、Funk 的悶音
+   檔名的升記號寫成 `s`(`F#2` → `Fs2.mp3`),八度是科學音名(C4 = MIDI 60) */
+const GTR_SRC = {
+  acoustic: ["https://cdn.jsdelivr.net/gh/nbrosowsky/tonejs-instruments@master/samples/guitar-acoustic/",
+             "https://raw.githubusercontent.com/nbrosowsky/tonejs-instruments/master/samples/guitar-acoustic/"],
+  nylon:    ["https://cdn.jsdelivr.net/gh/nbrosowsky/tonejs-instruments@master/samples/guitar-nylon/",
+             "https://raw.githubusercontent.com/nbrosowsky/tonejs-instruments/master/samples/guitar-nylon/"],
+  electric: ["https://cdn.jsdelivr.net/gh/nbrosowsky/tonejs-instruments@master/samples/guitar-electric/",
+             "https://raw.githubusercontent.com/nbrosowsky/tonejs-instruments/master/samples/guitar-electric/"],
+};
+/* 真的錄了哪幾顆音。**不要照公式去推**——三把琴的取樣點完全不一樣,
+   鋼弦是每個半音、電吉他是每三個半音、尼龍弦有幾個洞(C2、C♯2、G4 都沒有)。
+   推錯的那幾顆會整顆 404(Rhodes 的 A5 踩過同樣的坑) */
+const GTR_NOTES = {
+  acoustic: "D2 D#2 E2 F2 F#2 G2 G#2 A2 A#2 B2 C3 C#3 D3 D#3 E3 F3 F#3 G3 G#3 A3 A#3 B3 " +
+            "C4 C#4 D4 D#4 E4 F4 F#4 G4 G#4 A4 A#4 B4 C5 C#5 D5",
+  /* 尼龍弦的清單裡 `G5` 那一筆在原始的檔案表上指到 `G3.mp3`(他們自己寫錯),
+     收進來的話 G5 會低兩個八度——整串刷弦會冒出一顆莫名的低音,所以不收 */
+  nylon:    "B1 D2 E2 F#2 G#2 A2 B2 C#3 D3 E3 F#3 G3 A3 B3 C#4 D#4 E4 F#4 G#4 A4 B4 " +
+            "C#5 D5 E5 F#5 G#5 A5 A#5",
+  electric: "C#2 E2 F#2 A2 C3 D#3 F#3 A3 C4 D#4 F#4 A4 C5 D#5 F#5 A5 C6",
+};
+const PC_OF = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+function noteMidi(n){                      // "F#2" → 42、"C4" → 60
+  const m = /^([A-G])(#?)(-?\d+)$/.exec(n);
+  if (!m) return -1;
+  return (parseInt(m[3], 10) + 1) * 12 + PC_OF[m[1]] + (m[2] ? 1 : 0);
+}
+function noteFile(n){ return n.replace("#", "s") + ".mp3"; }
+/* midi → 檔名,每一把琴一張表(開場算一次) */
+const GTR_TABLE = (() => {
+  const out = {};
+  for (const kit of Object.keys(GTR_NOTES)) {
+    out[kit] = GTR_NOTES[kit].split(/\s+/).map(n => [noteMidi(n), noteFile(n)])
+                             .filter(e => e[0] > 0).sort((a, b) => a[0] - b[0]);
+  }
+  return out;
+})();
+/* `GUITAR_TONES` 的音色名 → 哪一把真的琴。沒對到就只剩 KS */
+const GTONE_KIT = { steel: "acoustic", nylon: "nylon",
+                    clean: "electric", chop: "electric", archtop: "electric" };
+const gtrBuffers = { acoustic: new Map(), nylon: new Map(), electric: new Map() };
+const gtrFailed  = { acoustic: new Set(), nylon: new Set(), electric: new Set() };
+const gtrLoading = {};
+function loadGtrOne(kit, midi, file){
+  const key = kit + ":" + midi;
+  if (gtrLoading[key]) return gtrLoading[key];
+  gtrLoading[key] = fetchDecode(GTR_SRC[kit], file)
+    .then(buf => { gtrBuffers[kit].set(midi, buf); gtrPick.clear(); })
+    .catch(() => { gtrFailed[kit].add(midi); });   // 這一顆掉回 KS,其他的照常
+  return gtrLoading[key];
+}
+/* 這次進行的吉他會用到哪幾顆音,就抓哪幾顆(跟鋼琴同一個做法)。
+   **一顆都不擋播放**:KS 先頂著,取樣到位之後下一次刷弦就換成真的琴了 */
+function ensureGuitar(midis, toneName){
+  const kit = GTONE_KIT[toneName];
+  if (!kit || !GTR_TABLE[kit]) return Promise.resolve();
+  const table = GTR_TABLE[kit], want = new Set();
+  for (const m of midis) {
+    let best = table[0];
+    for (const e of table) if (Math.abs(e[0] - m) < Math.abs(best[0] - m)) best = e;
+    want.add(best);
+  }
+  const list = [...want].filter(e => !gtrFailed[kit].has(e[0]) && !gtrBuffers[kit].has(e[0]));
+  /* **一顆一顆排隊抓,不要十四顆一起**。`decodeAudioData` 是在主執行緒上做的,
+     十四顆 mp3 同時解碼會跟排程器搶同一個執行緒。
+     這條鏈是**在按下播放之前**跑完的(見 `prewarmGuitar` 與 `startPlayback`),
+     所以它只影響「等多久才開始」,不影響已經在播的時候。
+     一開始是邊播邊載,CPU 降速 6× 時排程一跳從 46ms 跳到 73ms 還開始
+     「來不及」——那是解碼跟排程器搶同一個執行緒,踩過 */
+  return list.reduce((chain, e) => chain.then(() => loadGtrOne(kit, e[0], e[1])),
+                     Promise.resolve()).catch(() => {});
+}
+/* 「這顆音要用哪一份取樣」memo 起來。刷弦一小節十幾下、放克的切音更多,
+   每一下都去掃一遍 buffer 的 key 是白花的——載到新的取樣時整個清掉就好 */
+const gtrPick = new Map();
+/* 這一顆音有沒有真的取樣可以用。差超過三個半音就不要硬拉
+   (playbackRate 拉太多會把木頭箱體的共振一起搬走,聽起來像玩具琴) */
+function gtrSample(midi, toneName){
+  const kit = GTONE_KIT[toneName];
+  if (!kit) return null;
+  const bank = gtrBuffers[kit];
+  if (!bank.size) return null;
+  const key = kit + ":" + midi;
+  if (gtrPick.has(key)) return gtrPick.get(key);
+  let best = -1;
+  for (const k of bank.keys()) if (best < 0 || Math.abs(k - midi) < Math.abs(best - midi)) best = k;
+  const got = Math.abs(best - midi) > 3 ? null
+            : { buffer: bank.get(best), rate: Math.pow(2, (midi - best) / 12) };
+  gtrPick.set(key, got);
+  return got;
+}
+
 /* 這段進行的貝斯會用到哪幾個音(根音與五音,移調之後的) */
 function bassMidisOf(){
   const out = [];
@@ -3279,7 +3386,10 @@ function ksBuffer(midi, toneName){
    `str` 是第幾條弦(0 是最低的那條),用來給每條弦一點點自己的音準偏差 */
 function pluck(midi, when, gain, toneName, mute, str){
   const T = GUITAR_TONES[toneName] || GUITAR_TONES.nylon;
-  const ks = ksBuffer(midi, toneName);
+  /* **有真的取樣就用真的**,沒有才掉回 KS(取樣還在路上、載失敗、
+     或這顆音超出錄音的音域)。位置跟 `synthDrum` 一樣是備援不是主角 */
+  const smp = gtrSample(midi, toneName);
+  const ks = smp || ksBuffer(midi, toneName);
   const src = ctx.createBufferSource();
   src.buffer = ks.buffer;
   /* **每條弦差個兩三音分**。真的吉他不可能六條弦都完全準
@@ -3290,7 +3400,10 @@ function pluck(midi, when, gain, toneName, mute, str){
   src.playbackRate.value = ks.rate * Math.pow(2, off / 1200);
   const tone = ctx.createBiquadFilter();
   tone.type = "lowpass";
-  tone.frequency.value = T.bright;
+  /* `bright` 是**為了 KS 訂的**:合成的弦高頻太多太齊,要收掉才不刺。
+     真的錄音本來就是對的,同一顆低通會把箱體的空氣感一起切掉,
+     所以取樣這一路開高一階(`sbright`),只留一點點修飾 */
+  tone.frequency.value = smp ? (T.sbright || Math.min(12000, T.bright * 1.9)) : T.bright;
   tone.Q.value = 0.6;
   const g = ctx.createGain();
   const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
@@ -3298,6 +3411,8 @@ function pluck(midi, when, gain, toneName, mute, str){
   if (pan) pan.pan.value = 0.16 + ((midi % 5) - 2) * 0.035;
   src.connect(tone); tone.connect(g);
   if (pan) { g.connect(pan); pan.connect(combBus); } else { g.connect(combBus); }
+  /* 取樣本身錄到自然衰減完,但 Freddie Green 是用手掌壓住的、放克是悶音——
+     **那個「短」不是音色是演奏法**,所以長度照舊由 `sec` 決定,不是讓它響完 */
   const dur = mute ? Math.min(T.sec, mute) : T.sec;
   // 起音給 1 毫秒,理由跟 808 的鼓一樣:比限幅器還快的爆點會整個穿過去
   g.gain.setValueAtTime(0.0001, when);
@@ -3306,7 +3421,7 @@ function pluck(midi, when, gain, toneName, mute, str){
   /* 撥片碰到弦的那一聲。KS 本身只有「弦在振動」,沒有「東西碰到弦」——
      少了它聽起來是撥弦合成器,不是有人拿著撥片在刷。
      尼龍弦用指腹所以幾乎沒有,鋼弦與撥片的最明顯 */
-  if (T.pick > 0) {
+  if (T.pick > 0 && !smp) {
     const { src: n, offset: no } = noiseSrc(0.012);
     const bp = ctx.createBiquadFilter();
     bp.type = "bandpass"; bp.frequency.value = T.pickHz; bp.Q.value = 1.4;
@@ -3322,6 +3437,10 @@ function pluck(midi, when, gain, toneName, mute, str){
       try { n.disconnect(); bp.disconnect(); ng.disconnect(); } catch (e) {} };
   }
   if (mute) g.gain.setTargetAtTime(0.0001, when + dur * 0.55, dur * 0.16);
+  /* KS 的 buffer 本來就只有 `sec` 這麼長(算完就沒了),取樣不是——
+     它會一路響到錄音結束。不收的話 Freddie Green 的四分音符會全部疊在一起,
+     一小節四顆和弦 × 三條弦 = 十二條弦同時在響 */
+  else if (smp) g.gain.setTargetAtTime(0.0001, when + dur * 0.8, dur * 0.2);
   const stopAt = when + dur + 0.12;
   src.start(when); src.stop(stopAt);
   activeSources.add(src);
@@ -3425,17 +3544,28 @@ function synthKeyNote(midi, when, dur, peak){
 function playKeysChord(midis, when, dur, gain, kind){
   if (!midis.length) return;
   const organ = kind === "organ";
+  /* `low` 是**低音鋪底**:一層只住在 120–400Hz 的鋸齒,不亮、不掃、不搶。
+     它補的是量出來的那個洞(見 `FEELS.kpop.parts.klow`),所以濾波器兩邊都要關:
+     上面切在 420Hz(再高就跟 pluck 撞),下面用高通切在 110Hz
+     ——**一定要留給 808**,不切的話兩層低頻相加,尖峰直接爆掉 */
+  const low = kind === "low";
   const g = ctx.createGain();
   const lp = ctx.createBiquadFilter();
   lp.type = "lowpass";
   lp.Q.value = organ ? 0.5 : 0.8;
-  lp.frequency.setValueAtTime(organ ? 2600 : kind === "supersaw" ? 1400 : 900, when);
-  if (!organ) {
+  lp.frequency.setValueAtTime(low ? 420 : organ ? 2600 : kind === "supersaw" ? 1400 : 900, when);
+  if (!organ && !low) {
     // 鋪底的濾波器慢慢打開,那是「弦樂進來」的感覺
     lp.frequency.linearRampToValueAtTime(kind === "supersaw" ? 3400 : 2100,
                                          when + Math.min(dur * 0.7, 1.4));
   }
-  lp.connect(g);
+  let head = lp;
+  if (low) {
+    const hp = ctx.createBiquadFilter();
+    hp.type = "highpass"; hp.frequency.value = 110; hp.Q.value = 0.7;
+    lp.connect(hp); head = hp;
+  }
+  head.connect(g);
   const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
   if (pan) { pan.pan.value = organ ? -0.18 : 0; g.connect(pan); pan.connect(padBus); }
   else g.connect(padBus);
@@ -3444,18 +3574,20 @@ function playKeysChord(midis, when, dur, gain, kind){
      所以鋪底的音量只要一調小(0.075),±0.055 的 LFO 就變成 ±73% 的抖動,
      而且尖峰會被它推上去。這裡多開一顆 gain 把 LFO 縮成「音量的百分之幾」,
      一顆和弦一個節點,不是一個音一個 */
+  /* 低音鋪底不掛 Leslie/合唱:那一層的工作是「穩穩撐住身體」,
+     一抖就變成會呼吸的低頻,跟 808 的側鏈打架 */
   const lfoAmt = ctx.createGain();
   lfoAmt.gain.value = gain * (organ ? 0.17 : 0.09);
-  if (slowLfo) { try { slowLfo.connect(lfoAmt); lfoAmt.connect(g.gain); } catch (e) {} }
+  if (slowLfo && !low) { try { slowLfo.connect(lfoAmt); lfoAmt.connect(g.gain); } catch (e) {} }
 
-  const atk = organ ? 0.012 : kind === "supersaw" ? 0.16 : 0.34;
-  const rel = organ ? 0.09 : 0.7;
+  const atk = organ ? 0.012 : low ? 0.10 : kind === "supersaw" ? 0.16 : 0.34;
+  const rel = organ ? 0.09 : low ? 0.4 : 0.7;
   g.gain.setValueAtTime(0.0001, when);
   g.gain.linearRampToValueAtTime(gain, when + atk);
   g.gain.setTargetAtTime(0.0001, when + Math.max(dur, atk + 0.05), rel / 3);
   const stopAt = when + Math.max(dur, atk + 0.05) + rel + 0.3;
 
-  const saw = kind === "supersaw";
+  const saw = kind === "supersaw" || low;
   const wave = organ ? waveOf("organ", ORGAN_PARTS)
              : saw ? waveOf("saw", SAW_PARTS) : waveOf("pad", PAD_PARTS);
   const oscs = [];
@@ -3464,7 +3596,10 @@ function playKeysChord(midis, when, dur, gain, kind){
     /* 鋪底疊兩顆微微失諧的,風琴只要一顆(Hammond 的泛音是齒輪轉出來的,不會飄)。
        **supersaw 疊三顆、失諧拉到 ±13 音分**:K-Pop 的和聲層就是那一片
        又寬又厚的鋸齒,兩顆差五音分聽起來只是「有點抖」,不是 supersaw */
-    const voices = organ ? [0] : saw ? [-13, 0, 13] : [-5, 5];
+    /* **低音鋪底一顆音只用一顆振盪器**。低頻的拍頻很慢很明顯,失諧疊兩顆
+       會變成一秒抖兩下的嗡嗡聲(supersaw 的 ±13 在這個音域完全不能用);
+       既然失諧要收到聽不出來,那就不要疊——省下來的節點正好是它的成本 */
+    const voices = organ || low ? [0] : saw ? [-13, 0, 13] : [-5, 5];
     for (const cents of voices) {
       const o = ctx.createOscillator();
       o.setPeriodicWave(wave);
@@ -3481,8 +3616,9 @@ function playKeysChord(midis, when, dur, gain, kind){
       activeSources.delete(o);
       try { o.disconnect(); } catch (e) {}
       if (--left === 0) {
-        try { if (slowLfo) slowLfo.disconnect(lfoAmt); } catch (e) {}
-        try { lfoAmt.disconnect(); lp.disconnect(); g.disconnect(); if (pan) pan.disconnect(); } catch (e) {}
+        try { if (slowLfo && !low) slowLfo.disconnect(lfoAmt); } catch (e) {}
+        try { lfoAmt.disconnect(); lp.disconnect(); if (head !== lp) head.disconnect();
+              g.disconnect(); if (pan) pan.disconnect(); } catch (e) {}
       }
     };
   }
@@ -3738,14 +3874,36 @@ function playBassNote(midi, when, dur, peak){
       o.frequency.setValueAtTime(f * 1.9, when);
       o.frequency.exponentialRampToValueAtTime(f, when + 0.045);
     }
+    const prev808 = last808.midi;          // 諧波層要跟著同一條滑音,先留起來
     last808.midi = midi; last808.at = when;
-    // 一點點三次諧波,不然在筆電喇叭上整顆音會完全消失
+    /* ── 808 的中低頻諧波層(「飽和」那一層)─────────────────────
+       被回報「K-Pop 的聲音不夠飽滿,太單薄了」。量了八度頻帶之後找到原因:
+       **120–250Hz 有一個 10dB 的洞**(K-Pop −14.9dB,Pop −4.1、Funk −5.9)。
+       808 的正弦全部擠在 30–60Hz、pluck 從 250Hz 才開始,
+       中間那段「身體」沒有人在。那正是單薄的定義。
+
+       真的 808 混音**一定會過飽和**——不是為了破音,是因為純正弦在手機與
+       筆電喇叭上根本放不出來,要靠諧波讓耳朵補出基音。
+       所以這裡疊一顆**跟著滑音走的鋸齒**,用 100–460Hz 的帶通切出來:
+       45Hz 的基音在這一段剛好是第 3 到第 10 泛音,正好把洞填起來。
+       原本只有一顆 0.085 的三次諧波,而且**它不跟著滑音走**(音頭會分岔) */
     const h = ctx.createOscillator();
-    h.type = "triangle";
-    h.frequency.setValueAtTime(f * 3, when);
+    h.type = "sawtooth";
+    if (glide) {
+      const fp = 440 * Math.pow(2, (prev808 - 69) / 12);
+      h.frequency.setValueAtTime(fp, when);
+      h.frequency.exponentialRampToValueAtTime(f, when + 0.085);
+    } else {
+      h.frequency.setValueAtTime(f * 1.9, when);
+      h.frequency.exponentialRampToValueAtTime(f, when + 0.045);
+    }
+    const hHp = ctx.createBiquadFilter();
+    hHp.type = "highpass"; hHp.frequency.value = 100; hHp.Q.value = 0.7;
+    const hLp = ctx.createBiquadFilter();
+    hLp.type = "lowpass"; hLp.frequency.value = 460; hLp.Q.value = 0.7;
     const hg = ctx.createGain();
-    hg.gain.value = 0.085;
-    h.connect(hg); hg.connect(g);
+    hg.gain.value = 0.5;
+    h.connect(hHp); hHp.connect(hLp); hLp.connect(hg); hg.connect(g);
     o.connect(g);
     const len = Math.max(dur, 0.12);
     /* **要衰減,不要撐平**。808 的長音本來就是敲一下之後慢慢消,
@@ -3760,7 +3918,8 @@ function playBassNote(midi, when, dur, peak){
     h.start(when); h.stop(stopAt);
     activeSources.add(o); activeSources.add(h);
     const bye = () => { activeSources.delete(o); activeSources.delete(h);
-      try { o.disconnect(); h.disconnect(); hg.disconnect(); g.disconnect(); } catch (e) {} };
+      try { o.disconnect(); h.disconnect(); hHp.disconnect(); hLp.disconnect();
+            hg.disconnect(); g.disconnect(); } catch (e) {} };
     o.onended = bye; h.onended = bye;
     return;
   }
@@ -4041,7 +4200,10 @@ const FEELS = {
     /* **尼龍弦吉他是 bossa 的主角**,不是配菜:João Gilberto 那個切分
        跟 cross stick 打的是同一組 clave 格子(共用 `GROOVES.latin` 的 clave),
        兩層疊起來才是 bossa。cabasa 走八分當空氣 */
-    parts: { guitar: "bossa", gtone: "nylon", glevel: 0.58,
+    /* 0.52 不是 0.58:換成真的尼龍弦取樣之後同一個 gain 大了 1.9dB
+       (KS peak 0.383 → 取樣 0.477),整組 bossa 的 RMS 被它推出目標帶。
+       **招牌還是它**,收的是取樣自己帶來的那 1dB,不是把吉他推回後面 */
+    parts: { guitar: "bossa", gtone: "nylon", glevel: 0.52,
              perc: { kind: "cabasa", on: "sub", lvl: 0.15 } },
   },
   /* 放克:十六分的律動(`sub:2`,一拍四格)。hi-hat 走滿十六分、正拍重反拍輕,
@@ -4089,7 +4251,7 @@ const FEELS = {
     piano: "pluck", drums: "e808", lh: 0.3, roll: true,
     /* **不給吉他**:現在的 K-Pop 骨架是 808 加合成器,吉他不是那個聲音。
        supersaw 鋪底 + 沙鈴 + 指響(指響疊在拍手上,那是 R&B 的招牌) */
-    parts: { keys: "supersaw", klevel: 0.062,
+    parts: { keys: "supersaw", klevel: 0.075, klow: 0.12,
              perc: { kind: "shaker", on: "sub", lvl: 0.12, snap: true } },
   },
   /* 搖擺:爵士。ride 打型、hi-hat 踏鈸給拍子感、大鼓 feathering、小鼓在 comping */
@@ -5019,6 +5181,18 @@ function scheduleKeys(spans, barStartBeat, b, transpose, absBar){
   const lvl = (f.parts.klevel || 0.16) * (st === "drive" ? 1.12 : st === "pad" ? 0.9 : 1)
             * arcGain(absBar);
   playKeysChord(notes, beatTime(barStartBeat + b), len * 0.96, lvl, kind);
+  /* **低音鋪底是獨立的一層**(`klow`),不是把 `keys` 調大。
+     量出來 K-Pop 在 120–250Hz 比 Pop 低 10dB:808 的正弦擠在 30–60、
+     pluck 從 250 才開始,中間那段「身體」沒有人在,聽起來就是單薄。
+     這一層拿鋪底的和弦往下移一個八度、只留最低那三顆,
+     切在 110–420Hz 之間——填的就是那個洞,而且碰不到 808 也碰不到 pluck */
+  if (f.parts.klow) {
+    /* 只取最低**兩顆**(根音加五度或三度)。低音區疊三顆是把泥巴堆起來——
+       真的混音裡「身體」那一層永遠是一個雙音,不是一個和弦 */
+    const lowNotes = notes.map(n => n - 12).sort((a, b2) => a - b2).slice(0, 2);
+    playKeysChord(lowNotes, beatTime(barStartBeat + b), len * 0.96,
+                  f.parts.klow * arcGain(absBar), "low");
+  }
 }
 
 /* 打擊小物:沙鈴、鈴鼓、cabasa、指響。
@@ -5055,11 +5229,11 @@ function schedulePerc(barStartBeat, b, absBar, isFill){
    算完之後每一下就只是播一份 buffer,跟播取樣一樣便宜 */
 function prewarmGuitar(){
   const f = feel();
-  if (!ctx) return;
+  if (!ctx) return Promise.resolve();
   // 808 的金屬音色也先算好(1.3 秒的 buffer,算一次就一直用)
   if (drumKit() === "e808") hat808Buf();
   noiseBuf();
-  if (!f.parts || !f.parts.guitar) return;
+  if (!f.parts || !f.parts.guitar) return Promise.resolve();
   const tone = f.parts.gtone || "nylon";
   const want = new Set();
   for (const spans of (voicings || [])) {
@@ -5068,7 +5242,14 @@ function prewarmGuitar(){
       for (const n of guitarNotesFor(sp.chord, f.parts.guitar)) want.add(n + transposeOn);
     }
   }
-  for (const m of want) ksBuffer(m, tone);
+  /* **先把真的取樣抓完,再決定哪幾顆需要 KS**。
+     兩件事都很貴(一顆 KS 要跑八萬次迴圈、一顆 mp3 要解碼),邊播邊做會卡排程;
+     兩件都在按下播放之前做完就完全不影響播放。
+     而且取樣蓋得到的那幾顆**根本不用算 KS**——KS 只是備援,
+     真的用不到就不要花那個時間(Pop 的 14 顆音本來每一顆都要算) */
+  return ensureGuitar([...want], tone).then(() => {
+    for (const m of want) if (!gtrSample(m, tone)) ksBuffer(m, tone);
+  });
 }
 
 function scheduleExtras(spans, barStartBeat, b, transpose, absBar, isFill){
@@ -5153,7 +5334,7 @@ function startPlayback(){
   /* 撥弦的取樣先算好。**一定要在這裡算,不能等排程的時候現算**——
      一顆 1.9 秒的弦要跑 84000 次迴圈,排程中途做會卡一下,
      而且卡在音訊執行緒的前 0.15 秒裡,聽起來就是一聲爆音 */
-  prewarmGuitar();
+  const guitarReady = prewarmGuitar();
 
   // 貝斯用的音(含移調)跟鋼琴不同,要另外算
   const bassMidis = bassMidisOf();
@@ -5165,6 +5346,7 @@ function startPlayback(){
     ensureSamples(midis),
     ensureDrums(),
     ensureBass(bassMidis),
+    guitarReady,
   ]).then(() => {
     playBtn.disabled = false;
     /* 狀態列講的是「這首真的在用的那一台琴」:Rhodes 整組沒載到時

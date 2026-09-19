@@ -4700,6 +4700,38 @@ const FEELS = {
        一個曲風一個曲風調,其餘六種一個取樣都不會動 */
     micro: { keys: 7, bass: 5.5, gtr: 4.5, kick: 2.5, snare: 3, hat: 4.5 },
     roll2: true, breathe: true, velRange: 0.28,
+    /* ── 八小節的編曲 ────────────────────────────────────────────
+       兩個四小節樂句:前一句問、後一句答。**骨架(鼓/貝斯/Rhodes)全程都在**,
+       進出的只有第四層。橫的是小節,`1` = 上場:
+
+         小節        1 2 3 4 | 5 6 7 8
+         切音吉他    1 1 1 1 | 0 1 1 1     第 5 小節讓出來,句子的交界才聽得到
+         第二把吉他  0 0 0 0 | 1 1 1 1     後一句才進來,那是「答句」被加厚
+         銅管 stab   0 0 0 1 | 0 0 0 1     只落在兩個句尾——它是標點不是節奏樂器
+         鋪底        0 0 1 1 | 1 1 1 1     前兩小節乾的,鋪底鋪下去就開始堆
+         沙鈴        1 1 1 1 | 1 1 1 1     一直都在:它是空氣,抽掉會變成一個洞
+
+       所以整個八小節的厚度是 **2 → 3 → 4 → 5 層**,一路長上去再收回來。
+       而進行是四小節,**編曲八小節**——要繞兩圈才回到同一個組合,
+       所以第 2 圈跟第 1 圈聽起來不一樣。那就是「不像在循環」的來源。
+
+       **為什麼切音吉他讓的是第 5 小節不是第 8 小節**:第 8 小節已經有
+       鼓的過門與銅管的 stab,再把吉他抽掉會空一塊;而第 5 小節是
+       下半句的開頭,那裡留白才聽得出「換句了」。 */
+    arrange: {
+      cycle: 8,
+      layers: {
+        guitar:  "11110111",
+        guitar2: "00001111",
+        brass:   "00010001",
+        keys:    "00111111",
+        perc:    "11111111",
+      },
+      /* 力度也要跟著樂句走:前兩小節收 0.6dB、句尾推 0.5dB。
+         **幅度要小**——這是伴奏不是作品,起伏大到會讓人以為音量壞掉就過頭了。
+         它乘在 `arcGain` 上,所以整個樂團一起推,不是某一層自己變大聲 */
+      lift: [0.94, 0.94, 1.0, 1.0, 1.02, 1.02, 1.06, 1.06],
+    },
     /* **混音**:兩把吉他切在 150Hz 以上(它們從 G3=196Hz 才開始,
        切掉的全是別人的位置)、3.2kHz 補 2.5dB 給那個單線圈的亮面;
        壓縮是**重的**(4:1、起音 4ms)——AOR 的十六分切音本來就是
@@ -5055,9 +5087,60 @@ function pickCellEven(cells, absBar, salt){
 /* 段落強度弧線:繞第幾圈決定整體力度。一直同一個力度彈二十分鐘會很悶,
    真的伴奏會愈堆愈上去再收回來。四圈一個循環 */
 const ARC = [0.9, 1.0, 1.1, 1.0];
+/* ── 編曲的層級變化:誰在哪幾小節上場 ──────────────────────────
+   被指出「每個循環聽起來都一樣規律」。前一輪做的是**小節之內**的呼吸
+   (`phraseHole`:句尾讓半拍出來),那治的是「每一小節一樣忙」。
+   但還有更上面的一層沒做:**每一小節上場的人都一模一樣**。
+   真的唱片不是這樣——八小節裡第二把吉他什麼時候進來、銅管在哪一句收尾、
+   鋪底什麼時候鋪下去,那是編曲,而且那才是「這首歌在往前走」的感覺來源。
+
+   ### 三條規矩
+
+   **1. 週期是 8 小節,而且要跟進行的長度錯開。**
+   真的編曲以八小節為單位(兩個四小節樂句:一句問、一句答)。
+   這裡的關鍵不是「8」這個數字,是**它跟進行的長度不一樣**:
+   進行 4 小節 + 編曲 8 小節 = 要繞兩圈才回到同一個組合,
+   所以第 2 圈聽起來跟第 1 圈不一樣——**那正是「不像在循環」的來源**。
+   兩邊一樣長(進行 8 小節)就會對齊,那也沒關係,真的歌本來就是那樣寫的。
+
+   **2. 只有第四層可以進出,骨架永遠都在。**
+   這是**拿來跟著彈**的伴奏,不是作品。鼓、貝斯、鋼琴(Rhodes 的 comping)
+   是和聲與拍子的參考,少了任何一個跟著彈的人就抓不到——
+   這是「鼓與貝斯永遠都在」那條規則的延伸。
+   會進出的只有吉他、第二把吉他、銅管、鋪底、打擊小物這幾層。
+
+   **3. 表要看得出形狀。** 寫成八個字元的字串,一看就知道這一層在哪幾小節上場,
+   比一串 `if (absBar % 8 === 4)` 好讀太多,也不會變成「針對某個曲風寫 if」。
+
+   沒寫 `FEELS[x].arrange` 的曲風 `layerOn()` 一律回 true,零差異。 */
+function sectionBar(absBar){
+  const a = feel().arrange;
+  const cyc = (a && a.cycle) || 8;
+  return ((absBar % cyc) + cyc) % cyc;
+}
+/* 這一層這一小節上不上場。`name` 是 `FEELS[x].parts` 裡的欄位名 */
+function layerOn(name, absBar){
+  const a = feel().arrange;
+  if (!a || !a.layers) return true;
+  const map = a.layers[name];
+  if (!map) return true;                    // 表裡沒列到的一層 = 一直都在
+  return map[sectionBar(absBar) % map.length] === "1";
+}
+/* 段落的力度弧:八小節裡前面收一點、後面推上去。
+   **這一條是整個樂團一起的**(接在 `arcGain` 裡),不是只有某一層——
+   真的樂團是一起推的,只有一層變大聲聽起來是那一層爆掉 */
+function sectionLift(absBar){
+  const a = feel().arrange;
+  if (!a || !a.lift) return 1;
+  return a.lift[sectionBar(absBar) % a.lift.length];
+}
+
 function arcGain(absBar){
   const n = Math.max(1, voicings.length);
-  return ARC[Math.floor(absBar / n) % ARC.length];
+  /* 兩個弧疊在一起:`ARC` 是**一圈**(進行的長度)的起伏、
+     `sectionLift` 是**八小節樂句**的起伏。兩個週期不一樣,
+     所以疊出來的力度曲線不會跟任何一邊同步——那也是「不像循環」的一部分 */
+  return ARC[Math.floor(absBar / n) % ARC.length] * sectionLift(absBar);
 }
 
 /* 第幾格落在什麼時間。單拍子的後半格要搖擺(直的 0.5 就是正中間),
@@ -6205,13 +6288,23 @@ function scheduleExtras(spans, barStartBeat, b, transpose, absBar, isFill){
   const f = feel();
   const parts = f.parts;
   if (!parts) return;
-  if (parts.guitar) scheduleGuitar(spans, barStartBeat, b, transpose, absBar, isFill);
-  if (parts.keys)   scheduleKeys(spans, barStartBeat, b, transpose, absBar);
-  if (parts.perc)   schedulePerc(barStartBeat, b, absBar, isFill);
-  if (parts.vox)    scheduleVox(spans, barStartBeat, b, transpose, absBar);
-  if (parts.brass)  scheduleBrass(spans, barStartBeat, b, transpose, absBar);
-  if (parts.guitar2) scheduleGuitar2(spans, barStartBeat, b, transpose, absBar);
-  if (parts.arp)    scheduleArp(spans, barStartBeat, b, transpose, absBar);
+  /* **關卡只加在這裡**:每一層要不要上場是編曲的事,不是那一層自己的事。
+     散進各個 `schedule*` 裡的話,加新的一層就會忘記接(而且症狀是
+     「它從來不會休息」,很難發現) */
+  if (parts.guitar && layerOn("guitar", absBar))
+    scheduleGuitar(spans, barStartBeat, b, transpose, absBar, isFill);
+  if (parts.keys && layerOn("keys", absBar))
+    scheduleKeys(spans, barStartBeat, b, transpose, absBar);
+  if (parts.perc && layerOn("perc", absBar))
+    schedulePerc(barStartBeat, b, absBar, isFill);
+  if (parts.vox && layerOn("vox", absBar))
+    scheduleVox(spans, barStartBeat, b, transpose, absBar);
+  if (parts.brass && layerOn("brass", absBar))
+    scheduleBrass(spans, barStartBeat, b, transpose, absBar);
+  if (parts.guitar2 && layerOn("guitar2", absBar))
+    scheduleGuitar2(spans, barStartBeat, b, transpose, absBar);
+  if (parts.arp && layerOn("arp", absBar))
+    scheduleArp(spans, barStartBeat, b, transpose, absBar);
 }
 
 function scheduleBeat(i, when){

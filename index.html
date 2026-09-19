@@ -2348,7 +2348,13 @@ const PIANO_KITS = {
   /* **音量要壓得比想像中低**。被回報過「K-Pop 的 lead synth 聽起來太突出」:
      pluck 的音頭很亮、又掛著殘響,在一堆 808 與十六分 hi-hat 之間很容易跳出來。
      它是**和聲層不是主旋律**——真的 K-Pop 裡這一層是墊在人聲底下的 */
-  pluck:    { synth: "pluck", gain: 0.42, tau: 1 },
+  /* `lowCut` 與 `lead` 是**寫在音色裡的兩條**,不是排程裡的 if:
+     - `lowCut`:這個音色不進低音區(K-Pop 的 pluck 不碰 midi 55 以下)
+     - `lead`:它不是鍵盤而是 lead,一下最多幾顆音
+     兩條都是「哪一台琴在彈」的性質,跟 `gain` / `tau` 同一層 */
+  /* gain 從 0.42 收到 0.38:濾波器的落點改對之後它本來就亮了一階,
+     同一個 gain 會變得太突出(以前被回報過「lead synth 太突出」) */
+  pluck:    { synth: "pluck", gain: 0.38, tau: 1, lowCut: 55, lead: 2 },
   /* Rhodes 的音管衰減比平台鋼琴慢,tau 放長一點才像在延音。
      gain **要往下收**:同一個 peak 參數下這組取樣比 Salamander 大一倍
      (量過:四個音的和弦 Salamander 1.17、Rhodes 2.37),
@@ -2685,7 +2691,14 @@ function decayTau(midi){
 function playNote(midi, when, dur, peak){
   const kitNow = pianoKit();
   const KS0 = PIANO_KITS[kitNow];
-  if (KS0 && KS0.synth) { synthKeyNote(midi, when, dur, peak * KS0.gain); return; }
+  if (KS0 && KS0.synth) {
+    /* **這個音色不進低音區**(`lowCut`)。K-Pop 的 pluck 量到最低彈到 midi 36
+       (65Hz)——那是鋼琴左手也走同一顆合成音色的結果。
+       但那一段已經有 808 sub 與 `klow` 鋪底在撐,第三層低頻只會互相打架,
+       而且 65Hz 的鋸齒過低通只是一聲悶響,根本不是「叮」 */
+    if (KS0.lowCut && midi < KS0.lowCut) return;
+    synthKeyNote(midi, when, dur, peak * KS0.gain); return;
+  }
   if (!pianoBanks[kitNow]) return;
   /* 這首用哪一台琴。那一台整組沒載到就借平台鋼琴的取樣(見 ensureSamples),
      兩台都空的時候才掉到保底的三角波 */
@@ -3616,9 +3629,30 @@ function synthKeyNote(midi, when, dur, peak){
      在 808 上面整個跳出來(被回報「lead synth 太突出」)。
      pluck 要有形狀但不要有存在感 */
   lp.Q.value = 3.2;
-  /* 開口跟著力度走:輕的那幾下不只小聲也比較暗,跟取樣鋼琴同一條規則 */
+  /* ── 濾波器的落點要**絕對**,不可以整個跟著基頻跑 ──────────────
+     原本是 `lo = max(380, f × 1.6)`。量出來的落點是:
+     midi 36 落在 **5.8 倍**基頻、midi 53 落在 2.2 倍、midi 69 落在 **1.6 倍**
+     ——**越高的音越暗**,1.6 倍等於只剩基音加一點二次諧波,
+     高音在 0.17 秒後就變成一顆正弦。
+     而聽的人是把**和弦最高音當旋律**的,所以整組裡最該亮的那顆最鈍,
+     低音區反而相對最亮:音色的方向整個是反的(被回報「lead 聽起來很怪」)。
+
+     真的合成器上這叫 **key tracking**,而且沒有人開到 100%——
+     濾波器本來就是絕對頻率的東西,鍵盤追蹤通常只給二三成。
+     `(f/262)^0.3` 就是三成:高音的落點會往上,但走得比基頻慢得多,
+     所以**高音保住絕對亮度**,而「幾倍基頻」自然往下掉——
+     真的樂器就是這樣(越高的音泛音越少),只是這裡的走向終於是對的。
+     現在:midi 55 落在 1053Hz(5.4 倍)、midi 69 落在 1344Hz(3.1 倍)、
+     midi 79 落在 1597Hz(2.0 倍) */
+  /* 係數是量出來收過一次的:第一版寫 1150 與 (3.2 + 3.4×vel),
+     方向對了但**整組太亮**——K-Pop 的 2kHz 一口氣多了 3.1dB,
+     比 Pop 高 8dB,那就是以前被回報的「lead synth 太突出」。
+     收到 950 與 (2.8 + 2.8×vel):落點照樣隨音高往上
+     (midi 55 → 870Hz、69 → 1110Hz、79 → 1320Hz),只是整條低一階 */
   const vel = Math.max(0.25, Math.min(1, peak / 0.22));
-  const hi = Math.min(6200, f * (4 + 5 * vel)), lo = Math.max(380, f * 1.6);
+  const track = Math.pow(f / 262, 0.3);
+  const lo = 950 * track;
+  const hi = Math.min(9500, lo * (2.8 + 2.8 * vel));
   lp.frequency.setValueAtTime(hi, when);
   lp.frequency.exponentialRampToValueAtTime(lo, when + 0.17);
   lp.connect(g);
@@ -3635,8 +3669,12 @@ function synthKeyNote(midi, when, dur, peak){
      乾的是一顆一顆分開的音,掛上延遲才連成一條線 */
   let echo = null;
   if (echoBus) {
+    /* 送多一點(0.34 → 0.44):lead 現在只住在高音的一小段,
+       `pan` 那條音高對應的擺位幾乎擺不開(midi 62–69 只有 −0.02～+0.06)。
+       真的 K-Pop 的 pluck 本來就泡在延遲裡,而延遲是硬擺左右 ±0.7 的,
+       所以寬度交給它比硬拉 pan 誠實 */
     echo = ctx.createGain();
-    echo.gain.value = 0.34;
+    echo.gain.value = 0.44;
     (pan || g).connect(echo); echo.connect(echoBus);
   }
 
@@ -3677,7 +3715,15 @@ function synthKeyNote(midi, when, dur, peak){
    一秒抖兩下的嗡嗡聲(supersaw 的 ±13 在這個音域完全不能用) */
 function voicesOf(kind){
   if (kind === "organ" || kind === "low") return [0];
-  if (kind === "supersaw") return [-13, 0, 13];
+  /* ── supersaw 是**七顆不等距**,不是三顆 ±13 ────────────────────
+     三顆 ±13 音分的拍頻算得出來,C4 (261.63Hz) 上是
+     **1.96 / 1.97 / 3.93 Hz**——三個離散的慢拍頻,耳朵數得出來,
+     所以聽起來是「一組走音的三和弦」不是 supersaw(被回報 pad 很怪)。
+     真的 supersaw(JP-8000)是**七顆、失諧不等距**:同一顆和弦上會有
+     0.75 到 7.5Hz 之間一整片互不重合的拍頻,疊起來才糊成 shimmer。
+     所以要加的是**顆數與不等距**,不是把 ±13 拉得更開——拉開只會更走音。
+     刻意用不整齊的數字(−13.5 / 6.5 / 25.5)就是為了不讓拍頻對在一起 */
+  if (kind === "supersaw") return [-24, -13.5, -5, 0, 6.5, 15, 25.5];
   return [-5, 5];
 }
 function playKeysChord(midis, when, dur, gain, kind){
@@ -3692,12 +3738,15 @@ function playKeysChord(midis, when, dur, gain, kind){
   const lp = ctx.createBiquadFilter();
   lp.type = "lowpass";
   lp.Q.value = organ ? 0.5 : 0.8;
-  lp.frequency.setValueAtTime(low ? 420 : organ ? 2600 : kind === "supersaw" ? 1400 : 900, when);
-  if (!organ && !low) {
-    // 鋪底的濾波器慢慢打開,那是「弦樂進來」的感覺
-    lp.frequency.linearRampToValueAtTime(kind === "supersaw" ? 3400 : 2100,
-                                         when + Math.min(dur * 0.7, 1.4));
-  }
+  /* **supersaw 不掃濾波器,它一進來就是滿的**。原本是 1400 → 3400Hz 掃
+     `min(dur × 0.7, 1.4)` = **1.4 秒**,而量到的和弦長度是 2.3 秒——
+     等於每顆和弦有六成的時間在「打開」,每一下都「哇——」一聲。
+     那是弦樂 swell 的手勢(八〇年代的),現在的 K-Pop supersaw 是
+     **靜態而且亮**,它的起伏來自側鏈(`FEELS.kpop.duck.pad`)不是濾波器。
+     `pad`(City Pop 的 Prophet-5)**保留那個掃**:那個年代就是這樣按的 */
+  const swell = !organ && !low && kind !== "supersaw";
+  lp.frequency.setValueAtTime(low ? 420 : organ ? 2600 : kind === "supersaw" ? 2900 : 900, when);
+  if (swell) lp.frequency.linearRampToValueAtTime(2100, when + Math.min(dur * 0.7, 1.4));
   let head = lp;
   if (low) {
     const hp = ctx.createBiquadFilter();
@@ -3719,7 +3768,9 @@ function playKeysChord(midis, when, dur, gain, kind){
   lfoAmt.gain.value = gain * (organ ? 0.17 : 0.09);
   if (slowLfo && !low) { try { slowLfo.connect(lfoAmt); lfoAmt.connect(g.gain); } catch (e) {} }
 
-  const atk = organ ? 0.012 : low ? 0.10 : kind === "supersaw" ? 0.16 : 0.34;
+  /* supersaw 的起音從 0.16 收到 0.03:160 毫秒的淡入配上那條 1.4 秒的
+     濾波器掃,等於整顆和弦都在進場。K-Pop 的那一片是**按下去就在那裡** */
+  const atk = organ ? 0.012 : low ? 0.10 : kind === "supersaw" ? 0.03 : 0.34;
   const rel = organ ? 0.09 : low ? 0.4 : 0.7;
   g.gain.setValueAtTime(0.0001, when);
   g.gain.linearRampToValueAtTime(gain, when + atk);
@@ -3741,10 +3792,21 @@ function playKeysChord(midis, when, dur, gain, kind){
      又整個擺在正中間,一個人就把整首拉回單聲道。
      位置照聲部數量算(兩顆就 ±0.5、三顆就 ±0.62 加中間),
      不要拿固定三格去 mod:兩顆和弦用前兩格會變成「一顆左、一顆中」的偏心 */
+  /* **位置照失諧量走**:失諧越多的擺越外側,沒失諧的那顆留正中間。
+     這樣「寬」跟「厚」變成同一件事的兩面——中間乾淨、邊緣飄。
+     原本是寫死的三格再拿 `vi % 3` 去對,顆數一改就對不上
+     (七顆會變成兩顆半擠在同一個位置);照失諧量算就永遠是對的 */
+  const vlist = voicesOf(kind);
   const wide = (kind === "supersaw" || kind === "pad") && ctx.createStereoPanner;
-  const spread = wide ? (voicesOf(kind).length === 2 ? [-0.5, 0.5] : [-0.62, 0, 0.62]).map(v => {
+  const vmax = Math.max(...vlist.map(Math.abs)) || 1;
+  /* 用開根號不用線性:線性的話失諧小的那幾顆會全部擠在中間
+     (七顆的平均 |pan| 只有 0.43,比原本三顆的 0.41 幾乎沒進步,
+      量到 L/R 相關反而從 0.883 升到 0.901,出了 0.3–0.9 那一帶)。
+     開根號把中間那幾顆也推出去,中央只留真正沒失諧的那一顆 */
+  const spread = wide ? vlist.map(c => {
     const sp = ctx.createStereoPanner();
-    sp.pan.value = v;
+    sp.pan.value = c === 0 ? 0
+      : Math.sign(c) * 0.70 * Math.sqrt(Math.abs(c) / vmax);
     sp.connect(lp);
     return sp;
   }) : null;
@@ -3754,13 +3816,12 @@ function playKeysChord(midis, when, dur, gain, kind){
     /* 鋪底疊兩顆微微失諧的,風琴只要一顆(Hammond 的泛音是齒輪轉出來的,不會飄)。
        **supersaw 疊三顆、失諧拉到 ±13 音分**:K-Pop 的和聲層就是那一片
        又寬又厚的鋸齒,兩顆差五音分聽起來只是「有點抖」,不是 supersaw */
-    const voices = voicesOf(kind);
-    for (let vi = 0; vi < voices.length; vi++) {
-      const cents = voices[vi];
+    for (let vi = 0; vi < vlist.length; vi++) {
+      const cents = vlist[vi];
       const o = ctx.createOscillator();
       o.setPeriodicWave(wave);
       o.frequency.value = f * Math.pow(2, cents / 1200);
-      o.connect(spread ? spread[vi % spread.length] : lp);
+      o.connect(spread ? spread[vi] : lp);
       o.start(when); o.stop(stopAt);
       oscs.push(o);
       activeSources.add(o);
@@ -4116,6 +4177,10 @@ function synth808(piece, when, gain){
 }
 
 function playBassNote(midi, when, dur, peak){
+  /* 每個曲風的貝斯份量不一樣,寫在 `FEELS[x].bassGain` 裡,
+     跟 `kickGain` / `snareGain` / `cymGain` 同一個做法(沒寫就是 1,零差異)。
+     **不要在排程裡針對某一種曲風寫 if** */
+  peak *= (feel().bassGain || 1);
   const g = ctx.createGain();
   g.connect(bassBus);
   let src;
@@ -4442,11 +4507,31 @@ const FEELS = {
     /* **兩把吉他、一組銅管**才是真的 City Pop 錄音的編制:
        一把切十六分、一把彈琶音(左右各一把),銅管在句尾打 stab。
        銅管是合成的,理由見 `playBrass` 的註解 */
-    parts: { guitar: "chop", gtone: "clean", glevel: 0.115,
-             guitar2: { lvl: 0.075 },
-             brass: { lvl: 0.085 },
-             keys: "pad", klevel: 0.05,
+    /* ── 層級是量出來重訂的,不是憑感覺 ──────────────────────────
+       被問「City Pop 還有辦法更飽滿嗎」。**一次只留一層**量絕對能量
+       (scratchpad 的 `cpsolo.mjs`,靜音式的量法會被限幅器汙染——
+       關掉一層別的反而變大聲),結果是:
+
+         Rhodes −20.6 / 鋪底 −21.4 / 鼓 −24.0 / 貝斯 −24.7
+         銅管 −32.0 / 吉他 **−38.5** / 吉他2 **−42.8** / 沙鈴 −47.3
+
+       **兩把吉他比 Rhodes 低 18 與 22dB**——那等於沒有。而十六分切音
+       正是 City Pop 最招牌的一層(松原正樹、鈴木茂那兩把),
+       真的唱片裡它跟鍵盤是同一個量級的。
+       **鋪底反而只比 Rhodes 低 0.8dB**,而且它在 250Hz 是 −23.0、
+       比 Rhodes 的 −23.2 還大——中頻最擠的那一段是它塞的。
+
+       全曲風比對也指著同一件事:City Pop 的 60Hz 比 Pop 低 2.5dB、
+       120Hz 低 2.9dB,250–1k 卻高 3.5–4dB。**下盤輕、中頻重**,
+       所以「不夠飽滿」不是總音量的事,是中頻在替下盤做工 */
+    parts: { guitar: "chop", gtone: "clean", glevel: 0.26,
+             guitar2: { lvl: 0.17 },
+             brass: { lvl: 0.115 },
+             keys: "pad", klevel: 0.038,
              perc: { kind: "shaker", on: "sub", lvl: 0.17 } },
+    /* AOR 的貝斯是往前的(後藤次利、細野晴臣那一路),不是墊在後面。
+       量到 60Hz 比 Pop 低 2.5dB,補回來 */
+    bassGain: 1.3,
   },
   /* Blues:shuffle。跟 Pop 同一組鼓件、同一個 backbeat,差別在**八分是三連音的**
      (`swing: 0.66`,不是爵士的 0.58——藍調的搖擺更接近正三連音),
@@ -4543,7 +4628,11 @@ const FEELS = {
        它不是和聲也不是旋律,是節奏性的填空。做法見 `playVox` */
     /* `arp` 是**十六分的序列層**:現在的 K-Pop 幾乎每首都有,
        跟 pluck 是兩件事(pluck 打和弦、arp 跑單音線條) */
-    parts: { keys: "supersaw", klevel: 0.075, klow: 0.12,
+    /* `klow` 從 0.12 補到 0.145:pluck 不進低音區之後(`lowCut`)
+       120Hz 掉了 1.2dB——那正是「不夠飽滿」那節量出來的那個洞。
+       **補的是專門住在那一段的那一層,不是把 pluck 放回去**:
+       110–420Hz 本來就是 `klow` 的工作,pluck 在那裡只會跟 808 打架 */
+    parts: { keys: "supersaw", klevel: 0.075, klow: 0.145,
              vox: { lvl: 0.085 }, arp: { lvl: 0.07 },
              perc: { kind: "shaker", on: "sub", lvl: 0.12, snap: true } },
   },
@@ -5184,6 +5273,20 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord, span){
 /* `spans` 是這一格的和弦們(一顆就一段,兩顆就兩段)。
    左手在**每一顆和弦的開頭**落一次低音、撐到那顆和弦結束;
    右手打到哪一格就用那一格當下的和弦。一格只有一顆時跟以前一模一樣 */
+/* ── 這一台是鍵盤還是 lead ────────────────────────────────────
+   **量過原本 K-Pop 的 pluck 一下砸 2–4 顆音**(12 秒裡 42 下,只有 2 下是單音),
+   一小節砸 8.4 下——那是和弦 stab 不是 pluck。真的 K-Pop 那一層是
+   一兩顆音的動機,和弦的資訊交給鋪底與貝斯,所以聽起來乾淨又往前。
+   三顆鋸齒和弦 × 每顆再疊兩顆失諧 = 一下六顆鋸齒過同一顆低通,那只會糊。
+
+   上限寫在 `PIANO_KITS[x].lead` 裡,**排程不要針對某一種曲風寫 if**。
+   取最上面那幾顆:和弦的頂音本來就是耳朵當旋律的那一顆 */
+function keysNotes(notes){
+  const K = PIANO_KITS[pianoKit()];
+  const cap = K && K.lead;
+  return (cap && notes.length > cap) ? notes.slice(-cap) : notes;
+}
+
 function schedulePiano(spans, barStartBeat, b, transpose, absBar, isFill){
   const f = feel(), p = pat(absBar), st = styleAt(absBar);
   const m = meter(), beats = m.beats, div = divNow(), mid = midBeat();
@@ -5207,12 +5310,12 @@ function schedulePiano(spans, barStartBeat, b, transpose, absBar, isFill){
   // 墊底:一顆和弦一下,撐滿它自己那一段
   if (st === "pad") {
     if (b === here.fromBeat) {
-      for (const n of v.upper) playNote(n + transpose, beatTime(barStartBeat + b),
+      for (const n of keysNotes(v.upper)) playNote(n + transpose, beatTime(barStartBeat + b),
                                         spb * (here.toBeat - here.fromBeat),
                                         humanize(absBar, 84, p.compGain));
     }
     if (!multi && b === mid && isFill && chance(absBar, 80, 0.55)) {
-      for (const n of v.upper) playNote(n + transpose, beatTime(barStartBeat + mid),
+      for (const n of keysNotes(v.upper)) playNote(n + transpose, beatTime(barStartBeat + mid),
                                         spb * (beats - mid), p.compGain * 0.85);
     }
     return;
@@ -5254,11 +5357,11 @@ function schedulePiano(spans, barStartBeat, b, transpose, absBar, isFill){
       if (r < 0.34) notes = notes.slice(-2);
       else if (r < 0.46) notes = notes.slice(-1);
     }
-    for (const n of notes) playNote(n + transpose, t, dur, humanize(absBar, 84 + idx, peak * arc));
+    for (const n of keysNotes(notes)) playNote(n + transpose, t, dur, humanize(absBar, 84 + idx, peak * arc));
   }
 
   if (isFill && b === beats - 1) {
-    for (const n of (spanAt(spans, slotsInBar() - 1) || here).v.upper) {
+    for (const n of keysNotes((spanAt(spans, slotsInBar() - 1) || here).v.upper)) {
       playNote(n + transpose, slotTime(barStartBeat, slotsInBar() - 1), slotDur(), p.compGain * 0.85);
     }
   }

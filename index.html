@@ -3045,13 +3045,6 @@ const SMP_KITS = {
     "C#5 D5 E5 F#5 G#5 A5 A#5" },
   electric: { dir: "guitar-electric", notes:
     "C#2 E2 F#2 A2 C3 D#3 F#3 A3 C4 D#4 F#4 A4 C5 D#5 F#5 A5 C6" },
-  /* 弦樂分兩件:**大提琴在下、小提琴在上**,那才是真的弦樂組的寫法
-     (八〇年代的日本 AOR 錄音就是這樣配的)。小提琴只錄了 14 顆而且 A3 以下沒有,
-     所以低音一定要交給大提琴,不是把小提琴硬拉下來 */
-  cello:    { dir: "cello", notes:
-    "C2 D2 D#2 E2 F2 G2 G#2 A2 A#2 B2 C3 C#3 D3 D#3 E3 F3 F#3 G3 G#3 A3 A#3 B3 " +
-    "C4 C#4 D4 D#4 E4 F4 F#4 G4 G#4 A4 B4 C5" },
-  violin:   { dir: "violin", notes: "A3 C4 E4 G4 A4 C5 E5 G5 A5 C6 E6 G6 A6 C7" },
 };
 const PC_OF = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 function noteMidi(n){                      // "F#2" → 42、"C4" → 60
@@ -4272,10 +4265,11 @@ const FEELS = {
     piano: "rhodes",
     /* 這一種的編制是最厚的:乾淨電吉他切十六分、弦樂在後面鋪、沙鈴走八分。
        八〇年代的日本 AOR 就是這樣配的——錄音室樂手一次錄滿 */
-    /* 鋪底改成**真的弦樂取樣**(`strings`):八〇年代的日本 AOR 是真的請弦樂組進棚,
-       合成的鋸齒永遠不會是那個聲音。換成取樣之後電平要重訂(見 klevel) */
+    /* **鋪底維持合成的,不要換成弦樂取樣**。試過換成真的大提琴 + 小提琴取樣,
+       被回報「真實弦樂聽起來反而很怪,之前的比較好聽」——而且量出來確實是壞的,
+       原因見 CLAUDE.md 的「實錄取樣不是永遠比合成好」那節 */
     parts: { guitar: "chop", gtone: "clean", glevel: 0.115,
-             keys: "strings", klevel: 0.11,
+             keys: "pad", klevel: 0.05,
              perc: { kind: "shaker", on: "sub", lvl: 0.17 } },
   },
   /* Blues:shuffle。跟 Pop 同一組鼓件、同一個 backbeat,差別在**八分是三連音的**
@@ -5194,60 +5188,6 @@ function strumTake(notes, when, gain, toneName, up, spread, mute, transpose, tak
   }
 }
 
-/* ── 真的弦樂:大提琴在下、小提琴在上 ─────────────────────────
-   City Pop 的鋪底原本是合成的鋸齒。八〇年代的日本 AOR(山下達郎、竹內瑪莉亞)
-   是**真的請弦樂組進棚錄**的,合成的鋸齒不管怎麼失諧都不會是那個聲音——
-   弦樂真正的特徵是「很多人同時拉、每個人的起弓與音準都差一點」。
-
-   `STRING_SPLIT` 以下給大提琴、以上給小提琴。**不要整組都用小提琴往下拉**:
-   它只錄了 14 顆而且 A3(57)以下沒有,硬拉會變成一把很假的中提琴 */
-const STRING_SPLIT = 60;                 // C4:以下大提琴、以上小提琴
-function playStringChord(midis, when, dur, gain){
-  if (!midis.length) return;
-  /* 取樣還沒到位、或整組載不到時掉回合成的鋪底——
-     音色不對但不會沒聲音(跟 `synthDrum` 同一條規則) */
-  const ready = midis.some(m => smpPick(m < STRING_SPLIT ? "cello" : "violin", m, 5));
-  if (!ready) { playKeysChord(midis, when, dur, gain, "pad"); return; }
-  const bus = ctx.createGain();
-  bus.gain.value = 1;
-  const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
-  if (pan) { pan.pan.value = 0; bus.connect(pan); pan.connect(padBus); }
-  else bus.connect(padBus);
-  let left = 0;
-  const bye = () => { if (--left === 0) try {
-    bus.disconnect(); if (pan) pan.disconnect(); } catch (e) {} };
-  for (let i = 0; i < midis.length; i++) {
-    const m = midis[i];
-    const kit = m < STRING_SPLIT ? "cello" : "violin";
-    const smp = smpPick(kit, m, 5);
-    if (!smp) continue;
-    const src = ctx.createBufferSource();
-    src.buffer = smp.buffer;
-    /* **每一把琴差幾音分**,而且**起弓差幾毫秒**。弦樂組聽起來「厚」不是因為
-       音量大,是因為十幾個人不可能同時起弓、也不可能完全同音高。
-       偏差照聲部序號固定(不可以用亂數,那樣每次重新整理音色都不一樣) */
-    const cents = [-5, 4, -2, 6, -7, 3][i % 6];
-    src.playbackRate.value = smp.rate * Math.pow(2, cents / 1200);
-    const g = ctx.createGain();
-    const lp = ctx.createBiquadFilter();
-    lp.type = "lowpass"; lp.frequency.value = 5200; lp.Q.value = 0.5;
-    src.connect(lp); lp.connect(g); g.connect(bus);
-    // 起弓:弦樂沒有音頭,要拉進來。0.22 秒是「合奏的弦樂」不是「一把獨奏」
-    const atk = 0.22 + (i % 3) * 0.02;
-    g.gain.setValueAtTime(0.0001, when);
-    g.gain.linearRampToValueAtTime(gain, when + atk);
-    g.gain.setTargetAtTime(0.0001, when + Math.max(dur, atk + 0.05), 0.28);
-    const stopAt = when + Math.max(dur, atk + 0.05) + 1.0;
-    const start = when + (i % 4) * 0.006;        // 起弓錯開幾毫秒
-    src.start(start); src.stop(stopAt);
-    left++; activeSources.add(src);
-    src.onended = () => { activeSources.delete(src);
-      try { src.disconnect(); lp.disconnect(); g.disconnect(); } catch (e) {}
-      bye(); };
-  }
-  if (!left) { try { bus.disconnect(); if (pan) pan.disconnect(); } catch (e) {} }
-}
-
 /* ── 人聲切片(K-Pop)──────────────────────────────────────────
    現在的 K-Pop 幾乎每首都有那一層「啊——」的切片。它**不是和聲也不是旋律**,
    是節奏性的填空——所以它只拿和弦的頂音、只打幾格、而且每次的母音不一樣。
@@ -5457,10 +5397,7 @@ function scheduleKeys(spans, barStartBeat, b, transpose, absBar){
   const len = (here.toBeat - here.fromBeat) * spb;
   const lvl = (f.parts.klevel || 0.16) * (st === "drive" ? 1.12 : st === "pad" ? 0.9 : 1)
             * arcGain(absBar);
-  /* **弦樂走真的取樣**(大提琴在下、小提琴在上),取樣還沒到位時
-     `playStringChord` 自己掉回合成的鋪底 */
-  if (kind === "strings") playStringChord(notes, beatTime(barStartBeat + b), len * 0.96, lvl);
-  else playKeysChord(notes, beatTime(barStartBeat + b), len * 0.96, lvl, kind);
+  playKeysChord(notes, beatTime(barStartBeat + b), len * 0.96, lvl, kind);
   /* **低音鋪底是獨立的一層**(`klow`),不是把 `keys` 調大。
      量出來 K-Pop 在 120–250Hz 比 Pop 低 10dB:808 的正弦擠在 30–60、
      pluck 從 250 才開始,中間那段「身體」沒有人在,聽起來就是單薄。
@@ -5513,18 +5450,7 @@ function prewarmGuitar(){
   // 808 的金屬音色也先算好(1.3 秒的 buffer,算一次就一直用)
   if (drumKit() === "e808") hat808Buf();
   noiseBuf();
-  if (!f.parts) return Promise.resolve();
-  /* 弦樂用的音跟吉他不同(它走鋼琴的上聲部),而且要拆給大提琴與小提琴兩件。
-     跟吉他一樣**在按下播放之前載完**,不然解碼會跟排程器搶主執行緒 */
-  const strJob = f.parts.keys === "strings" ? (() => {
-    const lo = new Set(), hi = new Set();
-    for (const spans of (voicings || [])) for (const sp of (spans || [])) {
-      if (!sp || !sp.v) continue;
-      for (const n of padNotes(sp.v)) (n + transposeOn < STRING_SPLIT ? lo : hi).add(n + transposeOn);
-    }
-    return ensureSmp("cello", [...lo]).then(() => ensureSmp("violin", [...hi]));
-  })() : Promise.resolve();
-  if (!f.parts.guitar) return strJob;
+  if (!f.parts || !f.parts.guitar) return Promise.resolve();
   const tone = f.parts.gtone || "nylon";
   const want = new Set();
   for (const spans of (voicings || [])) {
@@ -5538,7 +5464,7 @@ function prewarmGuitar(){
      兩件都在按下播放之前做完就完全不影響播放。
      而且取樣蓋得到的那幾顆**根本不用算 KS**——KS 只是備援,
      真的用不到就不要花那個時間(Pop 的 14 顆音本來每一顆都要算) */
-  return Promise.all([strJob, ensureSmp(GTONE_KIT[tone], [...want])]).then(() => {
+  return ensureSmp(GTONE_KIT[tone], [...want]).then(() => {
     for (const m of want) if (!gtrSample(m, tone)) ksBuffer(m, tone);
   });
 }

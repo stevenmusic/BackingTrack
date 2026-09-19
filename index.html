@@ -1883,6 +1883,20 @@ function qualOf(c){
   return "other";                                // sus 之類的不動
 }
 function nameOf(pc, suffix){ return PAL_ROOTS[((pc % 12) + 12) % 12] + (suffix || ""); }
+/* **三全音代理的根音一定拼成降記號**。它存在的理由是低音**往下半音**接到目標
+   (G7 → D♭7 → C、C7 → G♭7 → F),寫成 `C♯7` / `F♯7` 的話那條半音線在譜上
+   變成往上的,看起來是完全另一回事(升記號留給真的往上走的經過減七:
+   `C♯dim7 → Dm7`、`F♯dim7`)。`PAL_ROOTS` 的 pc 1 與 6 是升記號,所以自己一張表 */
+const FLAT_ROOTS = ["C", "D♭", "D", "E♭", "E", "F", "G♭", "G", "A♭", "A", "B♭", "B"];
+function flatNameOf(pc, suffix){ return FLAT_ROOTS[((pc % 12) + 12) % 12] + (suffix || ""); }
+/* 副屬化要給哪一種屬七。本來一律 `7`,但原本寫九度以上的和弦會被拆掉色彩音
+   (`Am9 → A7`)——那跟 `EXT_TABLE` 不准往回拆是同一件事,聽起來像彈錯。
+   所以原本有色彩音的就保留一階:**往下走去小和弦給 `7♭9`**
+   (小調的 V7 本來就帶 ♭9,和聲小音階自己就有那個音)、去大和弦給 `13` */
+function domSuffix(x){
+  if (!/9|11|13/.test(x.suffix)) return "7";
+  return x.nq === "min" ? "7b9" : "13";
+}
 /* 把 bass 放到低音之後,低音線走到下一格是不是級進(一或兩個半音)。
    轉位存在的理由就是接低音線,不級進的轉位只是把和弦的重心弄歪 */
 function stepToNext(x, bassPc){
@@ -1900,7 +1914,11 @@ const EXT_TABLE = {
   "m7":   ["m9"],
   "6":    ["maj7"],
   "9":    ["13"],
-  "13":   ["9"],
+  /* **`13` 沒有往上的路,所以這裡是空的**。原本寫 `"13": ["9"]`,
+     那是把十三度拆掉——跟 `"m9": ["m7"]` 被拿掉是同一件事(只能往上加,
+     不能往回拆)。屬十三要再加色彩只剩 ♯11 / ♭9 那種改變功能的音,
+     那不是「換個聲位」而是換一顆和弦,交給三全音代理與轉位去做 */
+  "13":   [],
   /* **只能往上加,不能往回拆**。原本這裡寫 `"m9": ["m7"]`,結果
      `Am7 - Am7 - Dm9 - Dm9` 會被換成 `… Dm7 - Dm9`——聽起來不是變化,
      是把色彩音拿掉之後又加回來,像彈錯。m9 要動就往 m11 走 */
@@ -1968,12 +1986,22 @@ const SUB_RULES = [
      這是流行歌裡最常見的一手,而且**低音一個音都沒動**,所以永遠安全:
      招牌和弦、屬七要解決過來的那一格都照給(`keepsRoot`)。
      小三和弦換成大三/屬七那一下就是它的味道(Em → E),
-     所以三和弦的進行也給一個純大三的選項 */
+     所以三和弦的進行也給一個純大三的選項。
+
+     **但下一格已經是屬七的時候一律不套**(`x.nq !== "dom"`)。
+     那種情形這一格就是它的 ii,兩顆合起來是 ii-V——ii 一定是小三和弦,
+     改成屬七就變成 V/V-V,那是另一組進行不是同一組的代理。
+     被回報過:王道進行 `… Dm7 - G7 - Cmaj7` 的 Dm7 被換成 D7,
+     「後半段 2-5-1 這麼標準的和弦進行都可以搞錯」。
+     74 組裡每一個「下一格是屬七」的案例都是這件事:`Dm7 - G7`、`Am7 - D7`、
+     `Em7 - A7`、`A♭m7 - D♭7` 全部是 ii-V,一顆都不該動。
+     爵士的連續屬七(E7-A7-D7-G7)理論上成立,但那是**重配**不是代理,
+     要的話走 `V7/next`;這條的定位是「聽起來還是同一首」 */
   { id: "副屬化", feels: ["straight", "citypop", "kpop", "latin", "swing"], keepsRoot: true,
-    ok: x => (x.q === "maj" || x.q === "min") && x.next &&
+    ok: x => (x.q === "maj" || x.q === "min") && x.next && x.nq !== "dom" &&
              ((x.rootPc + 5) % 12) === x.nextRootPc && x.nextRootPc !== x.rootPc,
-    to: x => nameOf(x.rootPc, x.suffix === "" || x.suffix === "m" ? "" : "7"),
-    also: x => nameOf(x.rootPc, "7") },
+    to: x => nameOf(x.rootPc, x.suffix === "" || x.suffix === "m" ? "" : domSuffix(x)),
+    also: x => nameOf(x.rootPc, domSuffix(x)) },
   /* 副屬和弦:下一格的 V7 放在這裡。ii 前面放 VI7、V 前面放 II7…… */
   { id: "V7/next", feels: JAZZ_FEELS,
     ok: x => x.next && x.q !== "dom" && x.nq !== "dom" && x.nq !== "dim" &&
@@ -1983,7 +2011,7 @@ const SUB_RULES = [
   /* V7 的三全音代理:G7 → D♭7,低音半音走下去接到 I */
   { id: "tritone", feels: JAZZ_FEELS,
     ok: x => x.q === "dom" && x.next && ((x.rootPc + 5) % 12) === x.nextRootPc,
-    to: x => nameOf(x.rootPc + 6, "7") },
+    to: x => flatNameOf(x.rootPc + 6, "7") },
   /* ♯IV 減七:兩格同一顆屬七、下一格在五度上(F7 F7 C7 → F7 F♯dim7 C7)。
      藍調與爵士藍調第六小節的那顆經過和弦,幾乎是固定寫法 */
   { id: "♯IV°", feels: ["blues", "swing"], passing: true,
@@ -1996,7 +2024,7 @@ const SUB_RULES = [
      (爵士藍調第四小節的本家寫法);但藍調第五、六小節的 `F7 F7 C7` 裡,
      F7 是 IV 不是 V——塞一顆 Cm7 進去會變成 B♭ 的 ii-V,卻走到 C7,
      整組 ii-V 懸在半空(踩過)。所以要看**這一對後面那一格**的根音 */
-  { id: "ii-V",  feels: JAZZ_FEELS,
+  { id: "ii-V",  feels: JAZZ_FEELS, onPair: true,
     ok: x => x.q === "dom" && x.nextSame && x.afterRootPc >= 0 &&
              ((x.rootPc + 5) % 12) === x.afterRootPc,
     to: x => nameOf(x.rootPc + 7, "m7") },
@@ -2060,10 +2088,45 @@ function subCandidates(bars, i, key, pcs){
   const scale = new Set(MAJOR_SCALE.map(n => (n + key) % 12));
   const chromatic = c.intervals.some(iv => !scale.has((c.rootPc + iv) % 12)) ||
                     !scale.has(c.rootPc);
-  const resolvesHere = !!(prev && prev.ok && qualOf(prev.chord) === "dom" &&
-                          ((prev.chord.rootPc + 5) % 12) === c.rootPc);
+  /* 「上一格要解決到這裡」有三種寫法,三種都不可以動這一格的根音:
+       1. 屬七往下五度(`G7 → Cmaj7`)
+       2. 屬七往下半音——三全音代理(`D♭7 → Cmaj7`)
+       3. **減七往上半音——導音和弦**(`C♯dim7 → Dm7`)
+     原本只認第一種,結果 City Pop 的 `C♯dim7 - Dm7 - G7` 裡 Dm7 套「ii→IV」
+     變成 Fmaj7,前面那顆經過減七就解決不到任何地方——那顆和弦存在的唯一理由
+     就是半音走上去接到 D */
+  const pq = prev && prev.ok ? qualOf(prev.chord) : "";
+  const pStep = prev && prev.ok ? ((c.rootPc - prev.chord.rootPc) % 12 + 12) % 12 : -1;
+  const resolvesHere = (pq === "dom" && (pStep === 5 || pStep === 11)) ||
+                       (pq === "dim" && pStep === 1);
   const keepRootOnly = JAZZ_FEELS.indexOf(feelNow) < 0 && (chromatic || resolvesHere);
   if (x.q === "other" || x.q === "dim") return [];
+
+  /* ── 低音正在走一條級進的線時,不要動這一格的根音 ────────────
+     `C - G/B - Am - Am/G - F - C/E - Dm7`(卡農)的 F 換成 Dm7,
+     低音 G→F→E 就斷成 G→D→E;安達魯西亞 `Am - G - F - E7` 同理。
+     這是 CLAUDE.md 那條「F 換成 Fm 下行線就沒了」的一般化——
+     轉位存在的理由就是把低音線接順(`stepToNext`),同一個標準反過來用:
+     **那條線比「換一顆和弦」重要**。前後都是級進、而且同一個方向才算 */
+  const bassLine = (() => {
+    if (!prev || !prev.ok || !next || !next.ok) return false;
+    const a = ((c.bassPc - prev.chord.bassPc) % 12 + 12) % 12;
+    const b2 = ((next.chord.bassPc - c.bassPc) % 12 + 12) % 12;
+    const down = v => v === 10 || v === 11, up = v => v === 1 || v === 2;
+    return (down(a) && down(b2)) || (up(a) && up(b2));
+  })();
+
+  /* ── 旁邊那格「根音一樣但和弦不一樣」時,那一對是一個手勢,不要動根音 ──
+     `Am7 - D7 - Dm7 - G7`(City Pop)的 D7 → Dm7 是刻意在同一個根音上換顏色,
+     把 Dm7 換成 Fmaj7 等於把那一下抹掉;`F - Fm - C` 的借用 iv、
+     `Am7 - A7 - Dm7` 的副屬化都一樣,那兩格合起來才是一件事。
+
+     **一模一樣的重複不算**(`text` 相同):`C - C - F - G` 的第二格換成 Am7、
+     Blue Bossa 撐兩小節的 `Dm7 - Dm7` 換掉前一格,那正是代理和弦該做的事
+     (CLAUDE.md 的 `C - C - C7` → `C - Cmaj7 - C7` 就是這一條)。
+     踩過:一開始寫成「根音一樣就擋」,結果連重複的主和弦都不能換了 */
+  const pairedRoot = [prev, next].some(nb => nb && nb.ok &&
+                       nb.chord.rootPc === c.rootPc && nb.chord.text !== c.text);
 
   /* ── 換完之後不可以跟左右鄰居變成同一顆 ──────────────────────
      被回報過「有些替代和弦聽起來很怪」,追下去大半是這個:
@@ -2098,8 +2161,15 @@ function subCandidates(bars, i, key, pcs){
       continue;
     }
     for (const t of [r.to(x), r.also && r.also(x)]) {
-      if (!t || t === c.text || !parseChord(normalizeSymbol(t))) continue;
+      if (!t || t === c.text) continue;
+      const tc = parseChord(normalizeSymbol(t));
+      if (!tc) continue;
       if (!r.keepsRoot && !r.passing && clashesNeighbour(t)) continue;
+      /* 上面那兩道門只管**根音真的換掉**的候選:低音線與「同一個根音的一對」
+         都是根音的事,`IV→iv`(F → Fm)與加色彩音、轉位、副屬化不動根音,
+         那條線與那個手勢原封不動 */
+      if (tc.rootPc !== c.rootPc && !r.passing && !r.onPair &&
+          (bassLine || pairedRoot)) continue;
       out.push(t);
     }
   }

@@ -2398,6 +2398,15 @@ let reverbBus = null, drumBus = null, bassBus = null;
 /* 伴奏團的其他成員:吉他、鍵盤鋪底(風琴/弦樂)、打擊小物 */
 let combBus = null, padBus = null, percBus = null, drumGlue = null, roomBus = null;
 let masterHp = null, masterGlue = null, masterSat = null;
+let echoBus = null, echoL = null, echoR = null;
+/* 延遲時間跟著速度走:八分與附點八分(那是最常見的一組乒乓)。
+   **速度一改就要重算**,不然換速度之後延遲會跟節奏錯開 */
+function updateEcho(){
+  if (!echoL || !echoR || !spb) return;
+  const t = ctx.currentTime;
+  echoL.delayTime.setTargetAtTime(Math.min(1.9, spb * 0.5), t, 0.05);
+  echoR.delayTime.setTargetAtTime(Math.min(1.9, spb * 0.75), t, 0.05);
+}
 const BASS_BUS_LEVEL = 0.95;
 /* 上一顆 808 低音彈到哪個音、什麼時候彈的。滑音要靠它 */
 const last808 = { midi: -1, at: -99 };
@@ -2542,6 +2551,31 @@ function ensureAudio(){
     limiter.connect(outGain);
     outGain.connect(softClip);
     softClip.connect(ctx.destination);
+
+    /* ── 節拍同步的乒乓延遲 ───────────────────────────────────────
+       **K-Pop 的 pluck 幾乎一定掛延遲**,那是它「一直在迴盪」的來源;
+       乾的 pluck 聽起來就是一顆一顆分開的合成音,不是一條線。
+       兩顆延遲交叉回授(左進右、右進左)才是乒乓,單顆延遲只是回音。
+       時間**跟著速度走**(八分與附點八分),不跟的話換速度就跟節奏打架了。
+       回授收在 0.32:再高會一直疊上去,在已經很滿的低頻上很危險 */
+    echoBus = ctx.createGain();
+    echoBus.gain.value = 1;
+    echoL = ctx.createDelay(2); echoR = ctx.createDelay(2);
+    const efL = ctx.createGain(), efR = ctx.createGain();
+    efL.gain.value = 0.32; efR.gain.value = 0.32;
+    // 回授的路上收掉高頻,尾巴才會越來越暗(真的延遲器就是這樣)
+    const edL = ctx.createBiquadFilter(), edR = ctx.createBiquadFilter();
+    edL.type = edR.type = "lowpass";
+    edL.frequency.value = edR.frequency.value = 3200;
+    const epL = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+    const epR = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+    if (epL) { epL.pan.value = -0.7; epR.pan.value = 0.7; }
+    echoBus.connect(echoL);
+    echoL.connect(edL); edL.connect(efL); efL.connect(echoR);   // 左 → 右
+    echoR.connect(edR); edR.connect(efR); efR.connect(echoL);   // 右 → 左
+    if (epL) { echoL.connect(epL); epL.connect(masterGain); echoR.connect(epR); epR.connect(masterGain); }
+    else { echoL.connect(masterGain); echoR.connect(masterGain); }
+    updateEcho();
 
     reverbBus = ctx.createGain();
     const pre = ctx.createDelay(0.2);
@@ -2924,8 +2958,9 @@ function loadDrumSet(pieces, withRoom){
 }
 
 function ensureDrums(){
-  // 808 是合成的,一個檔案都不用抓(也不要順手把爵士鼓組載下來佔頻寬)
-  if (drumKit() === "e808") return Promise.resolve();
+  /* 808 改成真的取樣了(見 `SRC_D808`)。**還是不要順手把爵士鼓組載下來**
+     ——那是 26MB,808 整組不到 400KB */
+  if (drumKit() === "e808") return ensure808();
   if (!drumsLoading) {
     drumsLoading = loadDrumSet(DRUM_CORE, true);
     // 過門那幾顆不放進回傳的 promise 裡,播放不必等它
@@ -3177,7 +3212,11 @@ function pickDrumLayer(piece, vel){
 function playDrum(piece, when, gain, vel){
   // 實錄鼓組的大鼓也要能觸發側鏈(原本只有 808 的大鼓會);給不給看 FEELS[x].duck
   if (piece === "kick") duckBass(when);
-  if (drumKit() === "e808") { synth808(piece, when, gain); return; }
+  /* 808 先用真的取樣,載不到才掉回合成(`synth808` 是備援不是主角) */
+  if (drumKit() === "e808") {
+    if (!play808Sample(piece, when, gain)) synth808(piece, when, gain);
+    return;
+  }
   /* 沒特別給 vel 的話就拿音量當力度。鼓件自己的基準音量差很多
      (hi-hat 的 0.3 已經是很用力了、小鼓的 0.3 是幽靈音),
      所以要除掉那個基準才是真的「打多用力」 */
@@ -3574,6 +3613,14 @@ function synthKeyNote(midi, when, dur, peak){
   const send = ctx.createGain();
   send.gain.value = 0.52;
   (pan || g).connect(send); send.connect(reverbBus);
+  /* **再送一份進乒乓延遲**。這是 K-Pop 的 pluck 跟「一台合成器」最大的差別:
+     乾的是一顆一顆分開的音,掛上延遲才連成一條線 */
+  let echo = null;
+  if (echoBus) {
+    echo = ctx.createGain();
+    echo.gain.value = 0.34;
+    (pan || g).connect(echo); echo.connect(echoBus);
+  }
 
   g.gain.setValueAtTime(0.0001, when);
   g.gain.linearRampToValueAtTime(peak, when + 0.004);
@@ -3597,7 +3644,8 @@ function synthKeyNote(midi, when, dur, peak){
     o.onended = () => {
       activeSources.delete(o);
       try { o.disconnect(); } catch (e) {}
-      if (--left === 0) try { lp.disconnect(); g.disconnect(); send.disconnect(); if (pan) pan.disconnect(); } catch (e) {}
+      if (--left === 0) try { lp.disconnect(); g.disconnect(); send.disconnect();
+        if (echo) echo.disconnect(); if (pan) pan.disconnect(); } catch (e) {}
     };
   }
 }
@@ -3777,6 +3825,98 @@ function hat808Buf(){
   return buf;
 }
 
+/* ══ 真的 TR-808 取樣 ═══════════════════════════════════════════
+   **被回報「City Pop 的音色比 K-Pop 好聽多了」**。查下去原因很直接:
+   City Pop 是 Rhodes 取樣 + 真吉他取樣 + 實錄鼓,**K-Pop 從頭到尾一顆取樣都沒有**
+   ——pluck、supersaw、arp、808 鼓、808 低音、人聲切片全部是振盪器。
+
+   而且量過之後發現合成的 808 hi-hat 是錯的:原本六顆方波排在
+   360–1478Hz(`ratios × 180`),真的 TR-808 是 **205.3 / 304.4 / 369.6 /
+   522.7 / 540 / 800 Hz** 過一顆 10kHz 帶通。頻率整組不對,而且再兩段 7.6kHz
+   高通之後剩下的其實是方波的混疊——那就是它聽起來不金屬的原因。
+   hi-hat 是這個曲風打最多下的東西(一小節十六下),它不像就整首不像。
+
+   所以改成**真的 TR-808 取樣**(Dirt-Samples,TidalCycles 那組,授權可用)。
+   這條改掉了原本「808 是合成的,一個檔案都不下載」那條規則——
+   理由是那條當初寫的是「TR-808 本來就是合成鼓機」,沒錯,但**真的製作是用
+   那台機器的取樣**,不是自己重寫它的電路。整組八個檔案加起來不到 400KB。
+
+   **WAV 不是 mp3 也不是 FLAC**:`decodeAudioData` 對 WAV 的支援是最好的
+   (鼓那組 FLAC 在舊 iOS 上踩過)。
+   **`synth808` 留著當備援**,位置跟 `synthDrum` 一樣——載不到就掉回去 */
+const SRC_D808 = [
+  "https://cdn.jsdelivr.net/gh/tidalcycles/Dirt-Samples@master/",
+  "https://raw.githubusercontent.com/tidalcycles/Dirt-Samples/master/",
+];
+/* 哪一顆用哪一個檔案。**長度是挑出來的不是隨便拿的**(量過每一顆)。
+   `808bd/` 那一櫃是同一顆鼓的不同衰減設定,差距大得嚇人——
+   量前 0.55 秒的能量(那是 100 BPM 一小節裡大鼓真的在響的窗):
+   `BD0010` 1875、`BD0025` 233、`BD0000` 76,**第一顆是第二顆的八倍**。
+   一開始拿了 `BD0010`(3 秒),結果 K-Pop 的 RMS 從 −11.2 衝到 −9.0、
+   L/R 相關係數從 0.880 跳到 0.943——**一層一層關掉量出來,兩個數字
+   整整齊齊都是這一顆大鼓造成的**(關掉它 −10.9 / 0.867,
+   hi-hat、拍手、開放 hi-hat 關掉則是一點差別都沒有)。
+
+   **那條三秒的長尾巴本來就不是大鼓的工作**:K-Pop 的長低音是
+   `BASS_KITS.sub808` 那顆**有音高**的 808 在撐的,大鼓只負責音頭。
+   兩層都撐三秒就是兩條四十赫茲的正弦疊在一起,那正是
+   「808 大鼓的尾巴 0.52 秒」那條規則早就寫過的事。
+   所以改取 **`BD0025`(0.5 秒)**,跟合成那版的 0.52 秒對得起來。
+   - 開放 hi-hat 取 `OH10`(0.75 秒);`OH00` 只有 0.25 秒,聽起來是悶掉的閉合
+   - rim 疊在拍手下面給音頭(見 `snareStack`) */
+const D808_FILES = {
+  kick:  "808bd/BD0025.WAV", snare: "808sd/SD0010.WAV",
+  hihat: "808hc/HC00.WAV",   ohat:  "808oh/OH10.WAV",
+  clap:  "cp/HANDCLP0.wav",  rim:   "808/RS.WAV",
+  crash: "808cy/CY0050.WAV", ride:  "808cy/CY0000.WAV",
+  htom:  "808mc/MC00.WAV",   ltom:  "808lc/LC00.WAV",
+  xstick: "808/RS.WAV",      hhped: "808hc/HC10.WAV",
+};
+/* 取樣的電平跟合成那版完全不是同一個刻度(量過 peak:拍手 0.962、
+   大鼓 0.705、hi-hat 0.573、cymbal 0.415),所以**另外一張 trim 表**。
+   不要拿 `E808_TRIM` 硬套——那張是為合成音校正的 */
+const D808_TRIM = { kick: 0.62, snare: 0.36, hihat: 0.24, ohat: 0.21,
+                    clap: 0.36, rim: 0.3, crash: 0.18, ride: 0.21,
+                    htom: 0.36, ltom: 0.36, xstick: 0.3, hhped: 0.21 };
+/* **有幾顆要把尾巴剪掉**。鈸那兩顆錄了好幾秒,一小節打好幾下會疊起來。
+   **大鼓不在這張表裡**:試過拿 `BD0010` 配 `gain` 的包絡去剪,
+   剪完 RMS 只從 −8.6 回到 −9.0——**因為那三秒裡的能量幾乎全在前 0.55 秒,
+   剪的是已經沒聲音的那一段**。換成本來就短的 `BD0025` 才是對的做法:
+   選對錄音,不要用包絡去救錯的錄音 */
+const D808_CUT = { ohat: 0.45, crash: 1.2, ride: 0.7, clap: 0.35 };
+const d808Buffers = {};
+let d808Loading = null;
+function ensure808(){
+  if (d808Loading) return d808Loading;
+  /* 一顆一顆排隊解碼,跟吉他取樣同一條規則:`decodeAudioData` 在主執行緒上做,
+     十二顆一起解會跟排程器搶(踩過,吉他那次 46ms → 73ms) */
+  d808Loading = Object.keys(D808_FILES).reduce((chain, piece) =>
+    chain.then(() => fetchDecode(SRC_D808, D808_FILES[piece])
+      .then(buf => { d808Buffers[piece] = buf; })
+      .catch(() => {})), Promise.resolve());
+  return d808Loading;
+}
+/* 播一顆 808 取樣。找不到就回 false,呼叫端掉回 `synth808` */
+function play808Sample(piece, when, gain){
+  const buf = d808Buffers[piece];
+  if (!buf) return false;
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  const g = ctx.createGain();
+  const lvl = Math.max(0.0001, gain * (D808_TRIM[piece] || 0.4));
+  g.gain.setValueAtTime(lvl, when);
+  const cut = D808_CUT[piece];
+  if (cut) g.gain.setTargetAtTime(0.0001, when + cut, cut * 0.28);
+  const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+  if (pan) { pan.pan.value = DRUM_PAN[piece] || 0; src.connect(g); g.connect(pan); pan.connect(drumBus); }
+  else { src.connect(g); g.connect(drumBus); }
+  src.start(when);
+  if (cut) src.stop(when + cut * 2.2);
+  activeSources.add(src);
+  src.onended = () => { activeSources.delete(src);
+    try { src.disconnect(); g.disconnect(); if (pan) pan.disconnect(); } catch (e) {} };
+  return true;
+}
 const E808_TRIM = { kick: 0.056, snare: 0.30, clap: 1.05, xstick: 1.05,
                     /* 金屬那幾顆的數字跟別人差一個量級,因為它們走的是預先算好的
                        buffer(見 `hat808Buf`),絕對電平跟現場疊方波那版不一樣。
@@ -4118,6 +4258,7 @@ function currentBeat(){ return anchorBeat + (ctx.currentTime - anchorTime) / spb
 function reanchorTempo(newBpm){
   const keepTime = beatTime(nextBeat);
   spb = 60 / newBpm;
+  updateEcho();
   anchorBeat = nextBeat;
   anchorTime = keepTime;
 }
@@ -4374,6 +4515,8 @@ const FEELS = {
        hi-hat 會滾奏,808 低音會滑音——這四件事加起來才是現在的 K-Pop。
        Rhodes + 弦樂那一版被回報「聽起來不像 K-Pop」,因為那是九〇年代 R&B 的配器 */
     piano: "pluck", drums: "e808", lh: 0.3, roll: true,
+    // 開放 hi-hat 打「四的後半」、第三拍的拍手底下疊一顆 rim 給音頭
+    ohat: [2], snareStack: "rim",
     // 808 的大鼓與低音是同一顆音色,不壓就直接相加(peak 0.98 → 1.04 踩過)
     duck: { bass: 0.22, pad: 0.45, rel: 0.13 },
     /* **不給吉他**:現在的 K-Pop 骨架是 808 加合成器,吉他不是那個聲音。
@@ -4766,6 +4909,12 @@ function scheduleDrums(barStartBeat, b, absBar, isFill){
          Pop / Blues / Funk / City Pop 的 snarePiece 本來就是 "snare"(零差異),
          K-Pop 的是**拍手**——half-time 的第 3 拍在 K-Pop 裡是 clap 不是小鼓 */
       playDrum(f.snarePiece, t, humanize(absBar, idx + 40, f.snareGain * p.energy * arc));
+      /* **拍手要疊一層有音頭的東西**(`FEELS[x].snareStack`)。真的 K-Pop 的
+         第三拍從來不是單一顆拍手,是 clap + rim(+ snare)疊起來的:
+         拍手給「面積」、rim 給「啪」那一下的音頭。
+         只疊一顆、而且比拍手小一階——疊到一樣大聲就變成兩顆各自的鼓 */
+      if (f.snareStack)
+        playDrum(f.snareStack, t, humanize(absBar, idx + 41, f.snareGain * 0.5 * p.energy * arc));
     } else if (idx === g.ghost && chance(absBar, 3, 0.25)) {
       // 幽靈音一律是小鼓:拍手沒有「很輕地補一下」這種打法
       playDrum("snare", t, humanize(absBar, 55, f.snareGain * 0.23));
@@ -4806,7 +4955,12 @@ function scheduleDrums(barStartBeat, b, absBar, isFill){
         ? (off ? 0.46 : (beatIdx % 2 === 1 ? 1.05 : 0.88))
         : (div === 4 ? (k === 0 ? 1 : k === 2 ? 0.78 : 0.5)
                      : (off ? (shuffled ? 0.45 : 0.68) : 1));
-      playDrum(f.cym, t, humanize(absBar, idx + 60, f.cymGain * acc * p.energy * arc));
+      /* **開放 hi-hat 是往下一小節衝過去的那一下**(`FEELS[x].ohat`)。
+         trap 與 K-Pop 幾乎都打在「四的後半」——它不是裝飾,是句子的呼吸口。
+         打在正拍上會跟大鼓撞、而且聽起來像沒關好 */
+      const opens = f.ohat && f.ohat.indexOf(k) >= 0 && b === beatsInBar() - 1;
+      playDrum(opens ? "ohat" : f.cym, t,
+               humanize(absBar, idx + 60, f.cymGain * acc * (opens ? 1.15 : 1) * p.energy * arc));
     }
 
     // hi-hat 踏鈸:爵士的拍子感靠它(4/4 踩二四、3/4 踩二、6/8 踩第二拍)
@@ -5451,6 +5605,10 @@ function playArp(midi, when, dur, gain){
   const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
   if (pan) { pan.pan.value = 0.26; out.connect(pan); pan.connect(padBus); }
   else out.connect(padBus);
+  // arp 也走延遲,但比 pluck 少一半:兩層都灌滿會變成一團迴盪
+  let echo = null;
+  if (echoBus) { echo = ctx.createGain(); echo.gain.value = 0.18;
+                 (pan || out).connect(echo); echo.connect(echoBus); }
   const lp = ctx.createBiquadFilter();
   lp.type = "lowpass"; lp.Q.value = 4;
   lp.frequency.setValueAtTime(Math.min(9000, f * 9), when);
@@ -5467,7 +5625,8 @@ function playArp(midi, when, dur, gain){
   o.start(when); o.stop(stopAt);
   activeSources.add(o);
   o.onended = () => { activeSources.delete(o);
-    try { o.disconnect(); lp.disconnect(); out.disconnect(); if (pan) pan.disconnect(); } catch (e) {} };
+    try { o.disconnect(); lp.disconnect(); out.disconnect();
+          if (echo) echo.disconnect(); if (pan) pan.disconnect(); } catch (e) {} };
 }
 
 function scheduleArp(spans, barStartBeat, b, transpose, absBar){
@@ -5811,6 +5970,7 @@ function startPlayback(){
     // 已經在播了,這時候才放行「補完整組鼓」那一大包(見 drumFillGate)
     openDrumFill();
     spb = 60 / bpmOn;
+    updateEcho();
     countInBeats = countInOn ? beatsInBar() * 2 : 0;
     endBeat = loopOn ? Infinity : countInBeats + voicings.length * beatsInBar();
     anchorBeat = 0;

@@ -219,10 +219,23 @@ main{
 .tempo-group > .meter-row{margin-top:0}
 .bars{font-size:var(--fs-xs);color:var(--muted);font-variant-numeric:tabular-nums;
   text-align:right;line-height:1.5;text-wrap:pretty}
+/* **取名的容器**(`inputcol`):輸入框的字級要跟著**欄寬**走不是視窗寬。
+   平板直立是單欄、欄很寬,但視窗寬度落在手機那一段;兩欄的桌機
+   反而每一欄只有 480px——看視窗寬度一定判錯。
+
+   **容器一定要包在輸入框自己外面,不可以掛在 `.col` 上**:
+   `container-type:inline-size` 會建立含制脈絡,那一欄就不再把內容的
+   固有寬度貢獻給外層格線——實測小節格從 112px 掉到 45px、
+   1440×900 的整頁還爆出 23px。包一層只有它自己的 wrapper 就沒事
+   (textarea 本來就是 `width:100%`,沒有固有寬度要貢獻) */
+.input-wrap{container:inputcol / inline-size}
 #chordInput{
   width:100%;min-height:46px;resize:vertical;
   background:var(--surface-inset);border:1px solid var(--line);border-radius:var(--radius-md);
-  color:var(--ivory);font-family:"Noto Serif TC",serif;font-size:var(--fs-lg);
+  color:var(--ivory);font-family:"Noto Serif TC",serif;
+  /* 被回報「平板裝置和弦進行的文字太小」。它是整頁最需要看清楚的東西,
+     欄寬夠就沒有理由留在 16px。上限 23px:再大 16 小節就換行換到看不完 */
+  font-size:clamp(var(--fs-lg), 4.6cqi, 23px);
   letter-spacing:.04em;line-height:1.55;padding:9px 12px;
 }
 #chordInput:focus{outline:none;border-color:var(--gold);background:var(--surface-inset-hi)}
@@ -768,7 +781,18 @@ footer a:hover{color:var(--gold-bright)}
    兩件事沒辦法同時做到。手機不套用——那裡本來就要捲,元件再長大只是讓它更長 */
 @media (min-width:680px){
   :root{ --grow: clamp(0px, calc(2.2vh - 16.1px), 16px); }
-  #chordInput{min-height:calc(46px + var(--grow) * 2.4)}
+  /* **平板上這行字要大一點**(回報過「和弦進行的文字大小太小了」)。
+     它是整頁最需要看清楚的東西——手機上 16px 是因為寬度就那麼多,
+     680 以上寬度夠了就沒有理由還留在 16px。
+     用 clamp 讓它跟著欄寬長,上限 23px(再大 16 小節就換行換到看不完)。
+     **不影響版面高度**:textarea 是固定 min-height 自己捲的,
+     字大只是每行少幾個字,整頁不會跟著變高(量過) */
+  /* **高度要寫死,不能讓字級去撐**。textarea 的預設高度是 `rows`(2) 乘上
+     行高算出來的,所以字級一變大盒子就跟著長——量到 1280×720 的 12 小節
+     整頁爆出 9px。改用 `height` 之後字級只影響「一行放幾個字」,
+     不影響版面高度(它本來就是自己捲的) */
+  #chordInput{min-height:calc(46px + var(--grow) * 2.4);
+              height:calc(46px + var(--grow) * 2.4)}
   .ex-btn{min-height:calc(26px + var(--grow) * 0.5)}
   .pal-btn{padding-top:calc(4px + var(--grow) * 0.5);padding-bottom:calc(4px + var(--grow) * 0.5)}
   .bar-chip{min-height:calc(42px + var(--grow) * 2)}
@@ -915,9 +939,11 @@ try {
       <div class="col">
 
       <!-- 和弦輸入 -->
-      <textarea id="chordInput" spellcheck="false" autocapitalize="off" autocorrect="off"
-        data-i18n-attr="placeholder:chordPlaceholder,aria-label:chordLabel"
-        placeholder="C - Am - F - G">C - Am - F - G</textarea>
+      <div class="input-wrap">
+        <textarea id="chordInput" spellcheck="false" autocapitalize="off" autocorrect="off"
+          data-i18n-attr="placeholder:chordPlaceholder,aria-label:chordLabel"
+          placeholder="C - Am - F - G">C - Am - F - G</textarea>
+      </div>
       <p class="field-hint" data-i18n="chordHint">一個和弦一小節,4/4 拍。用空白或「-」分隔;不想打字就點下面那排。</p>
 
       <!-- 段落庫:預設收起來,點開才佔版面。挑長度、挑要接幾次,點一下就接到形式後面 -->
@@ -1709,6 +1735,48 @@ function updateBarCount(){
 }
 
 /* 整段進行:用空白 / - / | / 逗號分隔。「/」不能當分隔符,那是轉位用的 */
+/* ── 延長記號:讓一顆和弦多撐一拍 ────────────────────────────────
+   被問「如果有的和弦只有一拍呢」。原本一小節裡的和弦是**平分**的
+   (`spansOf`:4/4 兩顆 = 2+2、三顆 = 2+1+1,分不完的前面拿多的),
+   所以 `C Am F |` 一定是 2+1+1——**寫不出 1+1+2**,
+   也寫不出「這一顆只有一拍、下一顆撐三拍」。
+
+   補一個譜上本來就有的東西:**延長記號**。`/` 或 `.`(要用空白隔開),
+   意思是「前一顆和弦再多撐一格」:
+
+     `C / Am F |`  → C 兩拍、Am 一拍、F 一拍
+     `C Am F / |`  → C 一拍、Am 一拍、F 兩拍   ← 原本寫不出來的那一種
+     `C Am / F |`  → C 一拍、Am 兩拍、F 一拍
+
+   **有沒有小節線決定它的單位**,這條要一致:
+   - 有 `|`:一格裡的和弦本來就在分拍,所以延長記號 = **多一拍**
+   - 沒有 `|`:本來就是「一個和弦一小節」,所以延長記號 = **多一小節**
+     (`C / / /` = 四小節的 C,那正是譜上的寫法)
+
+   **一定要用空白隔開**:`C/E` 是轉位低音,那是一顆和弦不是延長記號。
+   分隔用的正規表示式不會切 `/` 與 `.`,所以 `C/E` 永遠是完整的一個 token,
+   只有單獨站著的 `/` 才會被當成延長記號 */
+const HOLD_BEAT = /^[/／]$/;          // 一拍
+const HOLD_SUB  = /^[.。·・]$/;        // 半拍(複拍子是三分之一拍)
+function isHold(tok){ return HOLD_BEAT.test(tok) || HOLD_SUB.test(tok); }
+function holdText(tok){ return HOLD_BEAT.test(tok) ? "/" : "."; }
+/* ── 和弦的格子 ────────────────────────────────────────────────
+   和弦可以換在**拍子中間**,所以位置的單位不是「拍」是「拍的細分」。
+   **這個格子跟曲風無關**(不吃 `FEELS` 的 `sub`):同一串和弦在 Pop 與
+   City Pop 底下,換和弦的位置必須一樣——不能因為伴奏走十六分
+   就讓和弦的位置跟著變。三種拍號各自用自己的細分:
+     4/4 → 4 拍 × 2 = 8 格(八分音符)
+     3/4 → 3 拍 × 2 = 6 格(八分音符)
+     6/8 → 2 大拍 × 3 = 6 格(八分音符)
+   所以三種拍號的「一格」都剛好是一個八分音符,`.` 在哪個拍號都講得通 */
+function chordDiv(){ return meter().div; }
+function chordUnits(){ return meter().beats * chordDiv(); }
+function holdUnits(tok){ return HOLD_BEAT.test(tok) ? chordDiv() : 1; }
+/* 一個和弦格 = 幾個排程格。`sub` 是整數倍,所以這個一定是整數 */
+function unitSlots(){ return divNow() / chordDiv(); }
+/* 這顆和弦是不是在第 b 拍**之內**開始的(不一定落在拍點上) */
+function startsInBeat(sp, b){ return sp.fromBeat >= b && sp.fromBeat < b + 1; }
+
 function parseProgression(text){
   /* 爵士的和弦表把小三和弦寫成 C-7。但這裡的「-」同時是分隔符,
      所以只認「根音後面緊接著 -,再接數字或結尾」那一種:
@@ -1718,25 +1786,54 @@ function parseProgression(text){
   /* **「|」是小節線**。有寫 `|` 的時候,一條線之間的和弦全部擠在同一小節裡
      (`C Am | F G` = 兩小節,每小節兩顆);沒寫 `|` 的時候照舊「一個和弦一小節」。
      用「有沒有 |」切換而不是換一套語法,舊的進行、存檔、分享連結才全部還能用 */
+  const SEP = /[\s,\-－]+/;
   const byBar = clean.indexOf("|") >= 0
-    ? clean.split("|").map(seg => seg.split(/[\s,\-－]+/).filter(Boolean)).filter(a => a.length)
-    : clean.split(/[\s,\-－]+/).filter(Boolean).map(t => [t]);
+    ? clean.split("|").map(seg => seg.split(SEP).filter(Boolean)).filter(a => a.length)
+    /* 沒有小節線 = 一個和弦一小節,所以延長記號在這裡的意思是
+       **再撐一整個小節**:把前一小節那一顆再複製一格出來 */
+    : clean.split(SEP).filter(Boolean).reduce((out, t) => {
+        if (isHold(t)) { if (out.length) out.push([out[out.length - 1][0]]); }
+        else out.push([t]);
+        return out;
+      }, []);
   const bars = [];
   let total = 0;
   for (const toks of byBar) {
     /* 一小節最多幾顆:不能比拍數多(4/4 最多四顆、6/8 最多兩顆),
        再多就沒有一顆音的時間了。多打的直接丟掉,不要靜悄悄排不進去 */
     const cap = Math.max(1, beatsInBar());
-    const use = toks.slice(0, cap);
-    const chords = use.map(tok => {
+    /* **收的是「拍」不是「顆」**:一顆和弦 = 一拍,每跟一個延長記號再多一拍。
+       總拍數不能超過拍數(4/4 最多四拍),多打的直接丟掉——
+       不要靜悄悄排不進去。
+       `raw` 留的是**含延長記號**的原始 token 串:編輯是從它重組文字的,
+       不留著的話點一下和弦鍵盤就把延長記號吃掉了 */
+    /* **顆數的上限是拍數**(四拍的小節最多四顆和弦),那是使用者講的。
+       但**時值的單位是「和弦格」**(八分音符),所以一顆和弦本身 = 一拍
+       (`chordDiv()` 格),`/` 再加一拍、`.` 再加一格。
+       `raw` 留的是含延長記號的原始 token:編輯是從它重組文字的,
+       不留著的話點一下和弦鍵盤就把時值吃掉了 */
+    const cd = chordDiv();
+    const chords = [], raw = [];
+    for (const tok of toks) {
+      if (isHold(tok)) {
+        // 開頭就寫延長記號 = 沒有東西可以延長,直接忽略
+        if (!chords.length) continue;
+        chords[chords.length - 1].w += holdUnits(tok);
+        raw.push(holdText(tok));
+        continue;
+      }
+      if (chords.length >= cap) continue;       // 多打的排不進去
       const ch = parseChord(tok);
-      return ch ? { ok: true, chord: ch, text: tok } : { ok: false, chord: null, text: tok };
-    });
+      chords.push(ch ? { ok: true, chord: ch, text: tok, w: cd }
+                     : { ok: false, chord: null, text: tok, w: cd });
+      raw.push(tok);
+    }
     total += toks.length;
+    if (!chords.length) continue;      // 整格只有延長記號,沒有東西可以畫
     bars.push({
       ok: chords.every(c => c.ok),
-      chords,
-      text: use.join(" "),
+      chords, raw,
+      text: raw.join(" "),
       // 只需要一顆代表的地方(整格的調性、比對「前一格是不是同一顆」)就用第一顆
       chord: chords[0].chord,
     });
@@ -1767,15 +1864,46 @@ function spansOf(bar){
   const list = (bar && bar.chords) || [];
   const n = Math.max(1, list.length);
   const beats = beatsInBar(), d = divNow();
-  const each = Math.floor(beats / n), extra = beats % n;
+  const cd = chordDiv(), U = beats * cd, per = unitSlots();
+  const w = list.map(c => Math.max(1, (c && c.w) || cd));
+  /* **有沒有自己寫時值,走的是兩條不同的規則** */
+  const anyHold = w.some(v => v !== cd);
+  let len;
+  if (!anyHold) {
+    /* **沒寫就照舊**:拍數平分、分不完的前面拿多的
+       (4/4 兩顆 = 2+2 拍、三顆 = 2+1+1、3/4 兩顆 = 2+1)。
+       舊的進行、存檔、分享連結**一個取樣都不會變** */
+    const each = Math.floor(beats / n), extra = beats % n;
+    len = [];
+    for (let i = 0; i < n; i++) len.push((each + (i < extra ? 1 : 0)) * cd);
+  } else {
+    /* **寫了就照字面**:一顆和弦是一拍,`/` 再一拍、`.` 再半拍。
+       加起來不滿一小節就讓**最後一顆補滿**、超過就把最後一顆切掉——
+       規則是「你只寫你在意的那幾顆,最後一顆負責把小節填滿」,
+       這樣 `C . Am |` 只要寫兩個 token 就換在一拍半的地方 */
+    len = w.slice();
+    len[n - 1] += U - len.reduce((a, b2) => a + b2, 0);
+    if (len[n - 1] < 1) {
+      /* 前面就已經寫滿了:超出的從後面往前收,每一顆至少留一格 */
+      let over = 1 - len[n - 1];
+      len[n - 1] = 1;
+      for (let i = n - 2; i >= 0 && over > 0; i--) {
+        const take = Math.min(over, len[i] - 1);
+        len[i] -= take; over -= take;
+      }
+    }
+  }
   const out = [];
-  let beat = 0;
+  let u = 0;
   for (let i = 0; i < n; i++) {
-    const len = each + (i < extra ? 1 : 0);
     out.push({ ok: list[i] ? list[i].ok : false, chord: list[i] ? list[i].chord : null,
-               text: list[i] ? list[i].text : "",
-               fromBeat: beat, toBeat: beat + len, from: beat * d, to: (beat + len) * d });
-    beat += len;
+               text: list[i] ? list[i].text : "", w: len[i],
+               /* `fromBeat` **可能是小數**(和弦換在拍子中間時),
+                  所以要判斷「第 b 拍裡有沒有和弦開始」一律走 `startsInBeat`,
+                  不要拿 `b === fromBeat` 去比 */
+               fromBeat: u / cd, toBeat: (u + len[i]) / cd,
+               from: u * per, to: (u + len[i]) * per });
+    u += len[i];
   }
   return out;
 }
@@ -5384,8 +5512,13 @@ function scheduleDrums(barStartBeat, b, absBar, isFill){
 function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord, span){
   const mode = bassMode(absBar);
   const m = meter(), div = divNow();
-  const beats = span ? (span.toBeat - span.fromBeat) : m.beats;
-  const b0 = span ? span.fromBeat : 0;          // 這顆和弦從第幾拍開始(整小節裡)
+  /* **貝斯一律走整數拍**。走動低音、boogie、八分推進的格子都是照拍算的,
+     `b0` 一變成 1.5 這種小數,底下的 `last` / `mid` / `lastSlot` 全部會錯位。
+     所以和弦換在拍子中間時,貝斯**跟到下一個拍點**才換——
+     鋼琴與吉他是照格子走的(`spanAt` 本來就是查格子),它們準時換,
+     只有貝斯晚半拍。那是刻意的取捨:低音線要踩在拍上才站得住 */
+  const b0 = span ? Math.floor(span.fromBeat) : 0;
+  const beats = span ? Math.max(1, Math.ceil(span.toBeat) - b0) : m.beats;
   const whole = beats === m.beats;              // 這一格只有一顆和弦
   b = b - b0;                                   // 以下一律用「這顆和弦裡的第幾拍」
   const last = beats - 1;
@@ -5595,11 +5728,18 @@ function schedulePiano(spans, barStartBeat, b, transpose, absBar, isFill){
   const multi = spans.length > 1;
 
   // 左手低音:每一顆和弦的第一拍落一次,撐到這顆和弦結束
-  if (b === here.fromBeat) {
-    const len = here.toBeat - here.fromBeat;
-    playNote(v.bass + transpose, beatTime(barStartBeat + b),
+  /* **和弦可能換在拍子中間**,所以不能拿 `b === here.fromBeat` 去比
+     (那個值會是 1.5 這種小數,永遠比不中),而且同一拍裡可能有兩顆和弦開始。
+     改成掃過這一格所有的和弦,誰在這一拍之內開始就在**它真正的格子上**落音 */
+  let started = false;
+  for (const sp of spans) {
+    if (!sp.v || !startsInBeat(sp, b)) continue;
+    started = true;
+    const len = sp.toBeat - sp.fromBeat;
+    playNote(sp.v.bass + transpose, slotTime(barStartBeat, sp.from),
              spb * (multi ? len : (beats >= 4 ? mid : beats)), 0.52 * lhGain());
-  } else if (!multi && beats >= 4 && b === mid) {
+  }
+  if (!started && !multi && beats >= 4 && b === mid) {
     // 整小節同一顆和弦時才在中間補一下(換和弦的地方已經有新的低音了)
     playNote(v.bass + transpose, beatTime(barStartBeat + mid), spb * (beats - mid), 0.42 * lhGain());
   }
@@ -6195,8 +6335,12 @@ function scheduleGuitar(spans, barStartBeat, b, transpose, absBar, isFill){
    它一有節奏就變成第二台鋼琴,整個伴奏會擠 */
 function scheduleKeys(spans, barStartBeat, b, transpose, absBar){
   const f = feel(), p = pat(absBar), st = styleAt(absBar);
-  const here = spanAt(spans, b * divNow());
-  if (!here || !here.v || b !== here.fromBeat) return;
+  /* 跟鋼琴左手同一條:和弦可能換在拍子中間,所以掃過所有
+     「在這一拍之內開始」的和弦,不要拿 `b === fromBeat` 去比 */
+  for (const sp of spans) if (sp.v && startsInBeat(sp, b)) keysChordAt(sp, barStartBeat, transpose, absBar);
+}
+function keysChordAt(here, barStartBeat, transpose, absBar){
+  const f = feel(), p = pat(absBar), st = styleAt(absBar);
   const kind = f.parts.keys;                    // "organ" 或 "pad"
   /* 鋪底用的是鋼琴那一組上聲部搬進中音域:它要跟鋼琴疊得剛好,
      不是獨立的一把樂器 */
@@ -6205,7 +6349,7 @@ function scheduleKeys(spans, barStartBeat, b, transpose, absBar){
   const len = (here.toBeat - here.fromBeat) * spb;
   const lvl = (f.parts.klevel || 0.16) * (st === "drive" ? 1.12 : st === "pad" ? 0.9 : 1)
             * arcGain(absBar);
-  playKeysChord(notes, beatTime(barStartBeat + b), len * 0.96, lvl, kind);
+  playKeysChord(notes, slotTime(barStartBeat, here.from), len * 0.96, lvl, kind);
   /* **低音鋪底是獨立的一層**(`klow`),不是把 `keys` 調大。
      量出來 K-Pop 在 120–250Hz 比 Pop 低 10dB:808 的正弦擠在 30–60、
      pluck 從 250 才開始,中間那段「身體」沒有人在,聽起來就是單薄。
@@ -6215,7 +6359,7 @@ function scheduleKeys(spans, barStartBeat, b, transpose, absBar){
     /* 只取最低**兩顆**(根音加五度或三度)。低音區疊三顆是把泥巴堆起來——
        真的混音裡「身體」那一層永遠是一個雙音,不是一個和弦 */
     const lowNotes = notes.map(n => n - 12).sort((a, b2) => a - b2).slice(0, 2);
-    playKeysChord(lowNotes, beatTime(barStartBeat + b), len * 0.96,
+    playKeysChord(lowNotes, slotTime(barStartBeat, here.from), len * 0.96,
                   f.parts.klow * arcGain(absBar), "low");
   }
 }
@@ -6735,8 +6879,12 @@ function renderBars(){
        和弦名包一層 span:格子太窄時 CSS 靠 --len 把字縮小,
        不然會把 Cmaj7 斷成「Cmaj / 7」,看起來像別的和弦 */
     const list = b.chords && b.chords.length ? b.chords : [{ ok: false, text: b.text, chord: null }];
+    /* 格子的寬度要照**算完的時值**(`spansOf`)不是寫的權重:
+       最後一顆會去補滿小節,只看權重的話畫出來跟聽到的不一樣 */
+    const sp = b.chords && b.chords.length ? spansOf(b) : null;
     if (list.length > 1) chip.classList.add("multi");
-    for (const c of list) {
+    for (let ci = 0; ci < list.length; ci++) {
+      const c = list[ci];
       const my = flat++;
       const cell = document.createElement("button");
       cell.type = "button";
@@ -6745,6 +6893,11 @@ function renderBars(){
       name.className = "bar-name";
       name.textContent = c.ok ? chordDisplay(c.chord, trSteps) : c.text;
       cell.style.setProperty("--len", name.textContent.length);
+      /* **格子的寬度照它佔幾拍**:撐兩拍的和弦格子就是兩倍寬。
+         不然 `C / Am F` 畫出來三顆一樣寬,看不出第一顆比較長 */
+      /* **撐兩拍的和弦格子就是兩倍寬**。不然 `C . Am` 畫出來兩顆一樣寬,
+         看不出第一顆比較長——而「和弦換在哪裡」正是這個功能的重點 */
+      if (list.length > 1 && sp) cell.style.flexGrow = String(Math.max(1, sp[ci].w || 1));
       cell.appendChild(name);
       // 點一下選起來(之後點音名/性質就是改這一顆)。點同一顆不取消:
       // 一直要有一顆在編輯,不然鍵盤不知道要改誰
@@ -6764,7 +6917,22 @@ function renderBars(){
      兩邊有一瞬間對不上(見上面 reparse 的 resetLap),欄數就會配錯,
      症狀是「8 格擠在同一橫排」 */
   const n = src.length;
-  const cols = n <= 12 ? 4 : 8;
+  /* **欄數要同時看格數與寬度**,不能只看格數。原本 `n > 12` 就一律八欄,
+     但手機上整排只有三百多 px,八欄等於一格 40px——`Fmaj7` 被 `--len`
+     縮到看不清楚(回報過「八個一橫排太窄了」)。
+     八欄要有夠寬的容器才成立;不夠寬就維持四欄、多排幾列
+     (手機本來就是已知要捲的那個平台)。
+     **4 與 8 都是 4 的倍數**,所以第 5 格一定還在某一排的開頭,
+     樂句照樣數得出來——這條跟「不要用六欄」是同一個理由。
+     520 是量出來的:一格要放得下五個字的和弦(`Fmaj7`)又不縮字,
+     八欄大約就要這麼寬。量不到寬度(還沒進 DOM)時當它夠寬,
+     下一次 `renderBars` 會修正 */
+  /* 門檻是**量出來的**:桌機的左欄只有 ~480px、平板直立更窄(~300–400px),
+     手機單欄約 330px。第一版寫 520 結果八欄永遠不會發生,
+     1280×720 的 16 小節反而從兩排變四排、超出 12px。
+     430 才切在對的地方:手機與窄平板四欄、桌機與寬平板八欄 */
+  const roomW = barsGrid.clientWidth;
+  const cols = (n > 12 && (roomW === 0 || roomW >= 430)) ? 8 : 4;
   barsGrid.style.gridTemplateColumns = "repeat(" + cols + ",minmax(0,1fr))";
   barsGrid.classList.toggle("dense", n > 4);
   barsGrid.classList.toggle("denser", n > 12);
@@ -7000,14 +7168,22 @@ function joinToken(root, suffix, bass){
 /* ── 編輯的單位是「一顆和弦」,不是「一小節」 ──────────────────
    一小節可以有兩顆和弦之後,選取、鍵盤、工具列都要對得到某一顆。
    所以內部用**攤平的和弦序號**(第幾顆,從 0 數),小節結構另外記在 groups 裡 */
-function barGroups(){ return parsed.bars.map(b => b.chords.map(c => c.text)); }
-function chordTokens(){ const out = []; for (const g of barGroups()) for (const t of g) out.push(t); return out; }
+/* **要回含延長記號的原始 token**:編輯(鍵盤、插一格、刪一格)是從這裡
+   重組整串文字的,只回和弦的話點一下就把延長記號吃掉了 */
+function barGroups(){ return parsed.bars.map(b => (b.raw || b.chords.map(c => c.text)).slice()); }
+/* 但**選取的單位是和弦**,延長記號不是可以點的東西,所以這兩個要跳過它 */
+function chordTokens(){
+  const out = [];
+  for (const g of barGroups()) for (const t of g) if (!isHold(t)) out.push(t);
+  return out;
+}
 /* 攤平的序號 → 在第幾格的第幾顆 */
 function posOf(i){
   const g = barGroups();
   let n = 0;
   for (let bi = 0; bi < g.length; bi++) for (let j = 0; j < g[bi].length; j++) {
-    if (n === i) return { bar: bi, idx: j };
+    if (isHold(g[bi][j])) continue;       // 延長記號不佔選取的序號
+    if (n === i) return { bar: bi, idx: j };   // 但回的是**在 token 串裡的位置**
     n++;
   }
   return null;
@@ -7108,7 +7284,11 @@ function palDelete(){
   const g = barGroups(), p = posOf(targetBar());
   if (!p) return;
   pushUndo();
-  if (g[p.bar].length > 1) g[p.bar].splice(p.idx, 1);
+  /* 刪掉一顆和弦要**連它後面的延長記號一起刪**:留著的話那幾拍會
+     被前一顆吃掉,看起來像「我刪了一顆,旁邊那顆卻變長了」 */
+  let span = 1;
+  while (p.idx + span < g[p.bar].length && isHold(g[p.bar][p.idx + span])) span++;
+  if (g[p.bar].length > span) g[p.bar].splice(p.idx, span);
   else g.splice(p.bar, 1);
   setGroups(g);
   selectBar(Math.min(targetBar(), Math.max(0, chordTokens().length - 1)));

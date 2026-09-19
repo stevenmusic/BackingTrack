@@ -3605,6 +3605,15 @@ function synthKeyNote(midi, when, dur, peak){
 /* ── 風琴與鋪底 ────────────────────────────────────────────────
    一顆和弦共用一條低通與一顆總 gain:四個音各自開濾波器的話節點翻四倍,
    而且四條濾波器的相位不一樣,和弦會散掉 */
+/* 一顆音要疊幾顆振盪器、各差幾音分。**`spread` 與排程迴圈要吃同一份**,
+   分開寫兩份的話聲部數一改就對不上(pan 會落在不存在的聲部上)。
+   **低音鋪底一顆音只用一顆**:低頻的拍頻很慢很明顯,失諧疊兩顆會變成
+   一秒抖兩下的嗡嗡聲(supersaw 的 ±13 在這個音域完全不能用) */
+function voicesOf(kind){
+  if (kind === "organ" || kind === "low") return [0];
+  if (kind === "supersaw") return [-13, 0, 13];
+  return [-5, 5];
+}
 function playKeysChord(midis, when, dur, gain, kind){
   if (!midis.length) return;
   const organ = kind === "organ";
@@ -3661,7 +3670,13 @@ function playKeysChord(midis, when, dur, gain, kind){
      失諧的那兩顆各自推到左右(±0.62)、中間那顆留在正中間,
      這就是 supersaw 的立體聲寬度真正的來源(不是殘響也不是 chorus)。
      一顆和弦只多三個節點(不是一個音三個),便宜 */
-  const spread = (kind === "supersaw" && ctx.createStereoPanner) ? [-0.62, 0, 0.62].map(v => {
+  /* **`pad` 也要分左右,不是只有 supersaw**。漏掉那一版量到 City Pop 的
+     L/R 相關係數 0.914–0.938(目標 0.3–0.9)——那層鋪底是撐著的長音、
+     又整個擺在正中間,一個人就把整首拉回單聲道。
+     位置照聲部數量算(兩顆就 ±0.5、三顆就 ±0.62 加中間),
+     不要拿固定三格去 mod:兩顆和弦用前兩格會變成「一顆左、一顆中」的偏心 */
+  const wide = (kind === "supersaw" || kind === "pad") && ctx.createStereoPanner;
+  const spread = wide ? (voicesOf(kind).length === 2 ? [-0.5, 0.5] : [-0.62, 0, 0.62]).map(v => {
     const sp = ctx.createStereoPanner();
     sp.pan.value = v;
     sp.connect(lp);
@@ -3673,10 +3688,7 @@ function playKeysChord(midis, when, dur, gain, kind){
     /* 鋪底疊兩顆微微失諧的,風琴只要一顆(Hammond 的泛音是齒輪轉出來的,不會飄)。
        **supersaw 疊三顆、失諧拉到 ±13 音分**:K-Pop 的和聲層就是那一片
        又寬又厚的鋸齒,兩顆差五音分聽起來只是「有點抖」,不是 supersaw */
-    /* **低音鋪底一顆音只用一顆振盪器**。低頻的拍頻很慢很明顯,失諧疊兩顆
-       會變成一秒抖兩下的嗡嗡聲(supersaw 的 ±13 在這個音域完全不能用);
-       既然失諧要收到聽不出來,那就不要疊——省下來的節點正好是它的成本 */
-    const voices = organ || low ? [0] : saw ? [-13, 0, 13] : [-5, 5];
+    const voices = voicesOf(kind);
     for (let vi = 0; vi < voices.length; vi++) {
       const cents = voices[vi];
       const o = ctx.createOscillator();
@@ -4268,7 +4280,12 @@ const FEELS = {
     /* **鋪底維持合成的,不要換成弦樂取樣**。試過換成真的大提琴 + 小提琴取樣,
        被回報「真實弦樂聽起來反而很怪,之前的比較好聽」——而且量出來確實是壞的,
        原因見 CLAUDE.md 的「實錄取樣不是永遠比合成好」那節 */
+    /* **兩把吉他、一組銅管**才是真的 City Pop 錄音的編制:
+       一把切十六分、一把彈琶音(左右各一把),銅管在句尾打 stab。
+       銅管是合成的,理由見 `playBrass` 的註解 */
     parts: { guitar: "chop", gtone: "clean", glevel: 0.115,
+             guitar2: { lvl: 0.075 },
+             brass: { lvl: 0.085 },
              keys: "pad", klevel: 0.05,
              perc: { kind: "shaker", on: "sub", lvl: 0.17 } },
   },
@@ -4363,8 +4380,10 @@ const FEELS = {
        supersaw 鋪底 + 沙鈴 + 指響(指響疊在拍手上,那是 R&B 的招牌) */
     /* `vox` 是**人聲切片**:現在的 K-Pop 幾乎每首都有那一層「啊——」的切片,
        它不是和聲也不是旋律,是節奏性的填空。做法見 `playVox` */
+    /* `arp` 是**十六分的序列層**:現在的 K-Pop 幾乎每首都有,
+       跟 pluck 是兩件事(pluck 打和弦、arp 跑單音線條) */
     parts: { keys: "supersaw", klevel: 0.075, klow: 0.12,
-             vox: { lvl: 0.085 },
+             vox: { lvl: 0.085 }, arp: { lvl: 0.07 },
              perc: { kind: "shaker", on: "sub", lvl: 0.12, snap: true } },
   },
   /* 搖擺:爵士。ride 打型、hi-hat 踏鈸給拍子感、大鼓 feathering、小鼓在 comping */
@@ -5279,6 +5298,205 @@ function scheduleVox(spans, barStartBeat, b, transpose, absBar){
   }
 }
 
+/* ── 合成銅管 stab(City Pop)────────────────────────────────────
+   **銅管 stab 是 City Pop 最大的招牌之一**——山下達郎的〈SPARKLE〉、
+   竹內瑪莉亞的〈Plastic Love〉都靠那幾下短促的管樂把句子釘住。
+
+   **為什麼是合成的不是取樣**:量過 Tone.js 那三件管樂的音頭
+   (峰值出現在第幾秒):小號 0.11–0.22 秒還行,但**長號是 1.99 / 3.10 秒、
+   薩克斯是 1.07 / 1.94 / 6.04 秒**——那三顆錄的是「慢慢推上去的長音」,
+   不是有音頭的音。拿來打 0.3 秒的 stab 只會拿到漸強的前段,
+   等於一個沒有力道的淡入(弦樂那次就是這樣壞的)。只有小號能用,
+   而一把小號不是一個銅管組。
+
+   而且**合成銅管本來就是這個年代的主力音色**:Prophet-5 與 Jupiter-8 的
+   brass 音色是八〇年代 AOR 到處都是的東西,不是退而求其次。
+
+   合成銅管的關鍵**不是波形是濾波器的包絡,而且要「衝過頭」**:
+   真的銅管吹下去的瞬間亮度會先衝過穩態再掉回來,那一下就是銅管的身分。
+   只有「開一點低通」會得到一片鋸齒鋪底,不是銅管。
+   再加一點點音頭的音高上滑(吹嘴咬合的那一下),25 毫秒內滑到位 */
+function playBrass(midis, when, dur, gain){
+  if (!midis.length || !combBus) return;
+  const bus = ctx.createGain();
+  bus.gain.value = 1;
+  bus.connect(combBus);
+  const wave = waveOf("saw", SAW_PARTS);
+  /* **一個聲部一個位置,不要整組擺中間**。真的銅管組是三個人站開的
+     (小號、薩克斯、長號各一個位置),而且量過:銅管全擺在 −0.12 的那一版
+     讓整個 City Pop 的 L/R 相關係數升到 0.938——超出目標帶(0.3–0.9),
+     跟之前 K-Pop 那顆 0.993 的 supersaw 是同一個毛病 */
+  const SPREAD = [-0.42, 0.06, 0.4];
+  const oscs = [];
+  for (let i = 0; i < midis.length; i++) {
+    const f = 440 * Math.pow(2, (midis[i] - 69) / 12);
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.Q.value = 2.2;                       // 一點共振,銅管的「嗚哇」就在這
+    /* **衝過頭再掉回來**:35 毫秒衝到穩態的兩倍多,再用 130 毫秒沉下去。
+       這條包絡比任何波形的選擇都決定它像不像銅管 */
+    const peakHz = Math.min(7000, f * 11);
+    const restHz = Math.min(3200, f * 4.2);
+    lp.frequency.setValueAtTime(Math.max(300, f * 1.6), when);
+    lp.frequency.linearRampToValueAtTime(peakHz, when + 0.035);
+    lp.frequency.setTargetAtTime(restHz, when + 0.035, 0.055);
+    const g = ctx.createGain();
+    const sp = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+    if (sp) { sp.pan.value = SPREAD[i % SPREAD.length]; lp.connect(g); g.connect(sp); sp.connect(bus); }
+    else { lp.connect(g); g.connect(bus); }
+    g.gain.setValueAtTime(0.0001, when);
+    g.gain.linearRampToValueAtTime(gain, when + 0.016);   // 銅管有音頭但不是瞬間
+    g.gain.setTargetAtTime(gain * 0.72, when + 0.016, 0.06);
+    g.gain.setTargetAtTime(0.0001, when + Math.max(dur, 0.1), 0.06);
+    const stopAt = when + Math.max(dur, 0.1) + 0.3;
+    /* 一個聲部兩顆、失諧 ±8 音分:銅管組是好幾個人一起吹,
+       不可能完全同音高。每個聲部的偏差照序號固定(不可以用亂數) */
+    for (const cents of [-8, 8]) {
+      const o = ctx.createOscillator();
+      o.setPeriodicWave(wave);
+      const ff = f * Math.pow(2, cents / 1200);
+      // 音頭的上滑:吹嘴咬到位之前那一下
+      o.frequency.setValueAtTime(ff * 0.985, when);
+      o.frequency.linearRampToValueAtTime(ff, when + 0.025);
+      o.connect(lp);
+      o.start(when); o.stop(stopAt);
+      oscs.push(o); activeSources.add(o);
+    }
+    let left = 2;
+    const bye = () => { if (--left) return;
+      try { lp.disconnect(); g.disconnect(); if (sp) sp.disconnect(); } catch (e) {} };
+    for (let k = oscs.length - 2; k < oscs.length; k++) {
+      const o = oscs[k];
+      o.onended = () => { activeSources.delete(o); try { o.disconnect(); } catch (e) {} bye(); };
+    }
+  }
+  setTimeout(() => { try { bus.disconnect(); } catch (e) {} },
+             (Math.max(dur, 0.1) + 1.2) * 1000);
+}
+
+/* 銅管打在哪幾格。**它是標點符號不是節奏樂器**:真的 City Pop 一段裡
+   銅管只出現幾次,而且落在切分上(反拍、或樂句的收尾),不是每小節都吹。
+   所以兩小節才給一次(`absBar % 2`),而且只拿和弦上面三顆(銅管組是
+   密集和聲、擠在中高音域,不是攤開的) */
+function scheduleBrass(spans, barStartBeat, b, transpose, absBar){
+  const f = feel(), p = pat(absBar), st = styleAt(absBar);
+  const div = divNow();
+  const spec = f.parts.brass;
+  if (st === "pad") return;                       // 墊底時不吹,那是最安靜的模式
+  if (absBar % 2 !== 1) return;                   // 兩小節一次,落在第二小節
+  const lvl = (spec.lvl || 0.1) * p.energy * arcGain(absBar);
+  /* 都是切分位置:十六分格的 6(二的後半)、10、14(四的後半)。
+     正拍上吹會跟鋼琴與鼓撞在一起,那就不是 stab 是鋪底了 */
+  const cells = div === 4 ? [[6, 10], [10, 14], [6, 14], [10]]
+                          : [[3, 5], [5, 7], [3, 7], [5]];
+  const cell = pickCell(cells, absBar, 149);
+  for (let k = 0; k < div; k++) {
+    const idx = b * div + k;
+    if (cell.indexOf(idx) < 0) continue;
+    const sp = spanAt(spans, idx);
+    if (!sp || !sp.v) continue;
+    const notes = padNotes(sp.v).slice(-3).map(n => n + transpose);
+    if (!notes.length) continue;
+    playBrass(notes, slotTime(barStartBeat, idx), spb * 0.3, lvl);
+  }
+}
+
+/* ── 第二把吉他:對位琶音(City Pop)────────────────────────────
+   真的 City Pop 錄音**一定有兩把電吉他**(松原正樹 + 鈴木茂 那種配置):
+   一把切十六分、另一把彈琶音或對位線,**左右各擺一把**。
+   只有一把切音的話右邊有東西、左邊是空的。
+
+   它直接走 `pluck` 的 `take = 1`——那個參數本來就是給雙軌吉他用的,
+   會自動擺到另一邊、而且換一組每條弦的音準偏差。不必再寫一套 pan */
+function scheduleGuitar2(spans, barStartBeat, b, transpose, absBar){
+  const f = feel(), p = pat(absBar), st = styleAt(absBar);
+  const div = divNow(), spec = f.parts.guitar2;
+  const lvl = (spec.lvl || 0.09) * p.energy * arcGain(absBar);
+  /* **對位線條不是刷滿**:第二把吉他走八分的話一小節八顆,加上切音那把的四到六顆
+     就是十四顆撥弦,CPU 降速 6× 時排程一跳從 35ms 衝到 82ms(量過)。
+     真的 City Pop 的第二把是彈「線」不是「刷」——推進四顆、打點兩顆、墊底一顆,
+     那個密度本來就比較對,順便把節點收回一半 */
+  const step = st === "drive" ? div : st === "comp" ? div * 2 : div * 4;
+  for (let k = 0; k < div; k++) {
+    const idx = b * div + k;
+    if (idx % step !== 0) continue;
+    const sp = spanAt(spans, idx);
+    if (!sp || !sp.v) continue;
+    const notes = guitarNotesFor(sp.chord, "chop");
+    if (!notes.length) continue;
+    /* 琶音:照格號在和弦音之間走上走下。用 `hash01` 決定方向,
+       一直往上走會變成音階練習 */
+    const dir = hash01(absBar, 151) < 0.5 ? 1 : -1;
+    const seq = Math.floor(idx / Math.max(1, step));
+    const pick = dir > 0 ? seq % notes.length
+                         : (notes.length - 1 - (seq % notes.length));
+    pluck(notes[pick] + 12 + transpose, slotTime(barStartBeat, idx),
+          lvl * (idx % div === 0 ? 1 : 0.78), f.parts.gtone || "clean",
+          spb * 0.9, pick, 1);
+  }
+}
+
+/* ── 十六分 arp 序列(K-Pop)──────────────────────────────────
+   **現在的 K-Pop 幾乎每首都有一層十六分的 arp**(NewJeans、IVE、aespa
+   都是這個做法):一顆很短、亮度掉得很快的合成音,在和弦音之間跑十六分。
+   它跟 pluck 不一樣——pluck 是打和弦、arp 是跑單音線條,
+   兩層疊起來才是那個「一直在動」的質感。
+
+   做法跟 `PIANO_KITS.pluck` 同一路(鋸齒過一顆會關起來的低通),
+   但**更短更亮**,而且**擺在人聲切片的另一邊**(切片在 −0.22)——
+   兩層都在中間會糊成一坨 */
+function playArp(midi, when, dur, gain){
+  const f = 440 * Math.pow(2, (midi - 69) / 12);
+  const out = ctx.createGain();
+  const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+  if (pan) { pan.pan.value = 0.26; out.connect(pan); pan.connect(padBus); }
+  else out.connect(padBus);
+  const lp = ctx.createBiquadFilter();
+  lp.type = "lowpass"; lp.Q.value = 4;
+  lp.frequency.setValueAtTime(Math.min(9000, f * 9), when);
+  lp.frequency.exponentialRampToValueAtTime(Math.max(420, f * 1.8), when + 0.1);
+  lp.connect(out);
+  out.gain.setValueAtTime(0.0001, when);
+  out.gain.linearRampToValueAtTime(gain, when + 0.003);
+  out.gain.setTargetAtTime(0.0001, when + 0.003, 0.055);
+  const stopAt = when + Math.max(dur, 0.06) + 0.25;
+  const o = ctx.createOscillator();
+  o.setPeriodicWave(waveOf("saw", SAW_PARTS));
+  o.frequency.value = f;
+  o.connect(lp);
+  o.start(when); o.stop(stopAt);
+  activeSources.add(o);
+  o.onended = () => { activeSources.delete(o);
+    try { o.disconnect(); lp.disconnect(); out.disconnect(); if (pan) pan.disconnect(); } catch (e) {} };
+}
+
+function scheduleArp(spans, barStartBeat, b, transpose, absBar){
+  const f = feel(), p = pat(absBar), st = styleAt(absBar);
+  const div = divNow(), spec = f.parts.arp;
+  const lvl = (spec.lvl || 0.07) * p.energy * arcGain(absBar);
+  /* **不要走滿十六分**。全部打滿是打字機,真的 arp 是有洞的——
+     那幾個洞才是律動。墊底時只留拍頭 */
+  const cells = st === "pad" ? [[0, 8]]
+              : st === "drive" ? [[0, 2, 3, 6, 8, 10, 11, 14], [0, 2, 4, 6, 8, 11, 12, 14]]
+              : [[0, 3, 6, 8, 11, 14], [0, 2, 6, 8, 10, 14]];
+  const cell = pickCell(cells, absBar, 157);
+  for (let k = 0; k < div; k++) {
+    const idx = b * div + k;
+    if (cell.indexOf(idx) < 0) continue;
+    const sp = spanAt(spans, idx);
+    if (!sp || !sp.v) continue;
+    const notes = padNotes(sp.v);
+    if (!notes.length) continue;
+    // 上上下下跑,不是一路往上(一路往上是音階練習不是 arp)
+    const seq = cell.indexOf(idx);
+    const span2 = notes.length * 2 - 2;
+    const t = span2 > 0 ? seq % span2 : 0;
+    const pick = t < notes.length ? t : span2 - t;
+    playArp(notes[pick] + 12 + transpose, slotTime(barStartBeat, idx),
+            spb * 0.22, lvl * (idx % div === 0 ? 1 : 0.8));
+  }
+}
+
 function scheduleGuitar(spans, barStartBeat, b, transpose, absBar, isFill){
   const f = feel(), g = groove(), p = pat(absBar), st = styleAt(absBar);
   const kind = f.parts.guitar, tone = f.parts.gtone || "nylon";
@@ -5457,6 +5675,13 @@ function prewarmGuitar(){
     for (const sp of (spans || [])) {
       if (!sp || !sp.v) continue;
       for (const n of guitarNotesFor(sp.chord, f.parts.guitar)) want.add(n + transposeOn);
+      /* **第二把吉他的音也要算進來**(它彈的是 `chop` 的聲位 +12)。
+         漏掉的話那幾顆在 `gtrSample` 找不到取樣、`pluck` 就掉回 KS,
+         而 KS 是**排程中途**現算的八萬次迴圈——量過:City Pop 在 CPU 降速 6×
+         之下排程一跳從 40ms 衝到 84ms,而它一小節只彈四顆。
+         這正是這一節第一條規則說的事,自己又踩了一次 */
+      if (f.parts.guitar2)
+        for (const n of guitarNotesFor(sp.chord, "chop")) want.add(n + 12 + transposeOn);
     }
   }
   /* **先把真的取樣抓完,再決定哪幾顆需要 KS**。
@@ -5477,6 +5702,9 @@ function scheduleExtras(spans, barStartBeat, b, transpose, absBar, isFill){
   if (parts.keys)   scheduleKeys(spans, barStartBeat, b, transpose, absBar);
   if (parts.perc)   schedulePerc(barStartBeat, b, absBar, isFill);
   if (parts.vox)    scheduleVox(spans, barStartBeat, b, transpose, absBar);
+  if (parts.brass)  scheduleBrass(spans, barStartBeat, b, transpose, absBar);
+  if (parts.guitar2) scheduleGuitar2(spans, barStartBeat, b, transpose, absBar);
+  if (parts.arp)    scheduleArp(spans, barStartBeat, b, transpose, absBar);
 }
 
 function scheduleBeat(i, when){

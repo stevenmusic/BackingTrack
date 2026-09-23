@@ -2986,6 +2986,7 @@ function decayTau(midi){
 }
 
 function playNote(midi, when, dur, peak){
+  dur *= artic("keys", when, 311);
   when += micro(when, 301, microOf("keys")) + pocket("keys") / 1000;
   const kitNow = pianoKit();
   const KS0 = PIANO_KITS[kitNow];
@@ -3579,7 +3580,11 @@ function playDrum(piece, when, gain, vel){
   const mj = piece === "kick" ? microOf("kick")
            : (piece === "snare" || piece === "clap" || piece === "rim" || piece === "xstick") ? microOf("snare")
            : microOf("hat");
-  when += micro(when, 303 + piece.length, mj);
+  /* 鼓也有 pocket(`FEELS[x].pocket.kick/snare/hat`):backbeat 往後靠一點
+     是「放鬆」的來源,hi-hat 往前一點是「往前走」。沒寫就是 0 */
+  const pk = piece === "kick" ? "kick"
+           : (piece === "snare" || piece === "clap" || piece === "rim" || piece === "xstick") ? "snare" : "hat";
+  when += micro(when, 303 + piece.length, mj) + pocket(pk) / 1000;
   // 實錄鼓組的大鼓也要能觸發側鏈(原本只有 808 的大鼓會);給不給看 FEELS[x].duck
   if (piece === "kick") duckBass(when);
   /* 808 先用真的取樣,載不到才掉回合成(`synth808` 是備援不是主角) */
@@ -4724,6 +4729,15 @@ function applyMix(){
   if (padEq) { padEq.frequency.value = m.padEqHz || 380; padEq.gain.value = m.padEq || 0; }
 }
 
+/* 音長的句法(`FEELS[x].artic`):同一個節奏型每一下放開的時間不一樣,
+   寬度 w 就是 1 ± w/2。種子跟 `micro` 一樣是音樂上的位置,可重現。
+   **沒寫就回 1,零差異** */
+function artic(name, when, salt){
+  const a = feel().artic;
+  const w = a && a[name];
+  if (!w || !playing || !spb) return 1;
+  return (1 - w / 2) + hash01(tickAt(when), salt) * w;
+}
 /* 這個曲風的 pocket(毫秒,正 = 落後)。沒寫就是 0,零差異 */
 function pocket(name){
   const pk = feel().pocket;
@@ -4949,7 +4963,12 @@ const FEELS = {
        110 BPM 的一個十六分是 136 毫秒,所以 4 毫秒只有 3%——
        它不會被聽成「不準」,但那個「浮起來」的感覺就是從這裡來的。
        City Pop 的錄音室樂手一次錄滿,人跟人之間本來就有這幾毫秒 */
-    pocket: { bass: 4, gtr: -2 },
+    /* 鼓的 pocket:小鼓的 backbeat 落後 3ms、hi-hat 往前 1ms。
+       村上ポンタ那種「躺著打」的二四,加上貝斯落後,整個節奏組是往後靠的,
+       只有 hi-hat 跟切音吉他在往前推——前後拉開那幾毫秒就是「律動」 */
+    pocket: { bass: 4, gtr: -2, snare: 3, hat: -1 },
+    // Rhodes 的音長每一下差 ±12%:同一個型每一下放開的時間都一樣就是在「按鍵」
+    artic: { keys: 0.24 },
     /* 微時值、和弦不同時落下、樂句換氣、力度範圍——**這四項只有 City Pop 開著**,
        一個曲風一個曲風調,其餘六種一個取樣都不會動 */
     micro: { keys: 7, bass: 5.5, gtr: 4.5, kick: 2.5, snare: 3, hat: 4.5 },
@@ -5719,8 +5738,34 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord, span){
       if (cell.indexOf(idx) < 0) continue;
       if (idx === slotsInBar() - 1 && isFill) continue;
       const pc = (idx >= div * 2 && chance(absBar, 5, 0.5)) ? fifthPc : rootPc;
-      playBassNote(bassMidiFor(pc), slotTime(barStartBeat, idx), slotDur() * 1.5,
-                   humanize(absBar, 70 + idx, idx === 0 ? 0.5 : 0.38));
+      /* **八度跳**(後藤次利那一下):反拍的根音偶爾往上一個八度、彈短。
+         同一個音級,所以跟和聲零衝突;它只改變「線條往哪裡走」 */
+      const onBeat = idx % div === 0;
+      const oct = !onBeat && pc === rootPc && hash01(absBar * 16 + idx, 191) < 0.3;
+      /* **音長也要有句法**:正拍的根音撐住(1.5 格)、切分短一點、
+         八度那顆最短——彈得一樣長就是在「放音」,不是在「彈」 */
+      const len = onBeat ? 1.5 : oct ? 0.7 : 1.1;
+      playBassNote(bassMidiFor(pc) + (oct ? 12 : 0), slotTime(barStartBeat, idx), slotDur() * len,
+                   humanize(absBar, 70 + idx, idx === 0 ? 0.5 : oct ? 0.34 : 0.38));
+      /* **幽靈音**:切分那一顆前面一格偶爾先悶悶地碰一下(左手悶住的「嘟」)。
+         力度很低,`playBassNote` 的力度濾波會自己把它壓暗,聽起來是手指不是音 */
+      if (!onBeat && idx > 0 && cell.indexOf(idx - 1) < 0 && hash01(absBar * 16 + idx, 192) < 0.35) {
+        playBassNote(bassMidiFor(pc), slotTime(barStartBeat, idx - 1), slotDur() * 0.35,
+                     humanize(absBar, 90 + idx, 0.16));
+      }
+    }
+    /* **經過音接到下一顆和弦**:這顆和弦的最後一格空著、下一顆根音不一樣時,
+       從半音上方或下方滑進去(一半機率)。過門那一小節上面已經接過了,不再重複。
+       這是 city pop 貝斯「在唱旋律」的那一半——根音與五音只是骨架 */
+    const endIdx = (b0 + beats) * div - 1;
+    if (b === last && !isFill && nextChord && cell.indexOf(endIdx) < 0) {
+      const nextPc = pcOf(nextChord.bassPc);
+      if (nextPc !== rootPc && hash01(absBar, 193 + b0) < 0.5) {
+        const target = bassMidiFor(nextPc);
+        playBassNote(target + (hash01(absBar, 194 + b0) < 0.5 ? 1 : -1),
+                     slotTime(barStartBeat, endIdx), slotDur() * 0.8,
+                     humanize(absBar, 195, 0.3));
+      }
     }
     return;
   }

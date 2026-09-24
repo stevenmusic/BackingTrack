@@ -2772,6 +2772,95 @@ function buildImpulseResponse(seconds, decayPow){
   return ir;
 }
 
+/* ══ 真正「看前面」的限幅器(AudioWorklet)═══════════════════════════
+   盲聽裡「破音 / 爆音」被寫了六次(City Pop 最多)。量出來兩個原因,而且是同一件事:
+   1. **飽和那一段其實在硬削波**:曲線裡 `if (x > 1) x = 1`,而 masterGain 先推了 1.9 倍,
+      進飽和的尖峰量到 1.1–1.4(City Pop 0.38% 的取樣被削平),`oversample:"none"` 又會折疊出雜音
+   2. **瀏覽器內建的限幅器不是磚牆**:它是一顆有自動補償增益的壓縮器,
+      起音 1ms 攔不住鼓的音頭——所以原本的設計其實是**靠飽和的硬削波在削尖峰**,
+      而且限幅器一直壓 6–7dB(中位數),整首被壓扁,那也是「鼓沒有 punch」的來源
+   把輸入降下來就不削波了,但尖峰就穿過去撞最後那一關軟削波(量到 1–2.5% 的取樣)。
+   **所以要的是一顆真的限幅器**:看前面 5ms,尖峰還沒到就把增益平滑地收下來,
+   數學上保證輸出不超過天花板,而且不產生任何削波失真。
+   演算法(每一個取樣):需要的增益 r = min(1, 天花板/|x|) → 往回 N+1 個取樣取最小值
+   → 長度 N 的平均(攻擊的斜坡)→ 慢慢放開(release);聲音本身延遲 N 個取樣。
+   保證:輸出第 n 個取樣時,平均窗裡每一個值都已經看過那個尖峰,所以平均 ≤ 它需要的增益。
+   舊的瀏覽器沒有 AudioWorklet 就維持原本那條鏈(`fetch` 不到、`addModule` 失敗都一樣) */
+const LIMITER_SRC = `
+class LookaheadLimiter extends AudioWorkletProcessor {
+  constructor(o){
+    super();
+    const p = (o && o.processorOptions) || {};
+    this.N = Math.max(8, Math.round((p.lookahead || 0.005) * sampleRate));
+    this.ceil = p.ceiling || 0.7;
+    this.rel = Math.exp(-1 / ((p.release || 0.08) * sampleRate));
+    this.r = new Float32Array(this.N + 1).fill(1); this.ri = 0;
+    this.box = new Float32Array(this.N).fill(1); this.bi = 0; this.bsum = this.N;
+    this.dl = [new Float32Array(this.N), new Float32Array(this.N)]; this.di = 0;
+    this.g = 1; this.minG = 1; this.cnt = 0;
+  }
+  process(inputs, outputs){
+    const inp = inputs[0], out = outputs[0];
+    if (!out || !out.length) return true;
+    const L = inp && inp[0], R = inp && (inp[1] || inp[0]);
+    const n = out[0].length, N = this.N;
+    for (let i = 0; i < n; i++) {
+      const xl = L ? L[i] : 0, xr = R ? R[i] : 0;
+      const a = Math.max(Math.abs(xl), Math.abs(xr));
+      this.r[this.ri] = a > this.ceil ? this.ceil / a : 1;
+      this.ri = (this.ri + 1) % (N + 1);
+      let m = 1; const rr = this.r;
+      for (let k = 0; k <= N; k++) if (rr[k] < m) m = rr[k];
+      this.bsum += m - this.box[this.bi]; this.box[this.bi] = m; this.bi = (this.bi + 1) % N;
+      const gb = Math.min(1, this.bsum / N);
+      this.g = gb < this.g ? gb : gb - (gb - this.g) * this.rel;
+      const ol = this.dl[0][this.di], or = this.dl[1][this.di];
+      this.dl[0][this.di] = xl; this.dl[1][this.di] = xr; this.di = (this.di + 1) % N;
+      out[0][i] = ol * this.g;
+      if (out[1]) out[1][i] = or * this.g;
+      if (this.g < this.minG) this.minG = this.g;
+    }
+    if ((this.cnt += n) >= sampleRate / 2) {
+      this.bsum = 0; for (let k = 0; k < N; k++) this.bsum += this.box[k];   // 浮點累加誤差歸零
+      this.port.postMessage(this.minG); this.minG = 1; this.cnt = 0;
+    }
+    return true;
+  }
+}
+registerProcessor("lookahead-limiter", LookaheadLimiter);`;
+let trueLimiter = null, limRed = [];
+function installTrueLimiter(){
+  if (!ctx.audioWorklet || !window.Blob || !window.URL) return;
+  const url = URL.createObjectURL(new Blob([LIMITER_SRC], { type: "application/javascript" }));
+  ctx.audioWorklet.addModule(url).then(() => {
+    const node = new AudioWorkletNode(ctx, "lookahead-limiter", {
+      numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2],
+      processorOptions: { lookahead: 0.005, ceiling: TL_CEIL, release: 0.08 } });
+    node.port.onmessage = e => { limRed.push(e.data); if (limRed.length > 240) limRed.shift(); };
+    /* 換成新的鏈:飽和 → outGain → 看前面的限幅器 → 軟削波(現在只是保險,碰不到)。
+       **masterGain 1.9 → 0.75**:進飽和的尖峰落在 0.8 以下,不再硬削波;
+       舊的 DynamicsCompressor 不在路上了,響度改由 outGain 決定 */
+    masterSat.disconnect(); limiter.disconnect(); outGain.disconnect();
+    masterSat.connect(outGain); outGain.connect(node); node.connect(softClip);
+    masterGain.gain.value = TL_IN; outGain.gain.value = TL_OUT;
+    /* 有了真的限幅器,最後那一關軟削波**永遠碰不到**(輸出被保證在 TL_CEIL 以下),
+       所以它的起彎點從 0.72 挪到 0.9:舊的鏈要它在 0.72 就開始彎,是因為那時候
+       尖峰真的會穿過去;現在天花板可以回到響度規則的 0.85,整首大聲 1.7dB 又不失真 */
+    softClip.curve = softCurve(0.9, 0.98);
+    trueLimiter = node;
+  }).catch(() => {}).finally(() => URL.revokeObjectURL(url));
+}
+const TL_IN = 0.75, TL_OUT = 2.35, TL_CEIL = 0.85;
+function softCurve(t, top){
+  const n = 4096, c = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const x = (i / (n - 1)) * 2 - 1, a = Math.abs(x);
+    const y = a <= t ? a : t + (top - t) * Math.tanh((a - t) / (top - t));
+    c[i] = x < 0 ? -y : y;
+  }
+  return c;
+}
+
 function ensureAudio(){
   if (!ctx) {
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -2872,6 +2961,7 @@ function ensureAudio(){
     limiter.connect(outGain);
     outGain.connect(softClip);
     softClip.connect(ctx.destination);
+    installTrueLimiter();
 
     /* ── 節拍同步的乒乓延遲 ───────────────────────────────────────
        **K-Pop 的 pluck 幾乎一定掛延遲**,那是它「一直在迴盪」的來源;
@@ -5032,6 +5122,12 @@ function midBeat(){ const b = meter().beats; return b >= 4 ? 2 : b - 1; }
 const FEELS = {
   /* Pop:八分平均的流行與搖滾。圓舞曲與 6/8 抒情也走這一種(差別在拍號) */
   straight: {
+    /* 人性化(`micro` / `pocket` / `roll2` / `velRange` / `artic`,原本只有 City Pop 開著)。
+       盲聽裡 Pop 被寫了三次「節奏太死板」:它每一顆音都落在格子正中央。
+       流行樂團的 pocket:backbeat 往後靠一點、hi-hat 往前一點 */
+    micro: { keys: 6, bass: 4.5, gtr: 5, kick: 2, snare: 2.5, hat: 4 },
+    pocket: { snare: 3, hat: -1, bass: -1 },
+    roll2: true, velRange: 0.24, artic: { keys: 0.2 },
     swing: 0.5, push: true,
     kickGain: 0.85,
     snarePiece: "snare", snareGain: 0.7,
@@ -5198,6 +5294,10 @@ const FEELS = {
      6/8 就是 12/8 的慢藍調,那裡三連音是拍號自己就有的,不再另外搖。
      3/4 的藍調基本上不存在,所以只有 4/4 與 6/8 */
   blues: {
+    /* 人性化:藍調是整個樂團往後坐(laid back),backbeat 與貝斯都晚一點 */
+    micro: { keys: 8, bass: 5.5, gtr: 5, kick: 3, snare: 4, hat: 5 },
+    pocket: { snare: 5, bass: 2, keys: 3 },
+    roll2: true, velRange: 0.3, artic: { keys: 0.26 },
     swing: 0.66, push: true,
     kickGain: 0.78,
     snarePiece: "snare", snareGain: 0.6,
@@ -5210,10 +5310,16 @@ const FEELS = {
     /* 藍調加的是 **Hammond 風琴**,不是吉他:鋼琴已經在走 boogie 了,
        再加一把吉他切音會把中頻塞死。風琴撐長音、填在鋼琴的縫裡,
        那是藍調小編制最常見的第四件樂器 */
-    parts: { keys: "organ", klevel: 0.09 },
+    /* 風琴 `klevel` 0.09 → 0.0225(−12dB):盲聽兩批都是「原樣 2 分、關掉或 −12dB 3 分」,
+       而且兩次都寫了 pad 很怪。退到後面當空氣,不拿掉(藍調的 Hammond 還是這個曲風的一部分) */
+    parts: { keys: "organ", klevel: 0.0225 },
   },
   /* 拉丁:bossa nova 與它的三拍、六八拍親戚。小鼓一律用框邊敲擊(cross stick) */
   latin: {
+    /* 人性化:bossa 的吉他與鋼琴攤開、鼓很緊(clave 是拍子的來源,不能晃) */
+    micro: { keys: 6, bass: 4, gtr: 5, kick: 1.5, snare: 2, hat: 3.5 },
+    pocket: { gtr: -1 },
+    roll2: true, velRange: 0.22, artic: { keys: 0.22 },
     swing: 0.5, push: false,
     kickGain: 0.5,
     snarePiece: "xstick", snareGain: 0.54,
@@ -5237,6 +5343,11 @@ const FEELS = {
      **只有 4/4**:放克的骨架就是四拍十六分,三拍與六八拍沒有這個東西,
      硬寫出來只是湊數。感覺選單在別的拍號會把它變暗 */
   funk: {
+    /* 人性化:放克要**緊**——十六分的顆粒靠對齊,抖太多就糊了。
+       只給小鼓一點往後靠(那是 James Brown 樂團的 pocket)、hi-hat 往前 */
+    micro: { keys: 4, bass: 2.5, gtr: 2.5, kick: 1.5, snare: 2, hat: 2.5 },
+    pocket: { snare: 4, hat: -1, gtr: -1 },
+    roll2: true, velRange: 0.26, artic: { keys: 0.2 },
     swing: 0.5, push: true, sub: 2,
     kickGain: 0.84,
     snarePiece: "snare", snareGain: 0.72,
@@ -5298,6 +5409,11 @@ const FEELS = {
   },
   /* 搖擺:爵士。ride 打型、hi-hat 踏鈸給拍子感、大鼓 feathering、小鼓在 comping */
   swing: {
+    /* 人性化:走動低音**踩在拍子前緣**(on top)、鼓組與鋼琴往後靠——
+       那個拉扯就是搖擺的 swing feel */
+    micro: { keys: 8, bass: 4, gtr: 5, kick: 3, snare: 4, hat: 4 },
+    pocket: { bass: -3, snare: 3, keys: 3 },
+    roll2: true, velRange: 0.3, artic: { keys: 0.28 },
     swing: 0.58, push: true,
     kickGain: 0.16, feather: true,
     snarePiece: "snare", snareGain: 0.42, compSnare: true,
@@ -6062,6 +6178,37 @@ function keysNotes(notes){
   return (cap && notes.length > cap) ? notes.slice(-cap) : notes;
 }
 
+/* ── comping 每一下按多久:**照樂句決定,不是一個固定的數字** ──────────
+   原本每一下都是 `slotDur() × 1.8`(推進 × 0.9),整段每一個音一樣長——
+   盲聽被寫了「鋼琴的每個音的長度應該更靈活,而不是每個音按下去都一樣長」
+   「要像人一樣彈奏」。真的手是這樣彈的:
+   1. **按到下一下之前**(音長跟著節奏走,不是固定值)
+   2. **每一小節一種觸鍵**:連奏(放到下一下前一點點)、半斷奏、斷奏,
+      照小節抽,同一小節裡一致——一下長一下短的亂數聽起來是手在抖,不是句法
+   3. **換和弦前最後一下常常撐到換和弦**(那是踏板的效果)
+   4. 小節第一下與推過去的那一下(切分)比較常撐住
+   種子是小節號與格號(`hash01`),可重現 */
+function compDur(absBar, idx, at, positions, sp, st){
+  const sd = slotDur(), end = slotsInBar();
+  let next = end;
+  for (const q of positions) {
+    if (q <= at || q >= next) continue;
+    if (q !== 0 && chance(absBar, 82 + q, 0.15)) continue;   // 跟排程同一個「偶爾空一下」
+    next = q;
+  }
+  const until = Math.min(next, sp && sp.to != null ? sp.to : end);
+  const gap = Math.max(1, until - at) * sd;
+  const r = hash01(absBar, 131);
+  const touch = st === "drive" ? (r < 0.5 ? 0.55 : 0.8)          // 推進:比較短、比較有顆粒
+              : r < 0.45 ? 0.94 : r < 0.8 ? 0.72 : 0.42;           // 連奏 / 半斷奏 / 斷奏
+  let d = gap * (touch * (0.9 + hash01(absBar, 132 + idx) * 0.2));
+  // 撐到換和弦:這顆和弦的最後一下、或小節第一下
+  const lastOfChord = until === (sp && sp.to != null ? sp.to : end) && next >= until;
+  if ((lastOfChord && chance(absBar, 133 + idx, 0.6)) || (idx === 0 && chance(absBar, 134, 0.5)))
+    d = Math.max(d, (until - at) * sd * 0.98);
+  return Math.max(0.09, d);
+}
+
 function schedulePiano(spans, barStartBeat, b, transpose, absBar, isFill){
   const f = feel(), p = pat(absBar), st = styleAt(absBar);
   const m = meter(), beats = m.beats, div = divNow(), mid = midBeat();
@@ -6133,15 +6280,19 @@ function schedulePiano(spans, barStartBeat, b, transpose, absBar, isFill){
                  : div === 4 ? 0.45            // 十六分裡的 e / a
                  : 0.62;                       // 八分的反拍
     const peak = p.compGain * accent * (push ? 0.8 : 1);
-    const dur = slotDur() * (st === "drive" ? 0.9 : 1.8);
+    const dur = compDur(absBar, idx, push ? idx + 1 : idx, positions, sp, st);
     /* **不是每一下都把整組音一起砸下去**。真的在 comping 的手,重拍才落滿,
        中間那些反拍多半只帶上面兩顆(有時只有最上面那一顆)。
        每一下都一樣厚就是「機器人」的來源——比節奏型固定還明顯 */
+    /* **拿掉的是底下的音,不是只留最上面一顆**。原本 12% 的反拍只彈最上面那一顆,
+       那一顆單獨冒出來就像一段沒頭沒尾的旋律——盲聽裡「旋律很怪」被寫了 8 次。
+       真的手在反拍是「少按一兩根手指」,頂音(耳朵當旋律的那一顆)一直都在,
+       所以頂音線只在換和弦時移動,不會自己跳出來 */
     let notes = sp.v.upper;
     if (idx !== 0 && notes.length > 2) {
       const r = hash01(absBar, 110 + idx);
-      if (r < 0.34) notes = notes.slice(-2);
-      else if (r < 0.46) notes = notes.slice(-1);
+      if (r < 0.34) notes = notes.slice(1);
+      else if (r < 0.46 && notes.length > 3) notes = notes.slice(2);
     }
     keysNotes(notes).forEach((n, i) =>
       playNote(n + transpose, t + chordRoll(t, 84 + idx, i), dur,

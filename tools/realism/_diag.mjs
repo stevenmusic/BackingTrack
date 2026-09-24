@@ -84,7 +84,7 @@ for (const cs of cfg.cases) {
   const ovr = cs.ovr ? JSON.stringify(cs.ovr) : '';
   const id = crypto.createHash('sha1').update([commit, cs.feel, cs.style, prog, SECS, FROM_BEAT].join('|') + (ovr ? '|' + ovr : '') + (cs.synth ? '|synth' : '')).digest('hex').slice(0, 10);
   const wavPath = path.join(CLIPS, id + '.wav');
-  if (fs.existsSync(wavPath)) { console.log('skip', id, commit, cs.feel, cs.style); continue; }
+  if (false) { console.log('skip', id, commit, cs.feel, cs.style); continue; }
   caseMissing = 0;
   const pg = await b.newPage(); await localSamples(pg, !!cs.synth);
   const errs = []; pg.on('pageerror', e => errs.push(e.message));
@@ -107,10 +107,24 @@ for (const cs of cfg.cases) {
   await pg.click('#playBtn');
   await pg.waitForFunction(() => typeof playing !== 'undefined' && playing, null, { timeout: 120000 });
   await pg.waitForFunction(b => currentBeat() >= b, FROM_BEAT, { timeout: 180000, polling: 5 });
-  await pg.evaluate(() => { __rec.on = true; });
+  await pg.evaluate(([gi, go, la, lr]) => { if (gi) masterGain.gain.value = gi; if (go) outGain.gain.value = go; if (+la >= 0) limiter.attack.value = +la; if (lr) limiter.release.value = lr; }, [+process.env.GIN || 0, +process.env.GOUT || 0, process.env.LATK ?? -1, +process.env.LREL || 0]);
+  await pg.waitForTimeout(1500);
+  await pg.evaluate(() => { __rec.on = true;
+    window.__d = { n: 0, over8: 0, over6: 0, red: [], pk: 0 };
+    const sp = ctx.createScriptProcessor(4096, 2, 2); const z = ctx.createGain(); z.gain.value = 0;
+    sp.onaudioprocess = e => { for (let c = 0; c < 2; c++) { const x = e.inputBuffer.getChannelData(c);
+      for (let i = 0; i < x.length; i++) { const a = Math.abs(x[i]); __d.n++; if (a > 0.8) __d.over8++; if (a > 0.6) __d.over6++; if (a > __d.pk) __d.pk = a; } } };
+    masterGlue.connect(sp); sp.connect(z); z.connect(ctx.destination);
+    setInterval(() => __d.red.push(limiter.reduction), 20); });
   await pg.waitForFunction(s => __rec.L.length * 4096 >= s * ctx.sampleRate, SECS, { timeout: 120000, polling: 50 });
   const r = await pg.evaluate((s) => { const cat = a => { const n = a.reduce((q, x) => q + x.length, 0), o = new Float32Array(n); let p = 0; for (const x of a) { o.set(x, p); p += x.length; } return o; };
     const L = cat(__rec.L), R = cat(__rec.R), n = Math.floor(s * ctx.sampleRate); return { L: Array.from(L.subarray(0, n)), R: Array.from(R.subarray(0, n)), sr: ctx.sampleRate, bpm: Math.round(60 / spb) }; }, SECS);
+  const dd = await pg.evaluate(() => { const r = __d.red.slice().sort((a, b) => a - b);
+    return { satIn_pk: +__d.pk.toFixed(3), hardclip_pct: +(100 * __d.over8 / __d.n).toFixed(3), over06_pct: +(100 * __d.over6 / __d.n).toFixed(2),
+             limiter_median_dB: +r[r.length >> 1].toFixed(2), limiter_max_dB: +r[0].toFixed(2),
+             TL: !!trueLimiter, TLred_med_dB: limRed.length ? +(20*Math.log10(limRed.slice().sort((a,b)=>a-b)[limRed.length>>1])).toFixed(2) : null,
+             TLred_max_dB: limRed.length ? +(20*Math.log10(Math.min(...limRed))).toFixed(2) : null }; });
+  console.log('DIAG', process.env.GIN, process.env.GOUT, cs.feel, 'rms', features(r.L, r.R, r.sr).rms, 'peak', features(r.L, r.R, r.sr).peak, 'soft%', (100*r.L.concat(r.R).filter(v=>Math.abs(v)>0.72).length/(r.L.length*2)).toFixed(4), cs.label || '', JSON.stringify(dd));
   await pg.close();
   /* 有取樣沒載到的話,錄到的是合成備援的聲音——那一筆不能收,補抓之後重跑 */
   if (caseMissing) { console.log('retry', id, cs.feel, cs.style, '(缺', caseMissing, '個取樣)'); continue; }

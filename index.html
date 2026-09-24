@@ -2712,7 +2712,7 @@ let masterHp = null, masterGlue = null, masterSat = null;
    數值寫在 `FEELS[x].mix`,跟 combHp 那一組同一個做法 */
 let keysBus = null, keysEq = null, keysAir = null, keysChorus = null;
 let bassEqN = null, bassCompN = null, bassMk = null, bassDry = null, bassWet = null, drumAir = null;
-let combAir = null, combChorus = null, masterMid = null, masterAirN = null, revTone = null, drumWidth = null;
+let combAir = null, combChorus = null, masterMid = null, masterAirN = null, revTone = null, drumWidth = null, padLp = null;
 let echoBus = null, echoL = null, echoR = null;
 /* 延遲時間跟著速度走:八分與附點八分(那是最常見的一組乒乓)。
    **速度一改就要重算**,不然換速度之後延遲會跟節奏錯開 */
@@ -3012,10 +3012,14 @@ function ensureAudio(){
     padEq = ctx.createBiquadFilter();
     padEq.type = "peaking"; padEq.frequency.value = 380;
     padEq.Q.value = 1.1; padEq.gain.value = 0;
-    padBus.connect(padHp); padHp.connect(padEq); padEq.connect(masterGain);
+    /* 鋪底的低通(`FEELS[x].mix.padLp`,預設 20k = 透明)。盲聽第一批「鋪底 / 合成器」被勾 8/12 段,
+       評語是「太尖銳、太突出、要溫暖一點」——這顆是拿來做 A/B 的 */
+    padLp = ctx.createBiquadFilter();
+    padLp.type = "lowpass"; padLp.frequency.value = 20000; padLp.Q.value = 0.5;
+    padBus.connect(padHp); padHp.connect(padEq); padEq.connect(padLp); padLp.connect(masterGain);
     const pSend = ctx.createGain();
     pSend.gain.value = 0.42;
-    padEq.connect(pSend); pSend.connect(reverbBus);
+    padLp.connect(pSend); pSend.connect(reverbBus);
     /* 鍵盤(鋼琴 / Rhodes)原本每一顆音直接接 masterGain,**沒有 bus 就沒辦法混**。
        挖 280Hz(整首最擠的那一段)、補一點高頻(Rhodes 的鐘聲)、再過 chorus */
     keysBus = ctx.createGain();
@@ -4837,6 +4841,7 @@ function applyMix(){
   if (combMakeup) combMakeup.gain.value = m.gtrMakeup || 1;
   if (padHp) padHp.frequency.value = m.padHp || 20;
   if (padEq) { padEq.frequency.value = m.padEqHz || 380; padEq.gain.value = m.padEq || 0; }
+  if (padLp) padLp.frequency.value = m.padLp || 20000;
   if (keysEq) { keysEq.frequency.value = m.keysEqHz || 280; keysEq.gain.value = m.keysEq || 0; }
   if (keysAir) { keysAir.frequency.value = m.keysAirHz || 5000; keysAir.gain.value = m.keysAir || 0; }
   if (keysChorus) keysChorus.wet.gain.value = m.keysChorus || 0;

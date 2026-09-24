@@ -70,7 +70,8 @@ const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', a
 const out = fs.createWriteStream(path.join(HERE, 'db/clips.jsonl'), { flags: 'a' });
 for (const cs of cfg.cases) {
   const commit = commitOf(cs.version), prog = cs.prog || cfg.progressions[cs.feel];
-  const id = crypto.createHash('sha1').update([commit, cs.feel, cs.style, prog, SECS, FROM_BEAT].join('|')).digest('hex').slice(0, 10);
+  const ovr = cs.ovr ? JSON.stringify(cs.ovr) : '';
+  const id = crypto.createHash('sha1').update([commit, cs.feel, cs.style, prog, SECS, FROM_BEAT].join('|') + (ovr ? '|' + ovr : '')).digest('hex').slice(0, 10);
   const wavPath = path.join(CLIPS, id + '.wav');
   if (fs.existsSync(wavPath)) { console.log('skip', id, commit, cs.feel, cs.style); continue; }
   caseMissing = 0;
@@ -89,6 +90,8 @@ for (const cs of cfg.cases) {
   });
   await pg.goto('file://' + htmlFor(cs.version));
   await pg.fill('#chordInput', prog); await pg.dispatchEvent('#chordInput', 'input');
+  /* A/B 用的覆寫:點曲風之前併進 FEELS[曲風](null = 拿掉那一層) */
+  if (ovr) await pg.evaluate(([f, o]) => { const m = (t, x) => { for (const k in x) { if (x[k] && typeof x[k] === 'object' && !Array.isArray(x[k])) { t[k] = t[k] || {}; m(t[k], x[k]); } else t[k] = x[k]; } }; m(FEELS[f], JSON.parse(o)); }, [cs.feel, ovr]);
   await pg.click(`[data-feel="${cs.feel}"]`); await pg.click(`[data-style="${cs.style}"]`);
   await pg.click('#playBtn');
   await pg.waitForFunction(() => typeof playing !== 'undefined' && playing, null, { timeout: 120000 });
@@ -101,7 +104,7 @@ for (const cs of cfg.cases) {
   /* 有取樣沒載到的話,錄到的是合成備援的聲音——那一筆不能收,補抓之後重跑 */
   if (caseMissing) { console.log('retry', id, cs.feel, cs.style, '(缺', caseMissing, '個取樣)'); continue; }
   fs.writeFileSync(wavPath, wav16(r.L, r.R, r.sr));
-  const row = { id, commit, version: cs.version, feel: cs.feel, style: cs.style, prog, bpm: r.bpm, secs: SECS, fromBeat: FROM_BEAT, sr: r.sr,
+  const row = { id, commit, version: cs.version, feel: cs.feel, style: cs.style, prog, ovr: cs.ovr || null, label: cs.label || null, batch: cs.batch || 1, bpm: r.bpm, secs: SECS, fromBeat: FROM_BEAT, sr: r.sr,
     renderedAt: new Date().toISOString(), errors: errs, features: features(r.L, r.R, r.sr) };
   out.write(JSON.stringify(row) + '\n');
   console.log('ok', id, commit, cs.feel, cs.style, row.features.rms, row.features.peak, errs.length ? 'ERR ' + errs[0] : '');

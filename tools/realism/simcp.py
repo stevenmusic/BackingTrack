@@ -28,6 +28,8 @@ GROUPS = {
   'after': sorted(glob.glob('/tmp/ours3/sep/htdemucs/n3_*')),
   'synth': sorted(glob.glob('/tmp/synthcp/sep/htdemucs/syn_*')),
   'A': sorted(glob.glob('/tmp/ours4/sep/htdemucs/n4_*')),   # 方案 A:鼓改乾之後
+  'B': sorted(glob.glob('/tmp/ours5/sep/htdemucs/ours5_*')),   # 方案 B:SM Drums(含悶音與鼓件 EQ)
+  'Braw': sorted(glob.glob('/tmp/ours6/sep/htdemucs/ours6_*')),   # 方案 B:SM Drums 不加悶音與 EQ
 }
 res = {}
 for name, stems in STEMS.items():
@@ -37,9 +39,9 @@ for name, stems in STEMS.items():
         pool = np.array([v for k, l in refs.items() if k != exclude for v in l])
         return float(np.mean([(pool @ v).max() for v in vs]))
     ref_self = np.mean([sim_to_refs(v, exclude=k) for k, v in refs.items()])     # 真歌 vs 另外兩首
-    s = {g: np.mean([sim_to_refs(v) for v in E[g].values()]) for g in ('before', 'after', 'A', 'synth')}
+    s = {g: np.mean([sim_to_refs(v) for v in E[g].values()]) for g in ('before', 'after', 'A', 'B', 'Braw', 'synth')}
     pct = lambda x: round(100 * (x - s['synth']) / (ref_self - s['synth']), 1)
     res[name] = {'真歌之間': round(float(ref_self), 4), **{g: round(float(v), 4) for g, v in s.items()},
-                 '改之前%': pct(s['before']), '改之後%': pct(s['after']), '方案A%': pct(s['A'])}
+                 '改之前%': pct(s['before']), '改之後%': pct(s['after']), '方案A%': pct(s['A']), '方案B%': pct(s['B']), 'B不悶%': pct(s['Braw'])}
     print(name, res[name], flush=True)
 json.dump(res, open(os.path.join(H, 'db', 'simcp.json'), 'w'), ensure_ascii=False, indent=1)

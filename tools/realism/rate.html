@@ -1,0 +1,195 @@
+<title>伴奏盲聽台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* 跟 BackingTrack 同一套變數(單一深色主題,app 本身就只有這一套) */
+:root{
+  color-scheme:dark;
+  --bg:#0C0A07; --panel:#161209; --panel-2:#201A0F;
+  --gold:#C9A24B; --gold-bright:#EFD48A; --ivory:#F4ECDA;
+  --muted:#8A7D5F; --muted-bright:#B6A576; --line:#2A2415; --danger:#D9735B;
+  --radius-sm:8px; --radius-md:14px; --radius-pill:999px;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ivory);font-family:"Noto Sans TC",system-ui,sans-serif;font-size:15px;line-height:1.55;padding-inline:16px;padding-block:28px 48px}
+.wrap{max-width:560px;margin:0 auto;display:grid;gap:22px}
+h1{font-family:"Noto Serif TC",serif;font-weight:700;font-size:26px;letter-spacing:.04em;margin:0;text-wrap:balance}
+.lede{color:var(--muted-bright);margin:6px 0 0;max-width:46ch}
+.progress{display:flex;align-items:center;gap:12px;color:var(--muted-bright);font-size:13px;font-variant-numeric:tabular-nums}
+.bar{flex:1;height:4px;background:var(--line);border-radius:4px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--gold);transition:width .3s}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);padding:20px;display:grid;gap:20px}
+.clip-head{display:flex;align-items:center;gap:16px}
+.play{flex:none;width:64px;height:64px;border-radius:50%;border:0;background:var(--gold);color:var(--bg);cursor:pointer;display:grid;place-items:center}
+.play:focus-visible{outline:2px solid var(--gold-bright);outline-offset:3px}
+.play svg{width:24px;height:24px}
+.clip-title{font-family:"Noto Serif TC",serif;font-size:20px;font-weight:700}
+.clip-sub{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.scrub{height:6px;background:var(--line);border-radius:6px;overflow:hidden;cursor:pointer}
+.scrub i{display:block;height:100%;width:0;background:var(--gold-bright)}
+.label{font-size:12px;letter-spacing:.12em;color:var(--muted-bright);margin:0 0 8px}
+.scores{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.scores button,.chips button{font:inherit;color:var(--ivory);background:transparent;border:1px solid var(--line);border-radius:var(--radius-sm);cursor:pointer;transition:border-color .15s,background .15s,color .15s}
+.scores button{height:52px;font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.scale{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;margin-top:6px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button{padding:7px 12px;font-size:14px;border-radius:var(--radius-pill)}
+button[aria-pressed="true"]{border-color:var(--gold)!important;color:var(--gold)!important;background:rgba(201,162,75,.14)!important}
+@media (hover:hover){.scores button:hover,.chips button:hover{border-color:var(--muted-bright)}}
+button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+textarea{width:100%;min-height:64px;resize:vertical;font:inherit;color:var(--ivory);background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px}
+textarea:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+.actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.btn{font:inherit;font-weight:700;border-radius:var(--radius-pill);padding:10px 20px;cursor:pointer;border:1px solid var(--line);background:transparent;color:var(--muted-bright)}
+.btn.primary{background:var(--gold);border-color:var(--gold);color:var(--bg)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.note{color:var(--muted);font-size:13px}
+.note.err{color:var(--danger)}
+.done{text-align:center;display:grid;gap:8px;padding:28px 12px}
+.done strong{font-family:"Noto Serif TC",serif;font-size:22px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>伴奏盲聽台</h1>
+    <p class="lede">每段 10 秒。憑耳朵打分，不會告訴你是哪個曲風或哪個版本。分數會存起來，累積多了就能知道哪些改動真的讓聲音變真實。</p>
+  </header>
+
+  <div class="progress"><span id="prog">載入中…</span><div class="bar"><i id="progBar"></i></div></div>
+
+  <section class="card" id="card" hidden>
+    <div class="clip-head">
+      <button class="play" id="play" type="button" aria-label="播放">
+        <svg id="icoPlay" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>
+        <svg id="icoPause" viewBox="0 0 24 24" fill="currentColor" hidden><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
+      </button>
+      <div>
+        <div class="clip-title" id="clipTitle">第 1 段</div>
+        <div class="clip-sub" id="clipSub">0:00 / 0:10</div>
+      </div>
+    </div>
+    <div class="scrub" id="scrub" role="progressbar" aria-label="播放進度"><i id="scrubBar"></i></div>
+    <audio id="audio" preload="auto"></audio>
+
+    <div>
+      <p class="label">聽起來有多像真的錄音？</p>
+      <div class="scores" id="scores"></div>
+      <div class="scale"><span>1 一聽就是電腦做的</span><span>5 像真的錄音</span></div>
+    </div>
+
+    <div>
+      <p class="label">哪裡聽起來假？(可以複選,也可以不選)</p>
+      <div class="chips" id="chips"></div>
+    </div>
+
+    <div>
+      <p class="label">想補充的話(選填)</p>
+      <textarea id="note" placeholder="例如：貝斯的音頭太硬、鼓像在罐頭裡"></textarea>
+    </div>
+
+    <div class="actions">
+      <button class="btn" id="skip" type="button">跳過</button>
+      <button class="btn primary" id="submit" type="button" disabled>送出，下一段</button>
+    </div>
+    <p class="note" id="status" aria-live="polite"></p>
+  </section>
+
+  <section class="card done" id="done" hidden>
+    <strong>這一批都聽完了</strong>
+    <span class="note">謝謝。新的一批產生之後，重新打開這頁就會出現。</span>
+  </section>
+
+  <p class="note err" id="fatal" hidden></p>
+</div>
+
+<script>
+const FAKE = ["鼓", "貝斯", "鍵盤 / 鋼琴", "吉他", "鋪底 / 合成器", "銅管", "打擊小物", "節奏太死板", "整體混音"];
+const $ = (id) => document.getElementById(id);
+let db = null, rater = null, queue = [], total = 0, doneCount = 0, cur = null, score = 0, fake = new Set();
+
+function localId(){
+  try { let v = localStorage.getItem("rater"); if (!v) { v = "anon-" + crypto.randomUUID(); localStorage.setItem("rater", v); } return v; }
+  catch { return "anon-session"; }
+}
+// 用同一個人固定的順序洗牌:重新整理不會換題目順序
+function seeded(str){ let h = 2166136261; for (const c of str) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return () => ((h = Math.imul(h ^ (h >>> 15), 2246822519) ^ Math.imul(h, 3266489917)) >>> 0) / 4294967296; }
+
+function buildControls(){
+  const s = $("scores");
+  for (let i = 1; i <= 5; i++) {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = i;
+    b.setAttribute("aria-pressed", "false"); b.setAttribute("aria-label", i + " 分");
+    b.onclick = () => { score = i; for (const x of s.children) x.setAttribute("aria-pressed", String(x === b)); $("submit").disabled = false; };
+    s.appendChild(b);
+  }
+  const c = $("chips");
+  for (const f of FAKE) {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = f; b.setAttribute("aria-pressed", "false");
+    b.onclick = () => { fake.has(f) ? fake.delete(f) : fake.add(f); b.setAttribute("aria-pressed", String(fake.has(f))); };
+    c.appendChild(b);
+  }
+}
+
+function paintProgress(){
+  $("prog").textContent = `已評 ${doneCount} / ${total}`;
+  $("progBar").style.width = total ? (doneCount / total * 100) + "%" : "0";
+}
+
+function fmt(t){ t = Math.max(0, t || 0); return Math.floor(t / 60) + ":" + String(Math.floor(t % 60)).padStart(2, "0"); }
+
+function showNext(){
+  const a = $("audio"); a.pause();
+  score = 0; fake.clear(); $("note").value = ""; $("submit").disabled = true; $("status").textContent = "";
+  for (const b of document.querySelectorAll("#scores button, #chips button")) b.setAttribute("aria-pressed", "false");
+  cur = queue.shift();
+  if (!cur) { $("card").hidden = true; $("done").hidden = false; return; }
+  $("card").hidden = false; $("done").hidden = true;
+  $("clipTitle").textContent = `第 ${doneCount + 1} 段`;
+  a.src = cur.url; a.load(); setPlaying(false);
+}
+
+function setPlaying(on){ $("icoPlay").hidden = on; $("icoPause").hidden = !on; $("play").setAttribute("aria-label", on ? "暫停" : "播放"); }
+
+async function submit(){
+  if (!cur || !score) return;
+  $("submit").disabled = true; $("status").textContent = "儲存中…";
+  try {
+    await db.collection("ratings").add({ clip: cur.id, score, fake: [...fake], note: $("note").value.trim().slice(0, 500), rater, at: new Date().toISOString() });
+    doneCount++; paintProgress(); showNext();
+  } catch (e) {
+    $("status").textContent = "沒存到：" + (e && e.message || e) + "。請再按一次送出。";
+    $("submit").disabled = false;
+  }
+}
+
+async function start(){
+  buildControls();
+  const a = $("audio");
+  $("play").onclick = () => { a.paused ? a.play().catch(() => {}) : a.pause(); };
+  a.onplay = () => setPlaying(true); a.onpause = () => setPlaying(false); a.onended = () => setPlaying(false);
+  a.ontimeupdate = () => { $("clipSub").textContent = fmt(a.currentTime) + " / " + fmt(a.duration || 10); $("scrubBar").style.width = (a.duration ? a.currentTime / a.duration * 100 : 0) + "%"; };
+  $("scrub").onclick = (e) => { if (a.duration) { const r = e.currentTarget.getBoundingClientRect(); a.currentTime = (e.clientX - r.left) / r.width * a.duration; } };
+  $("submit").onclick = submit;
+  $("skip").onclick = () => { if (cur) queue.push(cur); showNext(); };
+
+  db = await claude.use("db");
+  if (!db) { $("prog").textContent = ""; $("fatal").hidden = false; $("fatal").textContent = "這一頁要在 claude.ai 裡打開、而且有編輯權限，才存得了分數。"; return; }
+  const user = await claude.use("user");
+  try { rater = (user && user.id && await user.id()) || localId(); } catch { rater = localId(); }
+  try {
+    const clips = (await db.collection("clips").get()).docs.map(d => ({ id: d.id, ...d.data() })).filter(c => c.url && c.active !== false);
+    const mine = new Set((await db.collection("ratings").where("rater", "==", rater).get()).docs.map(d => d.data().clip));
+    const rnd = seeded(rater);
+    clips.sort((x, y) => x.id < y.id ? -1 : 1);
+    for (let i = clips.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [clips[i], clips[j]] = [clips[j], clips[i]]; }
+    total = clips.length; doneCount = clips.filter(c => mine.has(c.id)).length;
+    queue = clips.filter(c => !mine.has(c.id));
+    paintProgress(); showNext();
+  } catch (e) {
+    $("fatal").hidden = false; $("fatal").textContent = "讀不到片段清單：" + (e && e.message || e);
+  }
+}
+start();
+</script>

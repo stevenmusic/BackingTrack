@@ -1,0 +1,19 @@
+{
+ "selfCheck_pReal_heldOutReal": 0.99,
+ "fad": {
+  "c33893c:straight": 6.26,
+  "c33893c:citypop": 4.34,
+  "c33893c:kpop": 4.88,
+  "c33893c:latin": 6.62,
+  "c33893c:blues": 7.27,
+  "c33893c:swing": 8.45,
+  "c33893c:funk": 8.9,
+  "08e5fca:citypop": 5.43,
+  "08e5fca:straight": 6.07
+ },
+ "refs": [
+  "plastic-love-intro",
+  "plastic-love-full"
+ ],
+ "clips": 12
+}

@@ -5327,8 +5327,11 @@ const FEELS = {
        那不是混音決定,是壓縮器的副作用——要收回來,
        壓縮留下的是「顆粒變齊」不是「變大聲」 */
     parts: { guitar: "chop", gtone: "clean", glevel: 0.185,
-             guitar2: { lvl: 0.12 },
-             brass: { lvl: 0.115 },
+             /* 變化:切音 4 → 8 型、第二把吉他 3 種彈法、銅管 4 → 7 型 */
+             chopCells: [[2, 6, 10, 14], [2, 7, 10, 14], [2, 6, 11, 15], [3, 6, 10, 14],
+                         [2, 6, 10], [6, 10, 14], [2, 5, 10, 13], [3, 7, 11, 14]],
+             guitar2: { lvl: 0.12, modes: 3 },
+             brass: { lvl: 0.115, cells: [[6, 10], [10, 14], [6, 14], [10], [14], [3, 6], [11, 14]] },
              /* 鋪底 −2dB、過 3kHz 低通:盲聽 6 次寫「太尖銳、太突出、要溫暖一點、不夠後面」 */
              keys: "pad", klevel: 0.025,
              /* 沙鈴從十六分退回八分、−1.4dB:三首參考曲分軌量到高頻每拍 2.5–3 下,
@@ -5340,6 +5343,19 @@ const FEELS = {
        分軌之後貝斯相對整軌 −3.4～−6.6dB(平均 −5.2),我們是 −1.5～−2.0,貝斯站得太前面 */
     bassGain: 0.68,
     drumSet: "sm",   // 大鼓、小鼓、hi-hat 用 SM Drums(見 `SM_KIT`)
+    /* **變化**(使用者:「每個模式都多幾種彈法,過門也是」)。全部走通用欄位,沒寫的曲風零差異 */
+    padVar: 3,                                                   // 墊底的鋼琴三種彈法
+    ghosts: [[11], [7, 11], [3, 11], [11, 15], [7], [14]],       // 小鼓幽靈音的位置每小節抽一組
+    /* City Pop 的過門:小鼓十六分為主、tom 由高往低、結尾常常大鼓小鼓一起落(青山純的手) */
+    fills1: [["snare", null, "snare", "snare"], [null, "snare", "snare", "htom"],
+             ["snare", "snare", "htom", "ltom"], [null, "snare", "htom", "ltom"],
+             ["snare", null, "snare", "htom"], [null, null, "snare", "snare"],
+             ["htom", "htom", "ltom", "ltom"]],
+    fills2: [[null, "snare", null, "snare", "snare", null, "htom", "ltom"],
+             ["snare", null, "snare", "snare", null, "htom", "ltom", "ltom"],
+             [null, null, "snare", "snare", "htom", null, "ltom", "snare"],
+             ["snare", "snare", null, "snare", "htom", "htom", "ltom", "ltom"],
+             [null, "snare", "snare", null, "snare", "htom", "ltom", "snare"]],
     /* **鼓件悶音**:[撐幾秒, 收的時間常數]。大鼓塞枕頭、小鼓貼膠帶、tom 調緊——
        八〇年代初錄音室的鼓(村上ポンタ秀一、青山純)音頭飽滿、尾巴很短 */
     drumDamp: { kick: [0.14, 0.05], snare: [0.13, 0.05], htom: [0.2, 0.07], ltom: [0.24, 0.08] },
@@ -5733,7 +5749,10 @@ const COMP_CELLS = {
   /* City pop 的和弦打在「拍與拍中間」,而且常常提前半個十六分進來(搶拍)。
      比放克長、比放克少顆,聽起來像電鋼琴在鋪 */
   citypop: {
-    "4/4": [[0,6,10,14], [2,6,10], [0,6,11,14], [6,10,14], [0,3,10,14]],
+    /* 5 → 10 型(使用者要「每個模式都多幾種彈法」)。後五個一樣是十六分的切分,
+       有提前半拍搶進來的([0,6,8,14]、[3,6,10,14])、有空出第一拍讓貝斯說話的([2,8,10,14]) */
+    "4/4": [[0,6,10,14], [2,6,10], [0,6,11,14], [6,10,14], [0,3,10,14],
+            [0,6,8,14], [0,3,8,11], [3,6,10,14], [0,6,11], [2,8,10,14]],
   },
   /* K-Pop 的 Rhodes 是**鋪**不是打:一小節兩三下,第 1 拍與第 3 拍是骨架,
      中間補一顆切分。跟放克(一小節四顆 stab)剛好相反——half-time 的空間
@@ -5771,7 +5790,9 @@ const KICK_CELLS = {
   },
   // City pop 的大鼓比放克少、比 Pop 碎:一與「三的前一格」是本家
   citypop: {
-    "4/4": [[0,10], [0,6,10], [0,3,10], [0,10,14], [0,8]],
+    // 5 → 9 型:加了「二的後半 + 三」與「一、四的前一格」這種把第三拍讓開的
+    "4/4": [[0,10], [0,6,10], [0,3,10], [0,10,14], [0,8],
+            [0,7,10], [0,3,8], [0,10,13], [0,6,8]],
   },
   /* 808 的大鼓尾巴很長,打太密會整片糊成一條低頻,所以一小節只有兩三顆。
      本家型是「1 ・ 3的前一格 ・ 3的後半」——half-time 最典型的那個 */
@@ -5978,7 +5999,8 @@ function scheduleDrums(barStartBeat, b, absBar, isFill){
   const fillFrom = big ? beats - 2 : beats - 1;
 
   if (isFill && b >= fillFrom) {
-    const list = big ? FILLS_2BEAT : FILLS_1BEAT;
+    // `FEELS[x].fills1 / fills2`:這個曲風自己的過門(沒寫就用通用的)
+    const list = big ? (f.fills2 || FILLS_2BEAT) : (f.fills1 || FILLS_1BEAT);
     const fill = list[Math.floor(hash01(absBar, 11) * list.length) % list.length];
     /* 搖擺與 6/8 的過門要走三連音。八分是搖擺的、過門突然變成整齊的十六分,
        那一拍會整個掉出來 */
@@ -6048,7 +6070,10 @@ function scheduleDrums(barStartBeat, b, absBar, isFill){
          只疊一顆、而且比拍手小一階——疊到一樣大聲就變成兩顆各自的鼓 */
       if (f.snareStack)
         playDrum(f.snareStack, t, humanize(absBar, idx + 41, f.snareGain * 0.5 * p.energy * arc));
-    } else if (idx === g.ghost && chance(absBar, 3, 0.25)) {
+    } else if (f.ghosts ? (pickCell(f.ghosts, absBar, 108).indexOf(idx) >= 0 && hash01(absBar * 16 + idx, 109) < 0.6)
+                        : (idx === g.ghost && chance(absBar, 3, 0.25))) {
+      /* `FEELS[x].ghosts`:幽靈音的位置每小節抽一組(沒寫就照舊只有 `g.ghost` 那一格)。
+         City Pop 的小鼓在 backbeat 之間碎碎地補(青山純、村上ポンタ那種手),固定一格聽得出是程式 */
       // 幽靈音一律是小鼓:拍手沒有「很輕地補一下」這種打法
       playDrum("snare", t, humanize(absBar, 55, f.snareGain * 0.23));
     }
@@ -6186,7 +6211,9 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord, span){
      常常在下一小節之前提前半拍進來。比放克長、比放克少——它在唱旋律,
      不是在打點(細野晴臣那種走法) */
   if (mode === "citypop") {
-    const cell = pickCell([[0,6,10], [0,10,14], [0,6,11], [0,3,10], [0,8,14]], absBar, 104);
+    // 5 → 9 型:後四個有「一 + 二的前一格」的推進、有三連咬([0,6,8,14])
+    const cell = pickCell([[0,6,10], [0,10,14], [0,6,11], [0,3,10], [0,8,14],
+                           [0,7,10], [0,3,6,10], [0,6,10,13], [0,6,8,14]], absBar, 104);
     /* ── 過門(使用者點名要的)──────────────────────────────────────
        原本過門那一小節只有「最後一格一顆接音」,等於沒有過門。
        City Pop 的貝斯(後藤次利、Nathan East、細野晴臣)在樂句的尾巴一定會跑一句:
@@ -6209,11 +6236,16 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord, span){
         [R + 12, R + sev, R + fifthIv, R + 5],                // 從八度滑下來
         [R, R + fifthIv, app[0], app[1]],                     // 五度再半音走進去
         [R + 12, R + fifthIv, R + third, app[1]],             // 下行琶音接半音
+        [R, R + 12, R + sev, app[1]],                   // 八度跳上去、七度、半音進去
+        [R + fifthIv, R + 12, R + fifthIv, app[1]],     // 五度-八度-五度的來回
+        [R, R + third, R + fifthIv, app[1]],            // 三和弦往上,最後一顆半音接
       ];
       const runs2 = [
         [R, R + third, R + fifthIv, R + 12, R + sev, R + fifthIv, app[0], app[1]],
         [R, R + fifthIv, R + 12, R + fifthIv, R + 12, R + sev, R + fifthIv, app[1]],
         [R + 12, R + sev, R + fifthIv, R + 5, R + third, R + 2, R, app[1]],
+        [R, R, R + 12, R + 12, R + sev, R + sev, R + fifthIv, app[1]],   // 八度兩兩重複往下(放克式)
+        [R + fifthIv, R + third, R, R + 12, R + sev, R + fifthIv, app[0], app[1]],
       ];
       const pool = fillBeats === 2 ? runs2 : runs1;
       const run = pool[Math.floor(hash01(absBar, 197) * pool.length) % pool.length];
@@ -6448,10 +6480,23 @@ function schedulePiano(spans, barStartBeat, b, transpose, absBar, isFill){
   if (st === "pad") {
     if (b === here.fromBeat) {
       const t0 = beatTime(barStartBeat + b);
-      keysNotes(v.upper).forEach((n, i) =>
-        playNote(n + transpose, t0 + chordRoll(t0, 84, i),
-                 spb * (here.toBeat - here.fromBeat) * 0.88,
+      /* 墊底的彈法(`FEELS[x].padVar`,沒寫就只有第 0 種):
+         0 一下整顆、1 由下往上撥開(每顆晚 35–60ms)、
+         2 整顆 + 半小節後輕輕再按一次上面兩顆(二分音符的呼吸)。每顆和弦抽一種 */
+      const pv = f.padVar ? Math.floor(hash01(absBar * 8 + b, 87) * f.padVar) : 0;
+      const len = spb * (here.toBeat - here.fromBeat);
+      const up = keysNotes(v.upper);
+      const roll = pv === 1 ? 0.035 + hash01(absBar, 88) * 0.025 : 0;
+      const half = pv === 2 && here.toBeat - here.fromBeat >= 3;
+      up.forEach((n, i) =>
+        playNote(n + transpose, t0 + (roll ? i * roll : chordRoll(t0, 84, i)),
+                 (half ? len / 2 : len) * 0.88 - (roll ? i * roll : 0),
                  humanize(absBar, 84, p.compGain)));
+      if (half) {
+        const t1 = t0 + len / 2;
+        up.slice(-2).forEach((n, i) => playNote(n + transpose, t1 + chordRoll(t1, 89, i),
+                                               len / 2 * 0.86, humanize(absBar, 90, p.compGain * 0.7)));
+      }
     }
     if (!multi && b === mid && isFill && chance(absBar, 80, 0.55)) {
       const t1 = beatTime(barStartBeat + mid);
@@ -6877,7 +6922,7 @@ function scheduleBrass(spans, barStartBeat, b, transpose, absBar){
   const lvl = (spec.lvl || 0.1) * p.energy * arcGain(absBar);
   /* 都是切分位置:十六分格的 6(二的後半)、10、14(四的後半)。
      正拍上吹會跟鋼琴與鼓撞在一起,那就不是 stab 是鋪底了 */
-  const cells = div === 4 ? [[6, 10], [10, 14], [6, 14], [10]]
+  const cells = div === 4 ? (spec.cells || [[6, 10], [10, 14], [6, 14], [10]])
                           : [[3, 5], [5, 7], [3, 7], [5]];
   const cell = pickCell(cells, absBar, 149);
   for (let k = 0; k < div; k++) {
@@ -6920,9 +6965,22 @@ function scheduleGuitar2(spans, barStartBeat, b, transpose, absBar){
     const seq = Math.floor(idx / Math.max(1, step));
     const pick = dir > 0 ? seq % notes.length
                          : (notes.length - 1 - (seq % notes.length));
-    pluck(notes[pick] + 12 + transpose, slotTime(barStartBeat, idx),
-          lvl * (idx % div === 0 ? 1 : 0.78), f.parts.gtone || "clean",
-          spb * 0.9, pick, 1);
+    /* **三種彈法,每小節抽一種**(`spec.modes`,沒寫就只有琶音):
+       0 琶音(原本那個)、1 上面兩顆一起撥的雙音(六度/三度的 double stop,鈴木茂那種)、
+       2 最高音 + 高八度(八度奏法,City Pop 的間奏很常見)。
+       全部都是這顆和弦自己的音,和聲不會跑掉;餘音一樣不撐進下一顆和弦 */
+    const mode = spec.modes ? Math.floor(hash01(absBar, 152) * spec.modes) : 0;
+    const t0 = slotTime(barStartBeat, idx), ring = Math.min(spb * 0.9, Math.max(0.08, (sp.to - idx) * slotDur() * 0.95));
+    const tone = f.parts.gtone || "clean", gl = lvl * (idx % div === 0 ? 1 : 0.78);
+    if (mode === 1 && notes.length >= 2) {
+      notes.slice(-2).forEach((n, i) => pluck(n + 12 + transpose, t0 + i * 0.006, gl * 0.8, tone, ring, i, 1));
+    } else if (mode === 2) {
+      const top = notes[notes.length - 1];
+      pluck(top + transpose, t0, gl * 0.75, tone, ring, 0, 1);
+      pluck(top + 12 + transpose, t0 + 0.004, gl * 0.75, tone, ring, 1, 1);
+    } else {
+      pluck(notes[pick] + 12 + transpose, t0, gl, tone, ring, pick, 1);
+    }
   }
 }
 
@@ -7062,7 +7120,7 @@ function scheduleGuitar(spans, barStartBeat, b, transpose, absBar, isFill){
      格子跟 `COMP_CELLS` 錯開一格,兩件樂器才不會每一下都疊在一起 */
   if (kind === "chop") {
     const cells = div === 4
-      ? [[2, 6, 10, 14], [2, 7, 10, 14], [2, 6, 11, 15], [3, 6, 10, 14]]
+      ? (f.parts.chopCells || [[2, 6, 10, 14], [2, 7, 10, 14], [2, 6, 11, 15], [3, 6, 10, 14]])
       : [[1, 3, 5, 7], [1, 5, 7], [3, 5, 7], [1, 3, 7]];
     /* **每小節抽一個型**。試過「兩小節才換一次」(`absBar >> 1`),想做成
        「重複、重複、句尾才變」——但量出來反效果:跟兩小節前一模一樣的

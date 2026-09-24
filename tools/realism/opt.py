@@ -12,7 +12,8 @@ import numpy as np
 H = os.path.dirname(os.path.abspath(__file__))
 FEEL = sys.argv[1]; ROUNDS = int(sys.argv[2]) if len(sys.argv) > 2 else 12
 VERSION = os.environ.get('OPT_VERSION', 'bd80000')
-PROGS = {'citypop': ['Fmaj7 - E7 - Am7 - C7', 'Cmaj7 - Fmaj7 - Bm7b5 - E7 - Am7 - D7 - Dm7 - G7']}[FEEL]
+PROGS = {'citypop': ['Fmaj7 - E7 - Am7 - C7', 'Cmaj7 - Fmaj7 - Bm7b5 - E7 - Am7 - D7 - Dm7 - G7'],
+         'kpop': ['Am7 - F - C - G', 'F - G - Em - Am']}[FEEL]
 # (路徑, 現值, 下限, 上限, 種類) 種類 log = 乘法擾動、db = 加法擾動(單位 dB)、lin = 加法擾動
 SPACE = {'citypop': [
   ('parts.glevel', .185, .06, .4, 'log'), ('parts.guitar2.lvl', .12, .03, .3, 'log'), ('parts.brass.lvl', .115, .03, .3, 'log'),
@@ -22,7 +23,16 @@ SPACE = {'citypop': [
   ('mix.keysLevel', .85, .5, 1.3, 'log'), ('mix.keysAir', 2, -2, 6, 'db'), ('mix.keysEq', -3, -8, 2, 'db'), ('mix.keysChorus', .25, 0, .5, 'lin'),
   ('mix.gtrAir', 4, -2, 6, 'db'), ('mix.gtrChorus', .25, 0, .5, 'lin'), ('mix.drumAir', 4, -2, 6, 'db'), ('mix.bassEq', 2, -3, 5, 'db'),
   ('mix.masterMid', -2.5, -6, 2, 'db'), ('mix.masterAir', 2.5, -2, 6, 'db'),
-  ('mix.drumWidth', .7, .3, 1.0, 'lin'), ('mix.roomLevel', .5, .1, 1.0, 'log'), ('mix.revLp', 6000, 2500, 16000, 'log')]}[FEEL]
+  ('mix.drumWidth', .7, .3, 1.0, 'lin'), ('mix.roomLevel', .5, .1, 1.0, 'log'), ('mix.revLp', 6000, 2500, 16000, 'log')],
+  # K-Pop 的 mix 本來是全透明的(0dB、20k),起點照抄現值
+  'kpop': [
+  ('parts.klevel', .075, .02, .15, 'log'), ('parts.klow', .145, .05, .3, 'log'), ('parts.vox.lvl', .085, .02, .2, 'log'),
+  ('parts.arp.lvl', .07, .02, .15, 'log'), ('parts.perc.lvl', .12, .04, .3, 'log'),
+  ('kickGain', .7, .35, 1.1, 'log'), ('snareGain', .62, .3, 1.0, 'log'), ('cymGain', .28, .1, .6, 'log'),
+  ('lh', .3, .1, .6, 'log'), ('duck.bass', .22, .1, .8, 'lin'),
+  ('mix.keysLevel', 1.0, .5, 1.3, 'log'), ('mix.keysAir', 0, -3, 6, 'db'), ('mix.keysEq', 0, -8, 3, 'db'), ('mix.keysChorus', 0, 0, .5, 'lin'),
+  ('mix.drumAir', 0, -3, 6, 'db'), ('mix.bassEq', 0, -4, 5, 'db'),
+  ('mix.masterMid', 0, -6, 3, 'db'), ('mix.masterAir', 0, -3, 6, 'db'), ('mix.revLp', 20000, 3000, 20000, 'log')]}[FEEL]
 rng = np.random.default_rng(int(os.environ.get('SEED', '1')))
 
 def to_ovr(vals):

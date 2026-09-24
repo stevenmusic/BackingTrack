@@ -3510,6 +3510,7 @@ function ensureDrums(){
   }
   // 這次的感覺要用到的鼓件要等:ride 換成合成音就不是爵士了
   const jobs = [drumsLoading];
+  if (smKitOn()) jobs.push(ensureSM());
   for (const piece of (FEEL_PIECES[feelNow] || [])) {
     if (!feelPieceLoading[piece]) feelPieceLoading[piece] = loadDrumSet([piece], true);
     jobs.push(feelPieceLoading[piece]);
@@ -3780,6 +3781,8 @@ function playDrum(piece, when, gain, vel){
   const ref = piece === "hihat" || piece === "hhped" || piece === "ride" ? 0.34
             : piece === "kick" ? 0.9 : 0.7;
   const v = Math.max(0, Math.min(1, vel === undefined ? gain / ref : vel));
+  // City Pop 的大鼓、小鼓、hi-hat 走 SM Drums(載不到就往下走原本的 Virtuosity)
+  if (smKitOn() && playSMSample(piece, when, gain, v)) return;
   const slot = pickDrumLayer(piece, v);
   if (!slot) { synthDrum(piece, when, gain); return; }
 
@@ -4468,6 +4471,106 @@ function hat808Buf(){
    **WAV 不是 mp3 也不是 FLAC**:`decodeAudioData` 對 WAV 的支援是最好的
    (鼓那組 FLAC 在舊 iOS 上踩過)。
    **`synth808` 留著當備援**,位置跟 `synthDrum` 一樣——載不到就掉回去 */
+/* ══ SM Drums(City Pop 的大鼓、小鼓、hi-hat)════════════════════════
+   **為什麼換**:三首參考曲(Midnight Pretenders / Plastic Love / 真夜中のドア)的鼓軌,
+   跟同一個鼓型換不同鼓組打出來的比 MERT 相似度(`tools/realism/kitcmp.py`,兩次不同力度):
+   Virtuosity 0.860 / 0.847、Big Rusty 0.890 / 0.867、**SM Drums 0.920 / 0.912**。
+   Virtuosity 是現場感的爵士鼓組,City Pop 要的是六七〇年代錄音室那種悶、緊、乾的鼓。
+   SM Drums 是 1960 年代的 Ludwig Oyster Blue Pearl,小鼓取 **Snare65_NR**(NR = 悶住不共鳴)。
+   **授權**:作者 Scott McLean 聲明免費、royalty free,商用也可以(App 上架沒問題)。
+   使用者同意換的(換音源之前要先問,這條還是在)。
+
+   - **只換大鼓、小鼓、hi-hat**,tom、鈸照舊用 Virtuosity——過門的鼓件一小節才一兩下
+   - **響度照 Virtuosity 的力度曲線對齊**(`VIRT_DB`):兩組錄的電平不一樣,
+     SM 最輕的小鼓(−27.9dB)比 Virtuosity 的幽靈音(−43.3dB)大 15dB,直接換的話幽靈音會變成正拍。
+     所以每一下先照原本的規則算「要多大聲」,再挑 SM 裡音量最接近的那一層、差多少補多少
+   - **檔案是 24-bit 立體聲 WAV,一顆 ~430KB**(Virtuosity 的十倍)。擋住播放的只有三件的中間那一層
+     RR1(三個檔案),其餘力度層與 round robin 等真的開始播了才補(`drumFillGate`),解碼一顆一顆排隊
+   - **載不到就掉回 Virtuosity**(`playSMSample` 回 false),跟 808 同一個做法:
+     「取樣一定載得到」這個假設從來不能做
+   - 沒有房間麥(這組的立體聲檔本來就是混好的),所以 SM 的鼓不送 `roomBus` */
+const SRC_SM = [
+  "https://cdn.jsdelivr.net/gh/sfzinstruments/SMDrums@main/",
+  "https://raw.githubusercontent.com/sfzinstruments/SMDrums/main/",
+];
+// [檔名前綴(力度), 這一層前 150ms 的 RMS dB](量出來的,換層就要重量)
+const SM_KIT = {
+  kick:  { dir: "Samples/SMDrum Stereo (Samples)/Kik_Stereo", name: "Kik_Stereo",
+           layers: [["10", -35.2], ["20", -25.9], ["28", -18.7]] },
+  snare: { dir: "Samples/SMDrum Stereo (Samples)/Snare65_NR_Stereo", name: "Snare65_NR_Stereo",
+           layers: [["08", -27.9], ["18", -23.9], ["28", -18.9]] },
+  hihat: { dir: "Samples/SMD Cymbals Stereo (Samples)/Hi-Hat (Samples)/01 Hat Tight 1", name: "Hat_Tight_Cnt",
+           layers: [["15", -47.0], ["30", -37.9], ["42", -34.8]] },
+};
+const SM_RR = [1, 2];
+// Virtuosity 每一層(照 DRUM_LAYERS 的順序)前 150ms 的 RMS dB——SM 要對齊的目標
+const VIRT_DB = { kick: [-52.5, -40.3, -28.6, -22.5], snare: [-43.3, -33.2, -29.9, -24.6, -20.6],
+                  hihat: [-64.1, -54.3, -47.6, -34.2] };
+const smBuffers = {}, smRR = {};
+let smLoading = null;
+function smKitOn(){ return typeof FEELS !== "undefined" && typeof feelNow !== "undefined" && (FEELS[feelNow] || {}).drumSet === "sm"; }
+function smPath(piece, layer, rr){
+  const K = SM_KIT[piece];
+  return encodeURI(`${K.dir}/RR${rr}/${layer}_${K.name}_RR${rr}.wav`);
+}
+function ensureSM(){
+  if (smLoading) return smLoading;
+  const one = (piece, layer, rr) => fetchDecode(SRC_SM, smPath(piece, layer, rr)).then(buf => {
+    const byLayer = smBuffers[piece] || (smBuffers[piece] = {});
+    (byLayer[layer] || (byLayer[layer] = []))[rr - 1] = buf;
+  }).catch(() => {});
+  const pieces = Object.keys(SM_KIT);
+  const mid = p => SM_KIT[p].layers[1][0];
+  smLoading = pieces.reduce((c, p) => c.then(() => one(p, mid(p), 1)), Promise.resolve());
+  smLoading.then(() => drumFillGate()).then(() => {
+    const rest = [];
+    for (const p of pieces) for (const [l] of SM_KIT[p].layers) for (const r of SM_RR)
+      if (!(l === mid(p) && r === 1)) rest.push([p, l, r]);
+    return rest.reduce((c, [p, l, r]) => c.then(() => one(p, l, r)), Promise.resolve());
+  }).catch(() => {});
+  return smLoading;
+}
+/* 播一顆 SM 的鼓。這一件沒載到任何一層就回 false,呼叫端照原本的 Virtuosity 走 */
+function playSMSample(piece, when, gain, v){
+  const K = SM_KIT[piece], got = smBuffers[piece], L = DRUM_LAYERS[piece];
+  if (!K || !got || !L || !VIRT_DB[piece]) return false;
+  const n = L.vl.length, idx = Math.max(0, Math.min(n - 1, Math.round(v * (n - 1))));
+  const target = VIRT_DB[piece][idx];
+  let best = null;
+  for (const [name, db] of K.layers) {
+    const bufs = (got[name] || []).filter(Boolean);
+    if (!bufs.length) continue;
+    if (!best || Math.abs(db - target) < Math.abs(best[1] - target)) best = [name, db, bufs];
+  }
+  if (!best) return false;
+  const buf = best[2][(smRR[piece] = (smRR[piece] || 0) + 1) % best[2].length];
+  const layerNorm = 1 + (0.5 - idx / Math.max(1, n - 1)) * 0.55;   // 跟 playDrum 同一條補償
+  const g = ctx.createGain();
+  g.gain.value = gain * layerNorm * Math.pow(10, (target - best[1]) / 20);
+  const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+  if (pan) { pan.pan.value = DRUM_PAN[piece] || 0; g.connect(pan); pan.connect(drumBus); }
+  else g.connect(drumBus);
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  // 鼓件音色與悶音照樣吃 FEELS[x].drumTone / drumDamp(跟 playDrum 同一套)
+  const f0 = feel();
+  let head = g;
+  const tone = f0.drumTone && f0.drumTone[piece];
+  if (tone) for (let i = tone.length - 1; i >= 0; i--) {
+    const [type, hz, db, q] = tone[i];
+    const bq = ctx.createBiquadFilter(); bq.type = type; bq.frequency.value = hz; bq.gain.value = db; bq.Q.value = q || 0.9;
+    bq.connect(head); head = bq;
+  }
+  src.connect(head);
+  const damp = f0.drumDamp && f0.drumDamp[piece];
+  if (damp) { g.gain.setValueAtTime(g.gain.value, when + damp[0]); g.gain.setTargetAtTime(0, when + damp[0], damp[1]); }
+  src.start(when);
+  activeSources.add(src);
+  src.onended = () => { activeSources.delete(src);
+    try { src.disconnect(); g.disconnect(); if (pan) pan.disconnect(); } catch (e) {} };
+  return true;
+}
+
 const SRC_D808 = [
   "https://cdn.jsdelivr.net/gh/tidalcycles/Dirt-Samples@master/",
   "https://raw.githubusercontent.com/tidalcycles/Dirt-Samples/master/",
@@ -5229,6 +5332,7 @@ const FEELS = {
     /* 1.3 → 0.68(−5.6dB):三首參考曲(Midnight Pretenders / Plastic Love / 真夜中のドア)
        分軌之後貝斯相對整軌 −3.4～−6.6dB(平均 −5.2),我們是 −1.5～−2.0,貝斯站得太前面 */
     bassGain: 0.68,
+    drumSet: "sm",   // 大鼓、小鼓、hi-hat 用 SM Drums(見 `SM_KIT`)
     /* **鼓件悶音**:[撐幾秒, 收的時間常數]。大鼓塞枕頭、小鼓貼膠帶、tom 調緊——
        八〇年代初錄音室的鼓(村上ポンタ秀一、青山純)音頭飽滿、尾巴很短 */
     drumDamp: { kick: [0.14, 0.05], snare: [0.13, 0.05], htom: [0.2, 0.07], ltom: [0.24, 0.08] },

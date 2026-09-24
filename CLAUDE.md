@@ -1130,6 +1130,21 @@ Funk −11.4,跟改之前一模一樣。
 原本 12% 的反拍只留頂音,那一顆單獨冒出來像一段沒頭沒尾的旋律。
 改成**拿掉底下的音**(`slice(1)` / `slice(2)`),頂音一直都在,頂音線只在換和弦時動
 
+### 4. 吉他照真的手型彈(`realShape`)
+- **刷弦(Pop)用真的和弦手型**:開放和弦(C = x32010、G = 320003、Am、E、D…)
+  或 E 型/A 型封閉和弦,挑把位最低的。原本是從低音往上挑和弦音,
+  盲聽被寫「刷和弦的音應該根據真實樂器的 open string 排列」「跟 MIDI 完全一樣」。
+  **手型是照移調後真的在響的根音挑的**(`guitarNotesFor(chord, kind, transpose)`,回傳前減掉 transpose),
+  `prewarmGuitar` 也要傳 transposeOn,不然預載的音跟真的彈到的對不上
+- 性質對不上手型(九和弦、sus、轉位)就退回原本的 `guitarVoice`。add9 會被當大三彈(色彩音掉了,刷弦可以接受)
+- **Bossa 是拇指與手指分工**:拇指在一、三拍彈低音(第二下 75% 換五度)、手指只撥 D/G/B 三條弦打 clave。
+  原本每一下四個音一起撥,盲聽 2/2 寫「很機械」「完全不真實」。bossa 只用封閉和弦(空弦是民謠的聲音)
+
+### 5. 鋪底往後、變暗
+52 筆裡鋪底被勾 18 次(「吵」「尖銳」「太突出、不夠後面」「要溫暖」)。
+City Pop −2dB + 3kHz 低通、K-Pop supersaw −3dB + 5kHz、Funk 風琴再 −3dB + 2.5kHz、Blues 風琴(已 −12dB)+ 2.5kHz。
+都走 `FEELS[x].mix.padLp` 與 `parts.klevel`
+
 ### 另外
 - **人性化(`micro` / `pocket` / `roll2` / `velRange` / `artic`)原本只有 City Pop 開著**,
   其他曲風每一顆音都在格子正中央(Pop 被寫三次「死板」)。現在 Pop / Blues / Bossa / Funk / Swing 都開,

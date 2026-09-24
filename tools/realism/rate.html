@@ -130,24 +130,44 @@ function playAudio(){
   s.start(0, player.offset); player.src = s; player.startAt = c.currentTime; player.playing = true; setPlaying(true);
   const tick = () => { paintTime(); if (player.playing) player.raf = requestAnimationFrame(tick); }; tick();
 }
-async function loadClip(url){
+/* 一段音檔的讀法,照順序試:
+   1. 平台的 assets 網址(`/_blob/<id>`,官方文件寫「每個檢視畫面都能讀」)
+   2. 跟頁面一起發佈的附屬檔案,帶上頁面網址的查詢字串(有些檢視用它驗證)
+   3. 附屬檔案的相對路徑
+   全部失敗就把每一種的結果列出來,不用再猜 */
+async function fetchAudio(clip){
+  const tries = [];
+  if (clip.asset) tries.push(["assets", clip.asset]);
+  if (clip.url) {
+    if (location.search) tries.push(["附屬檔+參數", new URL(clip.url, location.href).pathname + location.search]);
+    tries.push(["附屬檔", clip.url]);
+  }
+  const report = [];
+  for (const [name, u] of tries) {
+    try {
+      const r = await fetch(u, { credentials: "include" });
+      if (!r.ok) { report.push(name + " HTTP " + r.status); continue; }
+      if (/\.json($|\?)/.test(u) || (r.headers.get("content-type") || "").includes("json")) {
+        const bin = atob((await r.json()).b64), u8 = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+        return u8.buffer;
+      }
+      return await r.arrayBuffer();
+    } catch (e) { report.push(name + " " + (e && e.name || "錯誤")); }
+  }
+  throw new Error(report.join(" / ") || "沒有可讀的網址");
+}
+async function loadClip(clip){
   const my = ++player.token; player.buf = null; player.offset = 0;
   $("play").disabled = true; $("clipSub").textContent = "載入中…";
   try {
-    /* 音檔包在 JSON 裡(base64):附屬檔案的 WAV 會被擋(403),JSON 是平台允許讀的資料格式 */
-    const r = await fetch(url); if (!r.ok) throw new Error("HTTP " + r.status);
-    let data;
-    if (/\.json($|\?)/.test(url)) {
-      const bin = atob((await r.json()).b64), u8 = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-      data = u8.buffer;
-    } else data = await r.arrayBuffer();
+    const data = await fetchAudio(clip);
     const buf = await new Promise((ok, bad) => ac().decodeAudioData(data, ok, bad));
     if (my !== player.token) return;
     player.buf = buf; $("play").disabled = false; paintTime();
   } catch (e) {
     if (my !== player.token) return;
-    $("clipSub").textContent = "這一段載不下來(" + (e && e.message || e) + "),可以先按跳過";
+    $("clipSub").textContent = "載不下來:" + (e && e.message || e) + "(可以先按跳過,並把這行字告訴 Claude)";
   }
 }
 let db = null, rater = null, queue = [], total = 0, doneCount = 0, cur = null, score = 0, fake = new Set();
@@ -190,7 +210,7 @@ function showNext(){
   if (!cur) { $("card").hidden = true; $("done").hidden = false; return; }
   $("card").hidden = false; $("done").hidden = true;
   $("clipTitle").textContent = `第 ${doneCount + 1} 段`;
-  setPlaying(false); loadClip(cur.url);
+  setPlaying(false); loadClip(cur);
 }
 
 function setPlaying(on){ $("icoPlay").hidden = on; $("icoPause").hidden = !on; $("play").setAttribute("aria-label", on ? "暫停" : "播放"); }
@@ -224,7 +244,7 @@ async function start(){
   const user = await claude.use("user");
   try { rater = (user && user.id && await user.id()) || localId(); } catch { rater = localId(); }
   try {
-    const clips = (await db.collection("clips").get()).docs.map(d => ({ id: d.id, ...d.data() })).filter(c => c.url && c.active !== false);
+    const clips = (await db.collection("clips").get()).docs.map(d => ({ id: d.id, ...d.data() })).filter(c => (c.asset || c.url) && c.active !== false);
     const mine = new Set((await db.collection("ratings").where("rater", "==", rater).get()).docs.map(d => d.data().clip));
     const rnd = seeded(rater);
     clips.sort((x, y) => x.id < y.id ? -1 : 1);

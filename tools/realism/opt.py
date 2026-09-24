@@ -12,8 +12,32 @@ import numpy as np
 H = os.path.dirname(os.path.abspath(__file__))
 FEEL = sys.argv[1]; ROUNDS = int(sys.argv[2]) if len(sys.argv) > 2 else 12
 VERSION = os.environ.get('OPT_VERSION', 'bd80000')
+CALIB_P = json.load(open(os.path.join(H, 'calib', 'cases0.json')))   # 只為了拿和弦進行
+def auto_space(feel):
+    """沒手寫範圍的曲風:從 index.html 的 FEELS[feel] 讀現值,各層音量與 mix 全部開放"""
+    out = subprocess.run(['node', '-e', '''
+const s=require("fs").readFileSync(process.argv[1],"utf8");const i=s.indexOf("const FEELS");let d=0,j;
+for(let k=s.indexOf("{",i);k<s.length;k++){if(s[k]=="{")d++;if(s[k]=="}"){d--;if(!d){j=k;break}}}
+const F=eval("("+s.slice(s.indexOf("{",i),j+1)+")");console.log(JSON.stringify(F[process.argv[2]]))''',
+        os.path.join(H, '..', '..', 'index.html'), feel], capture_output=True, text=True).stdout
+    f = json.loads(out); sp = []
+    for k, v in (f.get('parts') or {}).items():
+        if isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0: sp.append((f'parts.{k}', v, v / 4, v * 2.5, 'log'))
+        if isinstance(v, dict) and isinstance(v.get('lvl'), (int, float)): sp.append((f'parts.{k}.lvl', v['lvl'], v['lvl'] / 4, v['lvl'] * 2.5, 'log'))
+    for k, dv in [('kickGain', 1), ('snareGain', 1), ('cymGain', 1), ('bassGain', 1)]:
+        v = f.get(k, dv); sp.append((k, v, v / 2.5, v * 2, 'log'))
+    sp.append(('velRange', f.get('velRange', .16), .08, .45, 'lin'))
+    m = f.get('mix') or {}
+    for k, dv, lo, hi, kind in [('keysLevel', 1, .5, 1.4, 'log'), ('keysAir', 0, -3, 6, 'db'), ('keysEq', 0, -8, 3, 'db'), ('keysChorus', 0, 0, .5, 'lin'),
+                                ('gtrAir', 0, -3, 6, 'db'), ('gtrChorus', 0, 0, .5, 'lin'), ('drumAir', 0, -3, 6, 'db'), ('bassEq', 0, -4, 5, 'db'),
+                                ('masterMid', 0, -6, 3, 'db'), ('masterAir', 0, -3, 6, 'db'), ('drumWidth', 1, .3, 1, 'lin'), ('roomLevel', 1, .1, 1.5, 'log'),
+                                ('revLp', 20000, 3000, 20000, 'log')]:
+        sp.append((f'mix.{k}', m.get(k, dv), lo, hi, kind))
+    return sp
+
 PROGS = {'citypop': ['Fmaj7 - E7 - Am7 - C7', 'Cmaj7 - Fmaj7 - Bm7b5 - E7 - Am7 - D7 - Dm7 - G7'],
-         'kpop': ['Am7 - F - C - G', 'F - G - Em - Am']}[FEEL]
+         'kpop': ['Am7 - F - C - G', 'F - G - Em - Am']}.get(FEEL) or \
+        [c['prog'] for c in json.load(open(os.path.join(H, 'calib', 'cases1.json')))['cases'] if c['feel'] == FEEL and c['style'] == 'comp' and not c.get('synth')][:2]
 # (路徑, 現值, 下限, 上限, 種類) 種類 log = 乘法擾動、db = 加法擾動(單位 dB)、lin = 加法擾動
 SPACE = {'citypop': [
   ('parts.glevel', .185, .06, .4, 'log'), ('parts.guitar2.lvl', .12, .03, .3, 'log'), ('parts.brass.lvl', .115, .03, .3, 'log'),
@@ -32,8 +56,10 @@ SPACE = {'citypop': [
   ('lh', .3, .1, .6, 'log'), ('duck.bass', .22, .1, .8, 'lin'),
   ('mix.keysLevel', 1.0, .5, 1.3, 'log'), ('mix.keysAir', 0, -3, 6, 'db'), ('mix.keysEq', 0, -8, 3, 'db'), ('mix.keysChorus', 0, 0, .5, 'lin'),
   ('mix.drumAir', 0, -3, 6, 'db'), ('mix.bassEq', 0, -4, 5, 'db'),
-  ('mix.masterMid', 0, -6, 3, 'db'), ('mix.masterAir', 0, -3, 6, 'db'), ('mix.revLp', 20000, 3000, 20000, 'log')]}[FEEL]
+  ('mix.masterMid', 0, -6, 3, 'db'), ('mix.masterAir', 0, -3, 6, 'db'), ('mix.revLp', 20000, 3000, 20000, 'log')]}.get(FEEL) or auto_space(FEEL)
 rng = np.random.default_rng(int(os.environ.get('SEED', '1')))
+TARGET = {'vggish': 89.8, 'mert': 99.6}      # MUSDB18 真實伴奏的 10% 分位 = 「標準範圍」的下緣
+PLATEAU = int(os.environ.get('PLATEAU', '10'))  # 連續幾輪沒收就停,那表示旋鈕已經轉到頭
 
 def to_ovr(vals):
     o = {}
@@ -99,10 +125,16 @@ log = open(os.path.join(H, 'opt', f'{FEEL}.jsonl'), 'a')
 best = [s[1] for s in SPACE]
 bp = os.path.join(H, 'opt', f'{FEEL}_best.json')
 if os.path.exists(bp): best = json.load(open(bp))['vals']
-cur = evaluate('base', [('base', best)])['base']
+cur = evaluate(f'base{len(glob.glob(f"/tmp/opt/{FEEL}/base*"))}', [('base', best)])['base']
 print(f"起點 VGGish {pct(cur['vggish']):.1f}%  MERT {pct(cur['mert']):.1f}%  peak {cur['peak']:.3f}", flush=True)
 log.write(json.dumps({'round': 0, 'accepted': True, 'score': cur, 'ovr': to_ovr(best)}, ensure_ascii=False) + '\n'); log.flush()
-for r in range(1, ROUNDS + 1):
+miss = 0
+start = 1 + max([json.loads(l)['round'] for l in open(os.path.join(H, 'opt', f'{FEEL}.jsonl'))] or [0])
+for r in range(start, start + ROUNDS):
+    if pct(cur['vggish']) >= TARGET['vggish'] and pct(cur['mert']) >= TARGET['mert']:
+        print('兩隻耳朵都進了標準範圍,停'); break
+    if miss >= PLATEAU:
+        print(f'連續 {PLATEAU} 輪沒進步,旋鈕轉到頭了,停'); break
     cands = [(f'm{k}', mutate(best)) for k in range(4)]
     res = evaluate(f'r{r:02d}', cands)
     ok = [(n, v, res[n]) for n, v in cands if n in res and res[n]['n'] == len(PROGS) and res[n]['peak'] <= 0.85
@@ -112,6 +144,7 @@ for r in range(1, ROUNDS + 1):
         s = res.get(n)
         log.write(json.dumps({'round': r, 'cand': n, 'accepted': bool(ok and ok[0][0] == n), 'score': s, 'ovr': to_ovr(v)}, ensure_ascii=False) + '\n')
     log.flush()
+    miss = 0 if ok else miss + 1
     if ok:
         best, cur = ok[0][1], ok[0][2]
         json.dump({'vals': best, 'ovr': to_ovr(best), 'score': cur}, open(bp, 'w'), ensure_ascii=False, indent=1)

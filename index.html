@@ -2607,7 +2607,7 @@ const SAMPLE_TABLE = (() => {
 })();
 
 /* ══ 電鋼琴(Rhodes)══════════════════════════════════════════
-   City Pop、Funk、K-Pop 的鍵盤本來就不是平台鋼琴,是 Rhodes 電鋼琴:
+   Funk 的鍵盤本來就不是平台鋼琴,是 Rhodes 電鋼琴(City Pop 原本也用它,照相似度換回平台鋼琴了,見 FEELS.citypop):
    山下達郎、Stevie Wonder、K-Pop 的 R&B 段落都是這個聲音。
    換的是**音色**,不是聲位或節奏——`buildVoicing` 與 `schedulePiano` 完全不動。
 
@@ -2635,26 +2635,6 @@ const RHODES_TABLE = [
   [96, "As_096__C7_459"],
 ].map(e => ({ midi: e[0], file: e[1] + "-mono.flac" }));
 
-/* ══ Yamaha CP80 電平台鋼琴 ═══════════════════════════════════
-   八〇年代日本 AOR 錄音室裡的主力鍵盤(有弦有音板、用拾音器收音的「電鋼琴」),
-   介於平台鋼琴與 Rhodes 之間。Greg Sullivan 錄的、kinwie 轉成 sfz,
-   同在 sfzinstruments 底下(`GregSullivan.E-Pianos`)。
-   **授權是 CC-BY 3.0,要標註作者**(頁尾的 credit 那一行)。
-   - 取 MP 那一層力度(PP 只有 15 顆、F/FF 太亮),19 顆,整組 2.5MB
-   - 每一顆都被正規化到峰值 0.99,**比 Salamander 大 14.6dB**(C4 −5.9 vs −20.5 dBFS),
-     所以 gain 是 0.19——動它要重量整組響度
-   - 檔名帶 `#`,**網址裡要寫成 `%23`**,不然會被當成錨點、整顆 404 */
-const SRC_CP80 = [
-  "https://cdn.jsdelivr.net/gh/sfzinstruments/GregSullivan.E-Pianos@master/CP80/Samples/",
-  "https://raw.githubusercontent.com/sfzinstruments/GregSullivan.E-Pianos/master/CP80/Samples/",
-];
-const CP80_TABLE = [
-  [27, "027-D#1"], [34, "034-A#1"], [42, "042-F#2"], [46, "046-A#2"], [50, "050-D3"],
-  [53, "053-F3"], [57, "057-A3"], [60, "060-C4"], [63, "063-D#4"], [65, "065-F4"],
-  [68, "068-G#4"], [72, "072-C5"], [76, "076-E5"], [80, "080-G#5"], [82, "082-A#5"],
-  [85, "085-C#6"], [88, "088-E6"], [91, "091-G6"], [95, "095-B6"],
-].map(e => ({ midi: e[0], file: e[1].replace("#", "%23") + "-MP.flac" }));
-
 /* 哪一種曲風用哪一台琴。寫在 `FEELS[x].piano`,跟貝斯的 `kit` 同一個做法——
    不要在排程裡針對某一種曲風寫 if */
 const PIANO_KITS = {
@@ -2679,14 +2659,13 @@ const PIANO_KITS = {
      照原樣接進去 City Pop 整段會衝到 0.92。0.62 是把兩台拉到同一個刻度的值,
      動它就要重量一次整組響度 */
   rhodes:   { src: SRC_RHODES, table: RHODES_TABLE, gain: 0.62, tau: 1.5 },
-  cp80:     { src: SRC_CP80,   table: CP80_TABLE,   gain: 0.19, tau: 1.2 },
 };
 function pianoKit(){
   if (typeof FEELS === "undefined" || typeof feelNow === "undefined") return "acoustic";
   return (FEELS[feelNow] || FEELS.straight).piano || "acoustic";
 }
-const pianoBanks  = { acoustic: new Map(), rhodes: new Map(), cp80: new Map() };   // midi -> AudioBuffer
-const pianoFailed = { acoustic: new Set(), rhodes: new Set(), cp80: new Set() };
+const pianoBanks  = { acoustic: new Map(), rhodes: new Map() };   // midi -> AudioBuffer
+const pianoFailed = { acoustic: new Set(), rhodes: new Set() };
 /* 舊名字留著:狀態列與整份程式都拿它當「平台鋼琴那一組」 */
 const loadedSamples = pianoBanks.acoustic;
 const failedSamples = pianoFailed.acoustic;
@@ -5382,9 +5361,10 @@ const FEELS = {
     snarePiece: "snare", snareGain: 0.6,
     cym: "hihat", cymGain: 0.28,
     bass: "citypop", kit: "electric", meters: ["4/4"],
-    /* City Pop 的鍵盤是 Rhodes,不是平台鋼琴——山下達郎、竹內瑪莉亞那個年代
-       錄音室裡擺的就是電鋼琴。和聲一模一樣,換掉音色才聽得出是這一種 */
-    piano: "rhodes",
+    /* **鍵盤從 Rhodes 換成平台鋼琴**(照相似度決定,使用者指定「以分數高的為主」)。
+       12 段(4 組進行 × 3 種疏密)逐段配對比:Rhodes 89.2%、CP80 87.5%(−1.6,5/12 段贏)、
+       **平台鋼琴 95.4%(+6.3 ± 1.2,11/12 段贏)**。三首參考曲的鍵盤層比較接近原聲鋼琴 */
+    piano: "acoustic",
     /* 這一種的編制是最厚的:乾淨電吉他切十六分、弦樂在後面鋪、沙鈴走八分。
        八〇年代的日本 AOR 就是這樣配的——錄音室樂手一次錄滿 */
     /* **鋪底維持合成的,不要換成弦樂取樣**。試過換成真的大提琴 + 小提琴取樣,
@@ -5414,7 +5394,8 @@ const FEELS = {
        平均電平就上去了(2kHz 量到從 −21.0 衝到 −17.0)。
        那不是混音決定,是壓縮器的副作用——要收回來,
        壓縮留下的是「顆粒變齊」不是「變大聲」 */
-    parts: { guitar: "chop", gtone: "clean", glevel: 0.185,
+    /* 切音吉他用 Gretsch 的真斷奏錄音(`SMP_EXT.gretsch`):12 段配對 +1.5 ± 0.4、11/12 段贏 */
+    parts: { guitar: "chop", gtone: "clean", gkit: "gretsch", glevel: 0.185,
              /* 變化:切音 4 → 8 型、第二把吉他 3 種彈法、銅管 4 → 7 型 */
              chopCells: [[2, 6, 10, 14], [2, 7, 10, 14], [2, 6, 11, 15], [3, 6, 10, 14],
                          [2, 6, 10], [6, 10, 14], [2, 5, 10, 13], [3, 7, 11, 14]],
@@ -7733,7 +7714,7 @@ function styleName(absBar){
 function feelAuto(){ return detectFeel(parsed.bars); }
 function updateFeel(){
   const before = typeof feelNow !== "undefined" ? bassKit() : "";
-  /* 音色也跟著曲風換:換到 City Pop 就從平台鋼琴變 Rhodes、換到 K-Pop
+  /* 音色也跟著曲風換:換到 Funk 就從平台鋼琴變 Rhodes、換到 K-Pop
      連鼓都變成 808。播放中換的話那一台琴還沒載,要在背景補上 */
   const pianoBefore = typeof feelNow !== "undefined" ? pianoKit() : "";
   const feelBefore = feelNow;

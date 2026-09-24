@@ -37,7 +37,16 @@
     `playBassNote` 只從現在這把裡挑最近的音——混在一起會抓到另一把的取樣
 
 - 電鋼琴:**jlearman.jRhodes3c**(1977 Rhodes Mark I Stage 73),一樣在 sfzinstruments 底下。
-  City Pop / Funk / K-Pop 用它,其餘五種用 Salamander(`FEELS[x].piano`,跟貝斯的 `kit` 同一個做法)
+  **現在只有 Funk 用它**,其餘用 Salamander(`FEELS[x].piano`,跟貝斯的 `kit` 同一個做法)。
+  **City Pop 原本用 Rhodes,照相似度換回平台鋼琴**(使用者指定「以分數高的為主」):
+  12 段逐段配對,Rhodes 89.2%、Yamaha CP80(GregSullivan.E-Pianos)87.5%、
+  **Salamander 95.4%(+6.3 ± 1.2,12 段裡 11 段贏)**。CP80 輸了所以沒收進來
+  - 注意「其他樂器」那一軌單獨看是**反的**(Rhodes 73、平台鋼琴 45):換掉鍵盤之後
+    分軌器把鋼琴分到別的軌去的比例不一樣,單軌分數在這裡不能當結論,看整體伴奏
+- **City Pop 的切音吉他:Karoryfer「Black And Green Guitars」的 Gretsch 斷奏**
+  (`SMP_EXT.gretsch`,CC0,`FEELS.citypop.parts.gkit`)。E3–D7 每個半音、4 個 round robin 取 2 個。
+  **錄音的音量差到 17dB**,每一顆都要照 `db` 表拉平(`smpNorm`);檔名的八度是低一個八度的寫法
+  (`e3` = midi 40)。12 段配對 +1.5 ± 0.4、11/12 段贏
   - **取 mono 那一組**:單聲道一顆 75–175KB,立體聲是兩倍大;立體聲寬度由 `playNote`
     自己的 panner 給,不必付兩倍頻寬
   - 檔名是 `As_<midi>__<音名>_<力度層>-mono.flac`。力度層那個數字**每往上一個取樣點 +2**
@@ -785,7 +794,7 @@ E5 就低 20.5 音分,archtop 更誇張到 40 音分。一個刷弦和弦裡低�
 | 曲風 | 鍵盤 | 鼓 | 貝斯 |
 | --- | --- | --- | --- |
 | Pop | Salamander | 爵士鼓組 | 電貝斯 |
-| City Pop | **Rhodes** | 爵士鼓組 | 電貝斯 |
+| City Pop | Salamander(原本 Rhodes,照相似度換回) | SM Drums + 爵士鼓組 | 電貝斯 |
 | K-Pop | **合成 pluck** | **808 取樣** | **808 合成低音** |
 | Bossa | Salamander | 爵士鼓組(cross stick) | 低音提琴 |
 | Blues | Salamander | 爵士鼓組 | 電貝斯 |

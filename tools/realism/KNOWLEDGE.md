@@ -57,6 +57,27 @@
 - 特徵也要換:使用者的評語都在講**某一層太突出**,所以該量的是每一層相對整首的音量
   (solo 量法),不是整首的頻譜
 
+## 第二批(17 段,A/B:同一段只改一件事,commit 9c7fbb5)
+| 曲風 | 題目 |
+| --- | --- |
+| City Pop | 原樣 / 鋪底關掉 / 鋪底變暗(低通 1.2k) / 銅管關掉 / 銅管 −6dB |
+| Funk | 原樣 / 風琴關掉 / 風琴 −6dB |
+| Blues | 原樣 / 風琴關掉 / 風琴 −6dB 且變暗 |
+| K-Pop | 原樣 / supersaw −6dB / supersaw 關掉 |
+| Pop | 原樣 / 吉他 −6dB / 吉他關掉 |
+
+- **「原樣」跟第一批同一個設定**(只是 commit 不同,padLp 是透明的,響度差 ≤0.1dB)——
+  也就是**同一段聲音第二次盲聽**,可以看評分者自己前後一不一致
+- **City Pop 的鋪底本來就很小聲**:關掉它整首只差 ≤0.6dB。第一批 City Pop 被勾的「合成器」
+  (「太尖銳、太突出」)比較可能是**合成銅管**,所以這批加了銅管的兩題、拿掉了鋪底 −6dB
+- 送出前先讓模型與 VGGish **封存預測**(`db/predict_batch2.txt`),分數回來後直接對答案
+
+## 現成的打分工具
+- **Meta Audiobox Aesthetics**(2025)是最對題的:四個軸裡的 **PQ(Production Quality)** 就是「製作品質」,
+  而且是用大量人工評分訓練的。但權重在 `dl.fbaipublicfiles.com` 與 `huggingface.co`、
+  還要 CPU 版 PyTorch(`download.pytorch.org`)——**這三個網域在雲端環境被擋**,開放之後就能串進 `realism.py`
+- 其他試過的:OpenL3(安裝時要另外抓權重,被擋)、PANNs(zenodo,被擋)、CLAP(huggingface,被擋)
+
 ## 下一步
 - **更多參考曲**:每個曲風 3–5 首,純樂器段落最好。沒有參考曲的曲風只能跟 Plastic Love 比,沒有意義
 - **盲聽分數**:至少 30 筆之後,`analyze` 才算得出哪個指標跟你的耳朵一致

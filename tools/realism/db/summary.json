@@ -1,5 +1,5 @@
 {
- "selfCheck_pReal_heldOutReal": 0.99,
+ "selfCheck_pReal_heldOutReal": 0.994,
  "fad": {
   "c33893c:straight": 6.26,
   "c33893c:citypop": 4.34,
@@ -9,11 +9,16 @@
   "c33893c:swing": 8.45,
   "c33893c:funk": 8.9,
   "08e5fca:citypop": 5.43,
-  "08e5fca:straight": 6.07
+  "08e5fca:straight": 6.07,
+  "9c7fbb5:straight": 5.76,
+  "9c7fbb5:citypop": 4.33,
+  "9c7fbb5:kpop": 4.65,
+  "9c7fbb5:blues": 6.4,
+  "9c7fbb5:funk": 7.41
  },
  "refs": [
   "plastic-love-intro",
   "plastic-love-full"
  ],
- "clips": 12
+ "clips": 29
 }

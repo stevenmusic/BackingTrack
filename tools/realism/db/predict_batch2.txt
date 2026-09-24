@@ -1,0 +1,17 @@
+447d910107 9c7fbb5 straight  comp   預測 1.57
+81afa0d199 9c7fbb5 citypop   comp   預測 2.33
+4445c464d5 9c7fbb5 kpop      comp   預測 1.47
+757b73429c 9c7fbb5 blues     comp   預測 1.32
+6c0a0efa49 9c7fbb5 funk      comp   預測 1.38
+670e4f54ff 9c7fbb5 citypop   comp   預測 2.48
+186e437473 9c7fbb5 citypop   comp   預測 2.34
+fe541b73f5 9c7fbb5 funk      comp   預測 1.67
+1a88b12967 9c7fbb5 funk      comp   預測 1.61
+9c75fe36c8 9c7fbb5 blues     comp   預測 1.89
+95d46d4ee7 9c7fbb5 blues     comp   預測 1.65
+de7baab4f1 9c7fbb5 kpop      comp   預測 1.82
+0bf674d189 9c7fbb5 kpop      comp   預測 1.00
+2e0bfb3607 9c7fbb5 straight  comp   預測 1.51
+4dd253b68c 9c7fbb5 straight  comp   預測 1.49
+2b82efbc65 9c7fbb5 citypop   comp   預測 2.35
+358ad83f97 9c7fbb5 citypop   comp   預測 2.38

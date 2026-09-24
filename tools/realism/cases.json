@@ -1,26 +1,258 @@
 {
-  "_note": "每一筆是一個評測片段。version 是 index.html 的版本(git commit 或 HEAD),feel/style 同 app 裡的 key。加新版本就加新的一組,舊的不要刪,分數才能跨版本比",
-  "progressions": {
-    "straight": "C - G - Am - F",
-    "citypop":  "Fmaj7 - E7 - Am7 - C7",
-    "kpop":     "Am7 - F - C - G",
-    "latin":    "Cmaj7 - A7 - Dm7 - G7",
-    "blues":    "C7 - F7 - C7 - G7",
-    "swing":    "Dm7 - G7 - Cmaj7 - A7",
-    "funk":     "Em9 - A13 - Em9 - A13"
+ "_note": "每一筆是一個評測片段。version 是 index.html 的版本(git commit 或 HEAD),feel/style 同 app 裡的 key。加新版本就加新的一組,舊的不要刪,分數才能跨版本比",
+ "progressions": {
+  "straight": "C - G - Am - F",
+  "citypop": "Fmaj7 - E7 - Am7 - C7",
+  "kpop": "Am7 - F - C - G",
+  "latin": "Cmaj7 - A7 - Dm7 - G7",
+  "blues": "C7 - F7 - C7 - G7",
+  "swing": "Dm7 - G7 - Cmaj7 - A7",
+  "funk": "Em9 - A13 - Em9 - A13"
+ },
+ "cases": [
+  {
+   "version": "c33893c",
+   "feel": "straight",
+   "style": "comp"
   },
-  "cases": [
-    { "version": "HEAD", "feel": "straight", "style": "comp" },
-    { "version": "HEAD", "feel": "citypop",  "style": "comp" },
-    { "version": "HEAD", "feel": "kpop",     "style": "comp" },
-    { "version": "HEAD", "feel": "latin",    "style": "comp" },
-    { "version": "HEAD", "feel": "blues",    "style": "comp" },
-    { "version": "HEAD", "feel": "swing",    "style": "comp" },
-    { "version": "HEAD", "feel": "funk",     "style": "comp" },
-    { "version": "HEAD", "feel": "citypop",  "style": "drive" },
-    { "version": "HEAD", "feel": "straight", "style": "drive" },
-    { "version": "08e5fca", "feel": "citypop", "style": "comp" },
-    { "version": "08e5fca", "feel": "citypop", "style": "drive" },
-    { "version": "08e5fca", "feel": "straight", "style": "comp" }
-  ]
+  {
+   "version": "c33893c",
+   "feel": "citypop",
+   "style": "comp"
+  },
+  {
+   "version": "c33893c",
+   "feel": "kpop",
+   "style": "comp"
+  },
+  {
+   "version": "c33893c",
+   "feel": "latin",
+   "style": "comp"
+  },
+  {
+   "version": "c33893c",
+   "feel": "blues",
+   "style": "comp"
+  },
+  {
+   "version": "c33893c",
+   "feel": "swing",
+   "style": "comp"
+  },
+  {
+   "version": "c33893c",
+   "feel": "funk",
+   "style": "comp"
+  },
+  {
+   "version": "c33893c",
+   "feel": "citypop",
+   "style": "drive"
+  },
+  {
+   "version": "c33893c",
+   "feel": "straight",
+   "style": "drive"
+  },
+  {
+   "version": "08e5fca",
+   "feel": "citypop",
+   "style": "comp"
+  },
+  {
+   "version": "08e5fca",
+   "feel": "citypop",
+   "style": "drive"
+  },
+  {
+   "version": "08e5fca",
+   "feel": "straight",
+   "style": "comp"
+  },
+  {
+   "version": "9c7fbb5",
+   "feel": "citypop",
+   "style": "comp",
+   "batch": 2,
+   "label": "原樣"
+  },
+  {
+   "version": "9c7fbb5",
+   "feel": "citypop",
+   "style": "comp",
+   "batch": 2,
+   "label": "鋪底關掉",
+   "ovr": {
+    "parts": {
+     "keys": null
+    }
+   }
+  },
+  {
+   "version": "9c7fbb5",
+   "feel": "citypop",
+   "style": "comp",
+   "batch": 2,
+   "label": "鋪底變暗(低通 1.2k)",
+   "ovr": {
+    "mix": {
+     "padLp": 1200
+    }
+   }
+  },
+  {
+   "version": "9c7fbb5",
+   "feel": "funk",
+   "style": "comp",
+   "batch": 2,
+   "label": "原樣"
+  },
+  {
+   "version": "9c7fbb5",
+   "feel": "funk",
+   "style": "comp",
+   "batch": 2,
+   "label": "風琴關掉",
+   "ovr": {
+    "parts": {
+     "keys": null
+    }
+   }
+  },
+  {
+   "version": "9c7fbb5",
+   "feel": "funk",
+   "style": "comp",
+   "batch": 2,
+   "label": "風琴 −6dB",
+   "ovr": {
+    "parts": {
+     "klevel": 0.025
+    }
+   }
+  },
+  {
+   "version": "9c7fbb5",
+   "feel": "blues",
+   "style": "comp",
+   "batch": 2,
+   "label": "原樣"
+  },
+  {
+   "version": "9c7fbb5",
+   "feel": "blues",
+   "style": "comp",
+   "batch": 2,
+   "label": "風琴關掉",
+   "ovr": {
+    "parts": {
+     "keys": null
+    }
+   }
+  },
+  {
+   "version": "9c7fbb5",
+   "feel": "blues",
+   "style": "comp",
+   "batch": 2,
+   "label": "風琴 −6dB 且變暗",
+   "ovr": {
+    "parts": {
+     "klevel": 0.045
+    },
+    "mix": {
+     "padLp": 1500
+    }
+   }
+  },
+  {
+   "version": "9c7fbb5",
+   "feel": "kpop",
+   "style": "comp",
+   "batch": 2,
+   "label": "原樣"
+  },
+  {
+   "version": "9c7fbb5",
+   "feel": "kpop",
+   "style": "comp",
+   "batch": 2,
+   "label": "supersaw −6dB",
+   "ovr": {
+    "parts": {
+     "klevel": 0.0375
+    }
+   }
+  },
+  {
+   "version": "9c7fbb5",
+   "feel": "kpop",
+   "style": "comp",
+   "batch": 2,
+   "label": "supersaw 關掉",
+   "ovr": {
+    "parts": {
+     "keys": null
+    }
+   }
+  },
+  {
+   "version": "9c7fbb5",
+   "feel": "straight",
+   "style": "comp",
+   "batch": 2,
+   "label": "原樣"
+  },
+  {
+   "version": "9c7fbb5",
+   "feel": "straight",
+   "style": "comp",
+   "batch": 2,
+   "label": "吉他 −6dB",
+   "ovr": {
+    "parts": {
+     "glevel": 0.13
+    }
+   }
+  },
+  {
+   "version": "9c7fbb5",
+   "feel": "straight",
+   "style": "comp",
+   "batch": 2,
+   "label": "吉他關掉",
+   "ovr": {
+    "parts": {
+     "guitar": null
+    }
+   }
+  },
+  {
+   "version": "9c7fbb5",
+   "feel": "citypop",
+   "style": "comp",
+   "batch": 2,
+   "label": "銅管關掉",
+   "ovr": {
+    "parts": {
+     "brass": null
+    }
+   }
+  },
+  {
+   "version": "9c7fbb5",
+   "feel": "citypop",
+   "style": "comp",
+   "batch": 2,
+   "label": "銅管 −6dB",
+   "ovr": {
+    "parts": {
+     "brass": {
+      "lvl": 0.058
+     }
+    }
+   }
+  }
+ ]
 }

@@ -3697,7 +3697,11 @@ function bassMidisOf(){
   for (const b of flatChords(parsed.bars)) {
     if (!b.ok) continue;
     for (const raw of [b.chord.bassPc, b.chord.rootPc + 7]) {
-      out.push(bassMidiFor((((raw + transposeOn) % 12) + 12) % 12));
+      const m = bassMidiFor((((raw + transposeOn) % 12) + 12) % 12);
+      out.push(m);
+      /* City Pop 的貝斯會跳八度、跑過門(到八度與七度),那幾顆要載**高一點的錄音**,
+         不然從 E2 的取樣拉一個八度上去,聽起來是玩具不是貝斯 */
+      if (typeof feel === "function" && feel().bass === "citypop") out.push(m + 12, m + 7);
     }
   }
   return out;
@@ -5979,7 +5983,7 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord, span){
   const third = chord.intervals.indexOf(3) >= 0 ? 3 : 4;
 
   // 過門那一小節,最後一拍的最後一格接到下一個和弦的根音
-  if (isFill && b === last && nextChord && mode !== "drive") {
+  if (isFill && b === last && nextChord && mode !== "drive" && mode !== "citypop") {
     const target = bassMidiFor(pcOf(nextChord.bassPc));
     playBassNote(target - (chance(absBar, 7, 0.5) ? 1 : 2),
                  slotTimeAt(lastSlot), slotDur() * 0.9, 0.42);
@@ -6029,6 +6033,44 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord, span){
      不是在打點(細野晴臣那種走法) */
   if (mode === "citypop") {
     const cell = pickCell([[0,6,10], [0,10,14], [0,6,11], [0,3,10], [0,8,14]], absBar, 104);
+    /* ── 過門(使用者點名要的)──────────────────────────────────────
+       原本過門那一小節只有「最後一格一顆接音」,等於沒有過門。
+       City Pop 的貝斯(後藤次利、Nathan East、細野晴臣)在樂句的尾巴一定會跑一句:
+       琶音往上衝到八度、從八度沿著七度五度滑下來、或是半音一路走進下一顆和弦的根音。
+       - 進行繞一圈的最後一小節一定跑;八小節樂句的句尾(`sectionBar === 7`)跑兩拍,
+         其他時候 35% 機率兩拍、其餘一拍
+       - 過門那幾拍原本的節奏型讓開(下面的迴圈會跳過),不要兩條線疊在一起
+       - 音要落在錄音範圍裡(超過 B♭3 往下一個八度),不然 playbackRate 拉太多像玩具 */
+    const endsBar = b0 + beats === m.beats;
+    const fillBeats = isFill && nextChord && endsBar && m.beats >= 3
+      ? ((sectionBar(absBar) === 7 || hash01(absBar, 196) < 0.35) ? 2 : 1) : 0;
+    const fillStart = (m.beats - fillBeats) * div;
+    if (fillBeats && bAbs === m.beats - fillBeats) {
+      const R = bassMidiFor(rootPc), T = bassMidiFor(pcOf(nextChord.bassPc));
+      const sev = chord.intervals.indexOf(10) >= 0 ? 10 : chord.intervals.indexOf(11) >= 0 ? 11 : 12;
+      // 半音接進下一顆根音:從下面還是從上面,看下一顆在哪一邊
+      const app = T > R ? [T - 2, T - 1] : [T + 2, T + 1];
+      const runs1 = [
+        [R, R + third, R + 7, R + 12],                  // 琶音往上衝
+        [R + 12, R + sev, R + 7, R + 5],                // 從八度滑下來
+        [R, R + 7, app[0], app[1]],                     // 五度再半音走進去
+        [R + 12, R + 7, R + third, app[1]],             // 下行琶音接半音
+      ];
+      const runs2 = [
+        [R, R + third, R + 7, R + 12, R + sev, R + 7, app[0], app[1]],
+        [R, R + 7, R + 12, R + 7, R + 12, R + sev, R + 7, app[1]],
+        [R + 12, R + sev, R + 7, R + 5, R + third, R + 2, R, app[1]],
+      ];
+      const pool = fillBeats === 2 ? runs2 : runs1;
+      const run = pool[Math.floor(hash01(absBar, 197) * pool.length) % pool.length];
+      const fit = n => n > 49 ? n - 12 : n < 28 ? n + 12 : n;
+      run.forEach((n, i) => {
+        const ghost = i % 4 === 2 && hash01(absBar * 16 + i, 198) < 0.3;   // 偶爾一顆悶掉,手指的味道
+        const vel = ghost ? 0.17 : i % 4 === 0 ? 0.44 : 0.33;
+        playBassNote(fit(n), slotTime(barStartBeat, fillStart + i),
+                     slotDur() * (i === run.length - 1 ? 0.75 : 0.9), humanize(absBar, 200 + i, vel));
+      });
+    }
     for (let k = 0; k < div; k++) {
       /* 放克與 city pop 的貝斯是「整小節的十六分切分」,格號要用**絕對**的
          (整小節 0–15),不能跟著和弦重新從 0 數——不然一小節兩顆和弦時,
@@ -6036,6 +6078,7 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord, span){
       const idx = bAbs * div + k;
       if (cell.indexOf(idx) < 0) continue;
       if (idx === slotsInBar() - 1 && isFill) continue;
+      if (fillBeats && idx >= fillStart) continue;          // 過門那幾拍讓給過門
       const pc = (idx >= div * 2 && chance(absBar, 5, 0.5)) ? fifthPc : rootPc;
       /* **八度跳**(後藤次利那一下):反拍的根音偶爾往上一個八度、彈短。
          同一個音級,所以跟和聲零衝突;它只改變「線條往哪裡走」 */

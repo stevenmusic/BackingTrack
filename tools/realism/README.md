@@ -12,8 +12,11 @@
 1. 改 index.html
 2. cases.json 加一組新版本  →  node render.mjs          # 錄片段,聲學特徵寫進 db/clips.jsonl
 3. python realism.py score                                # VGGish:P(真)、最近距離、各組 FAD → db/scores.jsonl
-4. 片段放上盲聽台:WAV 包成 base64 的 JSON(`{type, b64}`),**用 Artifact 的 asset 上傳**
-   (一個 JSON 一次呼叫),回來的 `/_blob/<id>` 寫進 db `clips/<id>.asset`。
+4. 片段放上盲聽台:WAV 包成 base64 的 JSON(`{type, b64}`),**一定要當附屬檔發布**
+   (publish 的 `files`:`clips/<id>.json`),db `clips/<id>` 寫 `url: "clips/<id>.json"`。
+   **只上傳成 asset(`/_blob/<id>`)是不夠的**:第二批只做了這一步,使用者那邊整批 404、
+   一題都打不了。第一批能聽是因為它走附屬檔(頁面會帶著網址參數去抓)。
+   asset 留著當第一順位也沒關係,抓不到會自己往下試
    **不要用發佈時的附屬檔案**:使用者那邊 WAV 與 JSON 都是 403(本機測不出來);
    `<audio>` 也不要用,一律 fetch + Web Audio。頁面失敗時會把每一種讀法的錯誤列出來
 5. 你打分 → 讀回 db/ratings.jsonl → python realism.py analyze   # 寫進 KNOWLEDGE.md

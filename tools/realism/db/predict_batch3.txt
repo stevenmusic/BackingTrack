@@ -1,0 +1,20 @@
+# 第三批封存預測(耳朵 v1,人評之前寫下)。分數越高 = 耳朵覺得越像真的錄音
+38173a97b3 blues    風琴 −12dB                     vggish= -1.61 mert= -4.48
+cc5cc0e85a blues    風琴關掉(第二批的重考題)                vggish= -3.03 mert= -4.77
+01984e468f blues    原樣                           vggish= -6.03 mert= -5.72
+ead0e0ca0e citypop  原樣(新版)                       vggish= -1.69 mert= -5.42
+d8c07accb7 citypop  第二把吉他關掉                      vggish= -1.72 mert= -5.99
+f829628a24 citypop  chorus 關掉                    vggish= -2.04 mert= -4.81
+2a5be17e08 citypop  微時值關掉(每個音準時落下)               vggish= -2.57 mert= -5.20
+b129244872 citypop  混音處理全部拿掉                     vggish= -4.08 mert=-10.93
+07ebad4f72 funk     和弦簡化成七和弦                     vggish= -3.13 mert=-10.07
+c10be3e656 funk     切音吉他 −6dB                    vggish= -3.87 mert= -4.22
+12f45b8d4d funk     原樣(風琴已 −6dB)                 vggish= -4.29 mert= -3.69
+3c9d2b3b8c kpop     arp 關掉                       vggish= -4.77 mert= -5.97
+f02a778077 kpop     人聲切片關掉                       vggish= -5.01 mert= -6.45
+2c36baee53 kpop     原樣                           vggish= -6.24 mert= -5.61
+353eaa0fdf latin    原樣                           vggish= -4.42 mert= -6.94
+8509c48df5 straight 原樣(吉他已 −6dB)                 vggish= -2.12 mert= -4.14
+ea39ad0094 straight 鈴鼓關掉                         vggish= -2.47 mert= -5.10
+192141e7a1 straight 吉他再 −6dB                     vggish= -3.56 mert= -3.89
+39e35b0fe7 swing    原樣                           vggish= -4.32 mert= -4.69

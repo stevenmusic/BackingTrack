@@ -253,6 +253,196 @@
      }
     }
    }
+  },
+  {
+   "version": "bd80000",
+   "feel": "citypop",
+   "style": "comp",
+   "batch": 3,
+   "label": "原樣(新版)"
+  },
+  {
+   "version": "bd80000",
+   "feel": "citypop",
+   "style": "comp",
+   "batch": 3,
+   "label": "微時值關掉(每個音準時落下)",
+   "ovr": {
+    "micro": null,
+    "pocket": null,
+    "roll2": false,
+    "velRange": null,
+    "artic": null
+   }
+  },
+  {
+   "version": "bd80000",
+   "feel": "citypop",
+   "style": "comp",
+   "batch": 3,
+   "label": "混音處理全部拿掉",
+   "ovr": {
+    "mix": null
+   }
+  },
+  {
+   "version": "bd80000",
+   "feel": "citypop",
+   "style": "comp",
+   "batch": 3,
+   "label": "chorus 關掉",
+   "ovr": {
+    "mix": {
+     "keysChorus": 0,
+     "gtrChorus": 0
+    }
+   }
+  },
+  {
+   "version": "bd80000",
+   "feel": "citypop",
+   "style": "comp",
+   "batch": 3,
+   "label": "第二把吉他關掉",
+   "ovr": {
+    "parts": {
+     "guitar2": null
+    }
+   }
+  },
+  {
+   "version": "bd80000",
+   "feel": "straight",
+   "style": "comp",
+   "batch": 3,
+   "label": "原樣(吉他已 −6dB)"
+  },
+  {
+   "version": "bd80000",
+   "feel": "straight",
+   "style": "comp",
+   "batch": 3,
+   "label": "吉他再 −6dB",
+   "ovr": {
+    "parts": {
+     "glevel": 0.065
+    }
+   }
+  },
+  {
+   "version": "bd80000",
+   "feel": "straight",
+   "style": "comp",
+   "batch": 3,
+   "label": "鈴鼓關掉",
+   "ovr": {
+    "parts": {
+     "perc": null
+    }
+   }
+  },
+  {
+   "version": "bd80000",
+   "feel": "funk",
+   "style": "comp",
+   "batch": 3,
+   "label": "原樣(風琴已 −6dB)"
+  },
+  {
+   "version": "bd80000",
+   "feel": "funk",
+   "style": "comp",
+   "batch": 3,
+   "label": "和弦簡化成七和弦",
+   "prog": "Em7 - A7 - Em7 - A7"
+  },
+  {
+   "version": "bd80000",
+   "feel": "funk",
+   "style": "comp",
+   "batch": 3,
+   "label": "切音吉他 −6dB",
+   "ovr": {
+    "parts": {
+     "glevel": 0.07
+    }
+   }
+  },
+  {
+   "version": "bd80000",
+   "feel": "kpop",
+   "style": "comp",
+   "batch": 3,
+   "label": "原樣"
+  },
+  {
+   "version": "bd80000",
+   "feel": "kpop",
+   "style": "comp",
+   "batch": 3,
+   "label": "arp 關掉",
+   "ovr": {
+    "parts": {
+     "arp": null
+    }
+   }
+  },
+  {
+   "version": "bd80000",
+   "feel": "kpop",
+   "style": "comp",
+   "batch": 3,
+   "label": "人聲切片關掉",
+   "ovr": {
+    "parts": {
+     "vox": null
+    }
+   }
+  },
+  {
+   "version": "bd80000",
+   "feel": "blues",
+   "style": "comp",
+   "batch": 3,
+   "label": "原樣"
+  },
+  {
+   "version": "bd80000",
+   "feel": "blues",
+   "style": "comp",
+   "batch": 3,
+   "label": "風琴 −12dB",
+   "ovr": {
+    "parts": {
+     "klevel": 0.0225
+    }
+   }
+  },
+  {
+   "version": "bd80000",
+   "feel": "blues",
+   "style": "comp",
+   "batch": 3,
+   "label": "風琴關掉(第二批的重考題)",
+   "ovr": {
+    "parts": {
+     "keys": null
+    }
+   }
+  },
+  {
+   "version": "bd80000",
+   "feel": "latin",
+   "style": "comp",
+   "batch": 3,
+   "label": "原樣"
+  },
+  {
+   "version": "bd80000",
+   "feel": "swing",
+   "style": "comp",
+   "batch": 3,
+   "label": "原樣"
   }
  ]
 }

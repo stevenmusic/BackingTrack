@@ -14,7 +14,7 @@ const SERVE = await new Promise(ok => { const sv = http.createServer((q, s) => {
   sv.listen(0, '127.0.0.1', () => ok({ sv, port: sv.address().port })); });
 const HERE = path.dirname(new URL(import.meta.url).pathname);
 const REPO = path.resolve(HERE, '../..');
-const SECS = 10, FROM_BEAT = 32;
+const SECS = +process.env.REALISM_SECS || 10, FROM_BEAT = 32;
 const cfg = JSON.parse(fs.readFileSync(process.argv[2] || path.join(HERE, 'cases.json'), 'utf8'));
 /* REALISM_OUT:校準集(calib/)用自己的資料夾與 jsonl,不跟盲聽的題庫混在一起 */
 const OUT = process.env.REALISM_OUT ? path.resolve(process.env.REALISM_OUT) : HERE;

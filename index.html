@@ -2713,7 +2713,7 @@ let masterHp = null, masterGlue = null, masterSat = null;
 /* 每一條 bus 自己的 EQ / 壓縮 / 空氣 / chorus。預設全部透明(0dB、不壓、wet 0),
    數值寫在 `FEELS[x].mix`,跟 combHp 那一組同一個做法 */
 let keysBus = null, keysEq = null, keysAir = null, keysChorus = null;
-let bassEqN = null, bassCompN = null, bassMk = null, bassDry = null, bassWet = null, drumAir = null;
+let bassEqN = null, bassCompN = null, bassMk = null, bassDry = null, bassWet = null, drumAir = null, drumMidN = null;
 let combAir = null, combChorus = null, masterMid = null, masterAirN = null, revTone = null, drumWidth = null, padLp = null;
 let echoBus = null, echoL = null, echoR = null;
 /* 延遲時間跟著速度走:八分與附點八分(那是最常見的一組乒乓)。
@@ -3037,7 +3037,12 @@ function ensureAudio(){
       set(1);
       return { input: inp, output: mg, set };
     })();
-    drumGlue.connect(drumAir); drumAir.connect(drumWidth.input); drumWidth.output.connect(masterGain);
+    /* 鼓的中頻(`FEELS[x].mix.drumMid`,預設 0dB 透明)。City Pop 的三首參考曲分軌之後,
+       鼓在 500–2k 只有 −15～−26dB(相對整軌),我們的是 −10——那一段是「紙箱聲」,
+       實錄的爵士鼓組共鳴比 City Pop 那種悶住、調緊的鼓多 */
+    drumMidN = ctx.createBiquadFilter();
+    drumMidN.type = "peaking"; drumMidN.frequency.value = 1000; drumMidN.Q.value = 0.8; drumMidN.gain.value = 0;
+    drumGlue.connect(drumMidN); drumMidN.connect(drumAir); drumAir.connect(drumWidth.input); drumWidth.output.connect(masterGain);
     const dSend = ctx.createGain();
     dSend.gain.value = 0.1;
     drumGlue.connect(dSend); dSend.connect(reverbBus);
@@ -4959,6 +4964,7 @@ function applyMix(){
   }
   if (bassMk) bassMk.gain.value = m.bassMakeup || 1;
   if (drumAir) { drumAir.frequency.value = m.drumAirHz || 8000; drumAir.gain.value = m.drumAir || 0; }
+  if (drumMidN) { drumMidN.frequency.value = m.drumMidHz || 1000; drumMidN.gain.value = m.drumMid || 0; }
   if (combAir) { combAir.frequency.value = m.gtrAirHz || 6500; combAir.gain.value = m.gtrAir || 0; }
   if (combChorus) combChorus.wet.gain.value = m.gtrChorus || 0;
 }
@@ -5198,10 +5204,14 @@ const FEELS = {
              brass: { lvl: 0.115 },
              /* 鋪底 −2dB、過 3kHz 低通:盲聽 6 次寫「太尖銳、太突出、要溫暖一點、不夠後面」 */
              keys: "pad", klevel: 0.025,
-             perc: { kind: "shaker", on: "16", lvl: 0.26 } },
+             /* 沙鈴從十六分退回八分、−1.4dB:三首參考曲分軌量到高頻每拍 2.5–3 下,
+                我們是 5.4 下(hi-hat 八分 + 沙鈴十六分)——太碎 */
+             perc: { kind: "shaker", lvl: 0.22 } },
     /* AOR 的貝斯是往前的(後藤次利、細野晴臣那一路),不是墊在後面。
        量到 60Hz 比 Pop 低 2.5dB,補回來 */
-    bassGain: 1.3,
+    /* 1.3 → 0.68(−5.6dB):三首參考曲(Midnight Pretenders / Plastic Love / 真夜中のドア)
+       分軌之後貝斯相對整軌 −3.4～−6.6dB(平均 −5.2),我們是 −1.5～−2.0,貝斯站得太前面 */
+    bassGain: 0.68,
     /* **pocket**:貝斯落後 4 毫秒、切音吉他往前 2 毫秒。
        110 BPM 的一個十六分是 136 毫秒,所以 4 毫秒只有 3%——
        它不會被聽成「不準」,但那個「浮起來」的感覺就是從這裡來的。
@@ -5293,7 +5303,10 @@ const FEELS = {
               60–250 0.92 → 0.95 → 0.97、3–8k 0.72 → 0.42 → 0.76、8–16k **0.94 → 0.29** → 0.80。
               高頻散掉的來源是鼓(Virtuosity 是一對中距離麥,8k 以上 L/R 只有 0.03),
               不是殘響也不是 chorus(兩個都關掉量過,一點都沒變) */
-           drumWidth: 0.7, roomLevel: 0.5, revLp: 6000, padLp: 3000 },
+           drumWidth: 0.7, roomLevel: 0.5, revLp: 6000, padLp: 3000,
+           /* 鼓 +7dB、中頻挖 7dB:參考曲的鼓相對整軌 −2.5～−5.2dB(平均 −3.5),我們 −8～−11,
+              使用者也寫過「鼓的力度感覺不到」「鼓沒有 punch」。City Pop 的鼓是整首最大聲的那一層 */
+           drumLevel: 2.24, drumMid: -7, drumMidHz: 1000 },
   },
   /* Blues:shuffle。跟 Pop 同一組鼓件、同一個 backbeat,差別在**八分是三連音的**
      (`swing: 0.66`,不是爵士的 0.58——藍調的搖擺更接近正三連音),

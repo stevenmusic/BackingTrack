@@ -1,0 +1,236 @@
+{
+"progressions": {},
+"cases": [
+{
+"version": "9c7fbb5",
+"feel": "straight",
+"style": "comp",
+"prog": "C - G - Am - F"
+},
+{
+"version": "9c7fbb5",
+"feel": "straight",
+"style": "pad",
+"prog": "Am - F - C - G"
+},
+{
+"version": "9c7fbb5",
+"feel": "straight",
+"style": "comp",
+"prog": "Am - F - C - G",
+"synth": true
+},
+{
+"version": "9c7fbb5",
+"feel": "straight",
+"style": "drive",
+"prog": "C - Am - F - G"
+},
+{
+"version": "9c7fbb5",
+"feel": "straight",
+"style": "comp",
+"prog": "C - F - G - C"
+},
+{
+"version": "9c7fbb5",
+"feel": "citypop",
+"style": "pad",
+"prog": "Fmaj7 - E7 - Am7 - C7"
+},
+{
+"version": "9c7fbb5",
+"feel": "citypop",
+"style": "comp",
+"prog": "Fmaj7 - E7 - Am7 - C7",
+"synth": true
+},
+{
+"version": "9c7fbb5",
+"feel": "citypop",
+"style": "drive",
+"prog": "Cmaj7 - Fmaj7 - Bm7b5 - E7 - Am7 - D7 - Dm7 - G7"
+},
+{
+"version": "9c7fbb5",
+"feel": "citypop",
+"style": "comp",
+"prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7"
+},
+{
+"version": "9c7fbb5",
+"feel": "citypop",
+"style": "pad",
+"prog": "Am7 - D7 - Dm7 - G7 - Cmaj7 - Cmaj7 - Fmaj7 - E7"
+},
+{
+"version": "9c7fbb5",
+"feel": "citypop",
+"style": "comp",
+"prog": "Am7 - D7 - Dm7 - G7 - Cmaj7 - Cmaj7 - Fmaj7 - E7",
+"synth": true
+},
+{
+"version": "9c7fbb5",
+"feel": "kpop",
+"style": "drive",
+"prog": "Am7 - F - C - G"
+},
+{
+"version": "9c7fbb5",
+"feel": "kpop",
+"style": "comp",
+"prog": "F - G - Em - Am"
+},
+{
+"version": "9c7fbb5",
+"feel": "kpop",
+"style": "pad",
+"prog": "C - G - Am - F"
+},
+{
+"version": "9c7fbb5",
+"feel": "kpop",
+"style": "comp",
+"prog": "C - G - Am - F",
+"synth": true
+},
+{
+"version": "9c7fbb5",
+"feel": "kpop",
+"style": "drive",
+"prog": "Am - F - C - G"
+},
+{
+"version": "9c7fbb5",
+"feel": "latin",
+"style": "comp",
+"prog": "Cmaj7 - A7 - Dm7 - G7"
+},
+{
+"version": "9c7fbb5",
+"feel": "latin",
+"style": "pad",
+"prog": "Am7 - Am7 - Dm7 - Dm7 - Bm7b5 - E7 - Am7 - Am7"
+},
+{
+"version": "9c7fbb5",
+"feel": "latin",
+"style": "comp",
+"prog": "Am7 - Am7 - Dm7 - Dm7 - Bm7b5 - E7 - Am7 - Am7",
+"synth": true
+},
+{
+"version": "9c7fbb5",
+"feel": "latin",
+"style": "drive",
+"prog": "Cmaj7 - Dm7 - G7 - Em7 - A7 - Dm7 - G7 - Cmaj7"
+},
+{
+"version": "9c7fbb5",
+"feel": "latin",
+"style": "comp",
+"prog": "Dm7 - G7 - Cmaj7 - Cmaj7"
+},
+{
+"version": "9c7fbb5",
+"feel": "blues",
+"style": "pad",
+"prog": "C7 - F7 - C7 - G7"
+},
+{
+"version": "9c7fbb5",
+"feel": "blues",
+"style": "comp",
+"prog": "C7 - F7 - C7 - G7",
+"synth": true
+},
+{
+"version": "9c7fbb5",
+"feel": "blues",
+"style": "drive",
+"prog": "C7 - F7 - C7 - C7 - F7 - F7 - C7 - C7 - G7 - F7 - C7 - G7"
+},
+{
+"version": "9c7fbb5",
+"feel": "blues",
+"style": "comp",
+"prog": "C9 - F9 - C9 - G9"
+},
+{
+"version": "9c7fbb5",
+"feel": "blues",
+"style": "pad",
+"prog": "C7 - C7 - F7 - F7"
+},
+{
+"version": "9c7fbb5",
+"feel": "blues",
+"style": "comp",
+"prog": "C7 - C7 - F7 - F7",
+"synth": true
+},
+{
+"version": "9c7fbb5",
+"feel": "swing",
+"style": "drive",
+"prog": "Dm7 - G7 - Cmaj7 - A7"
+},
+{
+"version": "9c7fbb5",
+"feel": "swing",
+"style": "comp",
+"prog": "Dm9 - G13 - Cmaj9 - Cmaj9"
+},
+{
+"version": "9c7fbb5",
+"feel": "swing",
+"style": "pad",
+"prog": "Am7 - Dm7 - G7 - Cmaj7 - Fmaj7 - Bm7b5 - E7 - Am7"
+},
+{
+"version": "9c7fbb5",
+"feel": "swing",
+"style": "comp",
+"prog": "Am7 - Dm7 - G7 - Cmaj7 - Fmaj7 - Bm7b5 - E7 - Am7",
+"synth": true
+},
+{
+"version": "9c7fbb5",
+"feel": "swing",
+"style": "drive",
+"prog": "Cmaj7 - Am7 - Dm7 - G7"
+},
+{
+"version": "9c7fbb5",
+"feel": "funk",
+"style": "comp",
+"prog": "Em9 - A13 - Em9 - A13"
+},
+{
+"version": "9c7fbb5",
+"feel": "funk",
+"style": "pad",
+"prog": "Em7 - A7 - Em7 - A7"
+},
+{
+"version": "9c7fbb5",
+"feel": "funk",
+"style": "comp",
+"prog": "Em7 - A7 - Em7 - A7",
+"synth": true
+},
+{
+"version": "9c7fbb5",
+"feel": "funk",
+"style": "drive",
+"prog": "Dm9 - G13 - Dm9 - G13"
+},
+{
+"version": "9c7fbb5",
+"feel": "funk",
+"style": "comp",
+"prog": "Am7 - D9 - Am7 - D9"
+}
+]
+}

@@ -203,5 +203,6 @@ r = sp.add_parser('ref'); rs = r.add_subparsers(dest='sub', required=True)
 ra = rs.add_parser('add'); ra.add_argument('file'); ra.add_argument('--name', required=True); ra.add_argument('--genre', required=True)
 ra.add_argument('--start', type=float); ra.add_argument('--end', type=float); ra.add_argument('--vocal', action='store_true')
 sp.add_parser('score'); sp.add_parser('analyze'); sp.add_parser('learn'); sp.add_parser('predict')
-a = ap.parse_args()
-{'ref': cmd_ref_add, 'score': cmd_score, 'analyze': cmd_analyze, 'learn': cmd_learn, 'predict': cmd_predict}[a.cmd](a)
+if __name__ == '__main__':
+  a = ap.parse_args()
+  {'ref': cmd_ref_add, 'score': cmd_score, 'analyze': cmd_analyze, 'learn': cmd_learn, 'predict': cmd_predict}[a.cmd](a)

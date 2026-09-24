@@ -9,7 +9,9 @@ const HERE = path.dirname(new URL(import.meta.url).pathname);
 const REPO = path.resolve(HERE, '../..');
 const SECS = 10, FROM_BEAT = 32;
 const cfg = JSON.parse(fs.readFileSync(process.argv[2] || path.join(HERE, 'cases.json'), 'utf8'));
-const CLIPS = path.join(HERE, 'clips'); fs.mkdirSync(CLIPS, { recursive: true });
+/* REALISM_OUT:校準集(calib/)用自己的資料夾與 jsonl,不跟盲聽的題庫混在一起 */
+const OUT = process.env.REALISM_OUT ? path.resolve(process.env.REALISM_OUT) : HERE;
+const CLIPS = path.join(OUT, 'clips'); fs.mkdirSync(CLIPS, { recursive: true });
 const missing = new Set(), prod404 = new Set();
 /* **每一筆各自數**:用全域的 Set 大小判斷的話,兩個曲風缺同一批檔案時
    後面那一筆不會被擋下來(Swing 踩過:低音提琴的取樣全缺,照樣被收進來) */
@@ -30,9 +32,11 @@ function htmlFor(version){
   return out;
 }
 function commitOf(version){ return version === 'WORKTREE' ? 'worktree' : execSync(`git -C ${REPO} rev-parse --short ${version}`).toString().trim(); }
-async function localSamples(pg){
+async function localSamples(pg, synth){
   await pg.route(/cdn\.jsdelivr\.net\/gh\/|raw\.githubusercontent\.com\/|tonejs\.github\.io\/audio\//, async r => {
     const u = r.request().url();
+    /* `synth: true` 的 case 故意一個取樣都不給,錄到的就是合成備援——校準用的「已知比較假」那一組 */
+    if (synth) return r.fulfill({ status: 404, body: '' });
     const m = /jsdelivr\.net\/gh\/[^/]+\/([^@]+)@[^/]+\/(.*)$/.exec(u) || /githubusercontent\.com\/[^/]+\/([^/]+)\/[^/]+\/(.*)$/.exec(u);
     let repo, p; if (m) { repo = m[1]; p = decodeURIComponent(m[2]); } else { repo = 'audio'; p = decodeURIComponent(/tonejs\.github\.io\/audio\/(.*)$/.exec(u)[1]); }
     const f = `/tmp/smp/${repo}/${p}`;
@@ -67,15 +71,15 @@ function features(L, R, sr){
 }
 
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--autoplay-policy=no-user-gesture-required'] });
-const out = fs.createWriteStream(path.join(HERE, 'db/clips.jsonl'), { flags: 'a' });
+const out = fs.createWriteStream(path.join(OUT, OUT === HERE ? 'db/clips.jsonl' : 'clips.jsonl'), { flags: 'a' });
 for (const cs of cfg.cases) {
   const commit = commitOf(cs.version), prog = cs.prog || cfg.progressions[cs.feel];
   const ovr = cs.ovr ? JSON.stringify(cs.ovr) : '';
-  const id = crypto.createHash('sha1').update([commit, cs.feel, cs.style, prog, SECS, FROM_BEAT].join('|') + (ovr ? '|' + ovr : '')).digest('hex').slice(0, 10);
+  const id = crypto.createHash('sha1').update([commit, cs.feel, cs.style, prog, SECS, FROM_BEAT].join('|') + (ovr ? '|' + ovr : '') + (cs.synth ? '|synth' : '')).digest('hex').slice(0, 10);
   const wavPath = path.join(CLIPS, id + '.wav');
   if (fs.existsSync(wavPath)) { console.log('skip', id, commit, cs.feel, cs.style); continue; }
   caseMissing = 0;
-  const pg = await b.newPage(); await localSamples(pg);
+  const pg = await b.newPage(); await localSamples(pg, !!cs.synth);
   const errs = []; pg.on('pageerror', e => errs.push(e.message));
   await pg.addInitScript(() => {
     window.__rec = { L: [], R: [], on: false };
@@ -104,7 +108,7 @@ for (const cs of cfg.cases) {
   /* 有取樣沒載到的話,錄到的是合成備援的聲音——那一筆不能收,補抓之後重跑 */
   if (caseMissing) { console.log('retry', id, cs.feel, cs.style, '(缺', caseMissing, '個取樣)'); continue; }
   fs.writeFileSync(wavPath, wav16(r.L, r.R, r.sr));
-  const row = { id, commit, version: cs.version, feel: cs.feel, style: cs.style, prog, ovr: cs.ovr || null, label: cs.label || null, batch: cs.batch || 1, bpm: r.bpm, secs: SECS, fromBeat: FROM_BEAT, sr: r.sr,
+  const row = { id, commit, version: cs.version, feel: cs.feel, style: cs.style, prog, ovr: cs.ovr || null, label: cs.label || null, synth: !!cs.synth, batch: cs.batch || 1, bpm: r.bpm, secs: SECS, fromBeat: FROM_BEAT, sr: r.sr,
     renderedAt: new Date().toISOString(), errors: errs, features: features(r.L, r.R, r.sr) };
   out.write(JSON.stringify(row) + '\n');
   console.log('ok', id, commit, cs.feel, cs.style, row.features.rms, row.features.peak, errs.length ? 'ERR ' + errs[0] : '');

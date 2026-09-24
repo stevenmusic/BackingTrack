@@ -4793,12 +4793,15 @@ function makeChorus(c){
   wet.gain.value = 0;
   input.connect(output);
   const lfo = c.createOscillator();
-  lfo.frequency.value = 0.6;
+  lfo.frequency.value = 0.5;
   for (const side of [-1, 1]) {
     const d = c.createDelay(0.05);
     d.delayTime.value = side < 0 ? 0.0071 : 0.0093;   // 兩邊不一樣長,才不會對稱地塌回中間
     const depth = c.createGain();
-    depth.gain.value = 0.0017 * side;
+    /* 深度決定**音高晃多少**:音高偏移 = 深度 × 2π × 速率。
+       第一版 0.0017 s × 0.6Hz = **±11 音分**,那已經是走音(被回報「音色更奇怪了」);
+       CE-1 / Dimension D 只晃 2–3 音分。0.0005 × 0.5Hz = ±2.7 音分 */
+    depth.gain.value = 0.0005 * side;
     lfo.connect(depth); depth.connect(d.delayTime);
     const pan = c.createStereoPanner ? c.createStereoPanner() : null;
     input.connect(d);
@@ -5078,7 +5081,7 @@ const FEELS = {
              guitar2: { lvl: 0.12 },
              brass: { lvl: 0.115 },
              keys: "pad", klevel: 0.032,
-             perc: { kind: "shaker", on: "16", lvl: 0.32 } },
+             perc: { kind: "shaker", on: "16", lvl: 0.26 } },
     /* AOR 的貝斯是往前的(後藤次利、細野晴臣那一路),不是墊在後面。
        量到 60Hz 比 Pop 低 2.5dB,補回來 */
     bassGain: 1.3,
@@ -5152,25 +5155,28 @@ const FEELS = {
            /* 高頻的架子要從 2.5–5k 就開始:第一版掛在 5k / 8k / 6.5k,
               低頻補回來了,但 1k→2k 還是掉 6.6dB——缺的是**presence**
               (Rhodes 的鐘聲、小鼓的響線、hi-hat 的顆粒都在 2–5k),不是空氣 */
-           keysAir: 3, keysAirHz: 2500, keysChorus: 0.35,
+           keysAir: 2, keysAirHz: 2500, keysChorus: 0.25,
            bassComp: -24, bassRatio: 4, bassMakeup: 1.1, bassEq: 2, bassEqHz: 900,
-           gtrChorus: 0.4,
+           gtrChorus: 0.25,
            /* ── 第三輪:對著〈Plastic Love〉的前奏(20–40 秒,純樂器)調 ──────
               以 125Hz 對齊比八度頻帶,改之前是 **250–1k 多 7–8dB、4k–16k 少 8–10dB**
               (中頻箱子聲 + 頂端太暗,正是「不像唱片」的那個聲音)。
               每一層在 250Hz 都有份(鼓、貝斯、Rhodes、鋪底都在 −18～−21),
               所以單調一層補不完,主力是母帶的參考比對 EQ(`masterMid` / `masterAir`)。
               誤差(63–8k 的 RMS)6.42 → 2.44dB,之後再調幾乎不動了 */
-           keysEq: -5, keysEqHz: 800, keysEqQ: 0.6, keysLevel: 0.7,
+           keysEq: -3, keysEqHz: 800, keysEqQ: 0.6, keysLevel: 0.85,
            padEq: -4, padEqHz: 400,
            drumAir: 4, drumAirHz: 6000,
            gtrAir: 4, gtrAirHz: 3500,
-           masterMid: -6, masterMidHz: 330, masterAir: 6.5, masterAirHz: 3200,
+           /* **收過一次**:第一版 −6 / +6.5 是把一整首**有人聲、配器不同**的唱片
+              頻譜硬套上來,樂器的本體被挖空、刺耳的那段被推出來(被回報「音色更奇怪了」)。
+              頻譜比對只能當方向,不能當目標——收到三分之一左右 */
+           masterMid: -2.5, masterMidHz: 330, masterAir: 2.5, masterAirHz: 4000,
            /* 立體聲也對著同一首量(八度頻帶的 L/R 相關,原曲 → 改之前 → 現在):
               60–250 0.92 → 0.95 → 0.97、3–8k 0.72 → 0.42 → 0.76、8–16k **0.94 → 0.29** → 0.80。
               高頻散掉的來源是鼓(Virtuosity 是一對中距離麥,8k 以上 L/R 只有 0.03),
               不是殘響也不是 chorus(兩個都關掉量過,一點都沒變) */
-           drumWidth: 0.5, roomLevel: 0.35, revLp: 5000 },
+           drumWidth: 0.7, roomLevel: 0.5, revLp: 6000 },
   },
   /* Blues:shuffle。跟 Pop 同一組鼓件、同一個 backbeat,差別在**八分是三連音的**
      (`swing: 0.66`,不是爵士的 0.58——藍調的搖擺更接近正三連音),

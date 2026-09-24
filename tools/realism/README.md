@@ -28,6 +28,10 @@
 - **VGGish 權重**(290MB,不進 repo):
   `curl -L -o /tmp/vgg/vggish.pth https://github.com/harritaylor/torchvggish/releases/download/v0.1/vggish-10086976.pth`
   pypi 的 torch 是 CUDA 版跑不起來,所以 `vggish_np.py` 是純 numpy 實作(`pip install numpy scipy soundfile`)
+- **Audiobox Aesthetics**(`aes.py`):`python3 -m venv /tmp/abx`,`pip install torch==2.5.1 torchaudio==2.5.1 numpy audiobox_aesthetics requests huggingface_hub soundfile`
+  (pytorch.org 的 CPU 版會轉到 `download-r2.pytorch.org` 被擋,pypi 那一版在 CPU 上也跑得起來),
+  權重 `curl -L -o /tmp/abx_ckpt/checkpoint.pt https://dl.fbaipublicfiles.com/audiobox-aesthetics/checkpoint.pt`(415MB,不進 repo)。
+  跑 `/tmp/abx/bin/python aes.py [額外音檔…]`,29 段約 30 秒
 - **參考曲只存嵌入不存音檔**(`db/refs/*.npy`)。版權音檔不要進 repo
 
 ## 檔案

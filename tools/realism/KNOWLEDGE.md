@@ -73,9 +73,16 @@
 - 送出前先讓模型與 VGGish **封存預測**(`db/predict_batch2.txt`),分數回來後直接對答案
 
 ## 現成的打分工具
-- **Meta Audiobox Aesthetics**(2025)是最對題的:四個軸裡的 **PQ(Production Quality)** 就是「製作品質」,
-  而且是用大量人工評分訓練的。但權重在 `dl.fbaipublicfiles.com` 與 `huggingface.co`、
-  還要 CPU 版 PyTorch(`download.pytorch.org`)——**這三個網域在雲端環境被擋**,開放之後就能串進 `realism.py`
+- **Meta Audiobox Aesthetics 已經串進來**(`aes.py` → `db/aes.jsonl`)。四個軸 1–10:
+  CE 內容享受、CU 內容實用、PC 製作複雜度、PQ 製作品質。雲端環境 TT2 的 Network access
+  改成 Custom、加了 `dl.fbaipublicfiles.com` / `huggingface.co` / `download.pytorch.org` 之後才抓得到
+  - **對第一批人評(n=12)**:PC spearman **0.88**、CU 0.58、CE 0.13、**PQ 0.06**、VGGish P(真) 0.06。
+    **最對題的 PQ 反而跟你的耳朵無關**;跟得上的是 PC(製作複雜度)
+  - **PC 高可能只是「層數多」**:City Pop 層最多、人評也最高,n=12 分不開「曲風」與「好聽」。
+    第二批的 A/B(拿掉鋪底、銅管、風琴、supersaw)正好測這件事——
+    PC 預測「拿掉一層就掉分」,你第一批的評語卻說鋪底「太吵」。預測封存在 `db/predict_batch2_aes.txt`
+  - **參考曲**:Plastic Love 四段 10 秒 PQ 8.23–8.33,我們的 6.92–8.10;PC 前奏 5.96–5.99、
+    主歌之後 7.10,我們 5.26–5.84。**PQ 分得出唱片與伴奏,但分不出你喜歡哪一段伴奏**
 - 其他試過的:OpenL3(安裝時要另外抓權重,被擋)、PANNs(zenodo,被擋)、CLAP(huggingface,被擋)
 
 ## 下一步

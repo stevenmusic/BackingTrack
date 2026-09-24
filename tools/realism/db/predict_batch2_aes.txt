@@ -1,0 +1,18 @@
+# 第二批封存預測:Audiobox PC(製作複雜度)排序,人評之前寫下。第一批 PC 對人評 spearman 0.88(n=12,混著曲風)
+358ad83f97 citypop 銅管 −6dB PC=5.83 CE=7.38 PQ=7.67
+81afa0d199 citypop 原樣 PC=5.79 CE=7.29 PQ=7.67
+2b82efbc65 citypop 銅管關掉 PC=5.75 CE=7.39 PQ=7.64
+186e437473 citypop 鋪底變暗(低通 1.2k) PC=5.75 CE=7.36 PQ=7.77
+670e4f54ff citypop 鋪底關掉 PC=5.71 CE=7.24 PQ=7.73
+1a88b12967 funk 風琴 −6dB PC=5.65 CE=7.20 PQ=7.00
+6c0a0efa49 funk 原樣 PC=5.63 CE=7.12 PQ=7.14
+447d910107 straight 原樣 PC=5.57 CE=7.56 PQ=7.73
+fe541b73f5 funk 風琴關掉 PC=5.51 CE=6.70 PQ=6.92
+95d46d4ee7 blues 風琴 −6dB 且變暗 PC=5.51 CE=7.28 PQ=7.62
+2e0bfb3607 straight 吉他 −6dB PC=5.50 CE=7.50 PQ=7.77
+de7baab4f1 kpop supersaw −6dB PC=5.46 CE=6.61 PQ=7.48
+9c75fe36c8 blues 風琴關掉 PC=5.45 CE=7.17 PQ=7.86
+4dd253b68c straight 吉他關掉 PC=5.42 CE=7.39 PQ=7.80
+4445c464d5 kpop 原樣 PC=5.37 CE=6.46 PQ=7.43
+757b73429c blues 原樣 PC=5.34 CE=6.96 PQ=7.73
+0bf674d189 kpop supersaw 關掉 PC=5.26 CE=6.76 PQ=8.10

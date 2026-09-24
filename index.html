@@ -417,7 +417,13 @@ main{
 .pal-row{display:flex;flex-wrap:wrap;gap:6px}
 /* 音名用 grid 排。flex 會把最後一行剩下的幾顆撐滿整列,
    同一顆鈕在不同行寬度差一倍,看起來像壞掉 */
-#palRoots{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px}
+/* 音名與升降記號**拆開**:七個字母 + ♭ ♮ ♯,一排十顆。
+   原本是十二顆固定拼法(C♯ / E♭ …),pc 1 永遠是 C♯——
+   D♭ 大調的 I 級就只能寫成 C♯maj7(被抓過)。拆開之後拼法由使用者決定,
+   而且一排比原本兩排矮一截 */
+#palRoots{display:grid;grid-template-columns:repeat(7,minmax(0,1fr)) 6px repeat(3,minmax(0,1fr));gap:4px}
+#palRoots .pal-gap{pointer-events:none}
+#palRoots .pal-btn[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
 /* 性質固定七欄:剛好 14 顆排成整齊的兩列,不會有最後一列落單的格子,
    高度也不會因為視窗寬度忽然多一列(auto-fill 在 800px 寬會掉成六欄、變三列) */
 #palQuals{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;container:palq / inline-size}
@@ -1368,6 +1374,8 @@ const I18N = {
     barUndoLabel: "復原上一步",
     barUndoNone: "沒有可以復原的了",
     palRootLabel: "加一格 {root}",
+    palLetterLabel: "根音改成 {root}",
+    palAccLabel: "根音加上 {acc}",
     palQualLabel: "改成 {q}",
     palDelLast: "刪掉最後一格",
     palDelSel: "刪掉第 {n} 格",
@@ -1489,6 +1497,8 @@ const I18N = {
     barUndoLabel: "Undo",
     barUndoNone: "Nothing to undo",
     palRootLabel: "Add a bar of {root}",
+    palLetterLabel: "Set root to {root}",
+    palAccLabel: "Apply {acc} to the root",
     palQualLabel: "Change to {q}",
     palDelLast: "Delete the last bar",
     palDelSel: "Delete bar {n}",
@@ -2691,6 +2701,11 @@ let combBus = null, padBus = null, percBus = null, drumGlue = null, roomBus = nu
 let combHp = null, combEq = null, combComp = null, combMakeup = null;
 let padHp = null, padEq = null;
 let masterHp = null, masterGlue = null, masterSat = null;
+/* 每一條 bus 自己的 EQ / 壓縮 / 空氣 / chorus。預設全部透明(0dB、不壓、wet 0),
+   數值寫在 `FEELS[x].mix`,跟 combHp 那一組同一個做法 */
+let keysBus = null, keysEq = null, keysAir = null, keysChorus = null;
+let bassEqN = null, bassCompN = null, bassMk = null, bassDry = null, bassWet = null, drumAir = null;
+let combAir = null, combChorus = null;
 let echoBus = null, echoL = null, echoR = null;
 /* 延遲時間跟著速度走:八分與附點八分(那是最常見的一組乒乓)。
    **速度一改就要重算**,不然換速度之後延遲會跟節奏錯開 */
@@ -2895,14 +2910,30 @@ function ensureAudio(){
     drumGlue.attack.value = 0.01;
     drumGlue.release.value = 0.12;
     drumBus.connect(drumGlue);
-    drumGlue.connect(masterGain);
+    drumAir = shelf(ctx, "highshelf", 8000);
+    drumGlue.connect(drumAir); drumAir.connect(masterGain);
     const dSend = ctx.createGain();
     dSend.gain.value = 0.1;
     drumGlue.connect(dSend); dSend.connect(reverbBus);
 
     bassBus = ctx.createGain();
     bassBus.gain.value = BASS_BUS_LEVEL;
-    bassBus.connect(masterGain);
+    /* 貝斯的 bus:錄音室的貝斯**一定有壓縮**(每一顆都一樣站得住,
+       低頻才是一條線不是一顆一顆的),再補一點 900Hz 的指頭聲——
+       那是小喇叭上聽得到貝斯的那一段 */
+    bassEqN = ctx.createBiquadFilter();
+    bassEqN.type = "peaking"; bassEqN.Q.value = 1; bassEqN.gain.value = 0;
+    bassCompN = ctx.createDynamicsCompressor();
+    bassCompN.threshold.value = 0; bassCompN.knee.value = 6;
+    bassCompN.attack.value = 0.006; bassCompN.release.value = 0.15;
+    bassMk = ctx.createGain();
+    /* **壓縮器有 6ms 的 lookahead**(瀏覽器內建的延遲),所以沒開壓縮的曲風
+       要整個繞過它,不然貝斯會無緣無故晚 6ms。開了的曲風在 pocket 裡扣回來 */
+    bassDry = ctx.createGain(); bassWet = ctx.createGain(); bassWet.gain.value = 0;
+    bassBus.connect(bassEqN);
+    bassEqN.connect(bassDry); bassDry.connect(bassMk);
+    bassEqN.connect(bassCompN); bassCompN.connect(bassWet); bassWet.connect(bassMk);
+    bassMk.connect(masterGain);
 
     /* 節奏組以外的三條:吉他、鍵盤鋪底(風琴/弦樂)、打擊小物。
        各自一條的理由跟鼓、貝斯一樣——殘響量不一樣:
@@ -2932,7 +2963,10 @@ function ensureAudio(){
     /* `DynamicsCompressor` 沒有補償增益,壓完一定變小聲,所以自己補一顆 */
     combMakeup = ctx.createGain(); combMakeup.gain.value = 1;
     combBus.connect(combHp); combHp.connect(combEq); combEq.connect(combComp);
-    combComp.connect(combMakeup); combMakeup.connect(masterGain);
+    combAir = shelf(ctx, "highshelf", 6500);
+    combChorus = makeChorus(ctx);
+    combComp.connect(combMakeup); combMakeup.connect(combAir);
+    combAir.connect(combChorus.input); combChorus.output.connect(masterGain);
     const cSend = ctx.createGain();
     cSend.gain.value = 0.22;
     combMakeup.connect(cSend); cSend.connect(reverbBus);
@@ -2948,6 +2982,15 @@ function ensureAudio(){
     const pSend = ctx.createGain();
     pSend.gain.value = 0.42;
     padEq.connect(pSend); pSend.connect(reverbBus);
+    /* 鍵盤(鋼琴 / Rhodes)原本每一顆音直接接 masterGain,**沒有 bus 就沒辦法混**。
+       挖 280Hz(整首最擠的那一段)、補一點高頻(Rhodes 的鐘聲)、再過 chorus */
+    keysBus = ctx.createGain();
+    keysEq = ctx.createBiquadFilter();
+    keysEq.type = "peaking"; keysEq.Q.value = 1; keysEq.gain.value = 0;
+    keysAir = shelf(ctx, "highshelf", 5000);
+    keysChorus = makeChorus(ctx);
+    keysBus.connect(keysEq); keysEq.connect(keysAir); keysAir.connect(keysChorus.input);
+    keysChorus.output.connect(masterGain);
     applyMix();
 
     /* 鼓的空間麥克風。走自己的 bus 再進黏著壓縮,所以它跟近麥一起被壓——
@@ -3023,7 +3066,7 @@ function playNote(midi, when, dur, peak){
   }
   const out = pan || g;
   if (pan) g.connect(pan);
-  out.connect(masterGain);
+  out.connect(keysBus || masterGain);
   const send = ctx.createGain();
   send.gain.value = 0.3;
   out.connect(send); send.connect(reverbBus);
@@ -4714,6 +4757,36 @@ function microOf(name){
   const m = feel().micro;
   return (m && m[name]) || 0;
 }
+/* 立體聲 chorus(Roland CE-1 / Dimension D 那一類)。八〇年代的 Rhodes 與乾淨電吉他
+   幾乎都掛著它——那是 City Pop「亮、寬、會發光」的一大半來源,
+   量到 Rhodes 的 L/R 相關 0.987(等於單聲道)就是少了這一顆。
+   左右兩條延遲**反相**調變,乾的留在中間;`wet` 是 0 時完全透明 */
+function makeChorus(c){
+  const input = c.createGain(), output = c.createGain(), wet = c.createGain();
+  wet.gain.value = 0;
+  input.connect(output);
+  const lfo = c.createOscillator();
+  lfo.frequency.value = 0.6;
+  for (const side of [-1, 1]) {
+    const d = c.createDelay(0.05);
+    d.delayTime.value = side < 0 ? 0.0071 : 0.0093;   // 兩邊不一樣長,才不會對稱地塌回中間
+    const depth = c.createGain();
+    depth.gain.value = 0.0017 * side;
+    lfo.connect(depth); depth.connect(d.delayTime);
+    const pan = c.createStereoPanner ? c.createStereoPanner() : null;
+    input.connect(d);
+    if (pan) { pan.pan.value = side * 0.9; d.connect(pan); pan.connect(wet); }
+    else d.connect(wet);
+  }
+  wet.connect(output);
+  lfo.start();
+  return { input, output, wet };
+}
+function shelf(c, type, hz){
+  const f = c.createBiquadFilter();
+  f.type = type; f.frequency.value = hz; f.gain.value = 0;
+  return f;
+}
 /* 把 `FEELS[x].mix` 套到那兩條 bus 上。**沒寫的欄位一律回到透明值**,
    不要只在「有寫」的時候設——那樣換走曲風之後上一個的 EQ 會留著 */
 function applyMix(){
@@ -4727,6 +4800,21 @@ function applyMix(){
   if (combMakeup) combMakeup.gain.value = m.gtrMakeup || 1;
   if (padHp) padHp.frequency.value = m.padHp || 20;
   if (padEq) { padEq.frequency.value = m.padEqHz || 380; padEq.gain.value = m.padEq || 0; }
+  if (keysEq) { keysEq.frequency.value = m.keysEqHz || 280; keysEq.gain.value = m.keysEq || 0; }
+  if (keysAir) { keysAir.frequency.value = m.keysAirHz || 5000; keysAir.gain.value = m.keysAir || 0; }
+  if (keysChorus) keysChorus.wet.gain.value = m.keysChorus || 0;
+  if (bassEqN) { bassEqN.frequency.value = m.bassEqHz || 900; bassEqN.gain.value = m.bassEq || 0; }
+  if (bassCompN) {
+    const on = m.bassComp !== undefined;
+    bassCompN.threshold.value = on ? m.bassComp : 0;
+    bassCompN.ratio.value = m.bassRatio || 4;
+    bassDry.gain.value = on ? 0 : 1;
+    bassWet.gain.value = on ? 1 : 0;
+  }
+  if (bassMk) bassMk.gain.value = m.bassMakeup || 1;
+  if (drumAir) { drumAir.frequency.value = m.drumAirHz || 8000; drumAir.gain.value = m.drumAir || 0; }
+  if (combAir) { combAir.frequency.value = m.gtrAirHz || 6500; combAir.gain.value = m.gtrAir || 0; }
+  if (combChorus) combChorus.wet.gain.value = m.gtrChorus || 0;
 }
 
 /* 音長的句法(`FEELS[x].artic`):同一個節奏型每一下放開的時間不一樣,
@@ -4955,7 +5043,7 @@ const FEELS = {
              guitar2: { lvl: 0.12 },
              brass: { lvl: 0.115 },
              keys: "pad", klevel: 0.038,
-             perc: { kind: "shaker", on: "sub", lvl: 0.17 } },
+             perc: { kind: "shaker", on: "sub", lvl: 0.24 } },
     /* AOR 的貝斯是往前的(後藤次利、細野晴臣那一路),不是墊在後面。
        量到 60Hz 比 Pop 低 2.5dB,補回來 */
     bassGain: 1.3,
@@ -4966,7 +5054,8 @@ const FEELS = {
     /* 鼓的 pocket:小鼓的 backbeat 落後 3ms、hi-hat 往前 1ms。
        村上ポンタ那種「躺著打」的二四,加上貝斯落後,整個節奏組是往後靠的,
        只有 hi-hat 跟切音吉他在往前推——前後拉開那幾毫秒就是「律動」 */
-    pocket: { bass: 4, gtr: -2, snare: 3, hat: -1 },
+    /* 貝斯寫 −2 不是 +4:它的壓縮器自己帶 6ms 的 lookahead,實際還是落後 4ms */
+    pocket: { bass: -2, gtr: -2, snare: 3, hat: -1 },
     // Rhodes 的音長每一下差 ±12%:同一個型每一下放開的時間都一樣就是在「按鍵」
     artic: { keys: 0.24 },
     /* 微時值、和弦不同時落下、樂句換氣、力度範圍——**這四項只有 City Pop 開著**,
@@ -5017,7 +5106,21 @@ const FEELS = {
        那不是「更專業」,是把吉他推到臉上。補償只是把壓下去的補回來,
        不是拿來加音量的——1.5 倍等於 +3.5dB,壓縮器根本沒壓那麼多 */
     mix: { gtrHp: 150, gtrEq: 1.2, gtrEqHz: 3200, gtrComp: -18, gtrRatio: 3, gtrMakeup: 1.0,
-           padHp: 160, padEq: -2.5, padEqHz: 380 },
+           padHp: 160, padEq: -2.5, padEqHz: 380,
+           /* ── 第二輪:照頻譜與 solo 量出來的四個洞補 ──────────────
+              (真的取樣量的;scratchpad 的 `cpan.mjs`)
+              - 整首的最高點在 250Hz、2k 以上每個八度掉 5–6dB(一般唱片約 3–4):
+                **中頻箱子聲 + 頂端太暗**。八〇年代 AOR 的母帶是亮的
+              - Rhodes 的 L/R 相關 0.987 = 單聲道。那個年代的 Rhodes 一定掛 chorus
+              - 貝斯沒有壓縮,波峰因數 13.4dB,一顆大一顆小,低頻站不成一條線
+              - 吉他 8kHz 只剩 −59:乾淨單線圈的那層亮面被切光了 */
+           /* 高頻的架子要從 2.5–5k 就開始:第一版掛在 5k / 8k / 6.5k,
+              低頻補回來了,但 1k→2k 還是掉 6.6dB——缺的是**presence**
+              (Rhodes 的鐘聲、小鼓的響線、hi-hat 的顆粒都在 2–5k),不是空氣 */
+           keysEq: -2.5, keysEqHz: 280, keysAir: 3, keysAirHz: 2500, keysChorus: 0.35,
+           bassComp: -24, bassRatio: 4, bassMakeup: 1.1, bassEq: 2, bassEqHz: 900,
+           drumAir: 3, drumAirHz: 5000,
+           gtrAir: 3, gtrAirHz: 4000, gtrChorus: 0.4 },
   },
   /* Blues:shuffle。跟 Pop 同一組鼓件、同一個 backbeat,差別在**八分是三連音的**
      (`swing: 0.66`,不是爵士的 0.58——藍調的搖擺更接近正三連音),
@@ -7430,7 +7533,7 @@ function targetBar(){
 /* 原本這裡是一行字寫「正在改第幾格的哪一顆」。那行字被**格線編輯條**取代了
    ——它把同一件事畫出來(選到的那一顆整段反白),而且還可以點。
    `updateBarTools()` 裡會重畫它,所以這裡只要轉手過去 */
-function updatePalHint(){ updateBarTools(); }
+function updatePalHint(){ updateBarTools(); paintPalRoot(); }
 
 /* 點音名:換掉正在編輯那一格的根音,性質與轉位低音都留著。
    **不會自己往後跳一格**——改完第 3 格還是停在第 3 格,要改下一格就點下一格。
@@ -7443,6 +7546,37 @@ function palRoot(root){
   const p = splitToken(t[i]);
   setChordAt(i, p ? joinToken(root, p.suffix, p.bass) : root);
   selectBar(i);
+}
+
+/* 升降記號:套在正在編輯那一顆的**字母**上(♮ 是拿掉)。
+   字母不動,所以 C♯ 按 ♭ 是 C♭ 不是 D♭——要 D♭ 就是先點 D 再點 ♭,跟寫譜一樣 */
+const PAL_LETTERS = ["C","D","E","F","G","A","B"];
+const PAL_ACCS = [{ a: "♭", n: "flat" }, { a: "", n: "natural", label: "♮" }, { a: "♯", n: "sharp" }];
+function rootAcc(root){
+  const c = root.slice(1);
+  return c === "#" || c === "♯" ? "♯" : c === "b" || c === "♭" ? "♭" : "";
+}
+function palAcc(acc){
+  const t = chordTokens();
+  if (!t.length) return;
+  const i = targetBar();
+  const p = splitToken(t[i]);
+  if (!p) return;
+  const want = p.root[0].toUpperCase() + acc;
+  if (want === p.root) return;
+  pushUndo();
+  setChordAt(i, joinToken(want, p.suffix, p.bass));
+  selectBar(i);
+}
+/* 鍵盤上亮起「正在編輯那一顆」的字母與升降,一眼看得到現在是 D♭ 還是 C♯ */
+function paintPalRoot(){
+  const box = $("palRoots");
+  if (!box) return;
+  const t = chordTokens(), i = targetBar();
+  const p = i >= 0 ? splitToken(t[i]) : null;
+  const L = p ? p.root[0].toUpperCase() : null, A = p ? rootAcc(p.root) : null;
+  for (const b of box.querySelectorAll("[data-letter]")) b.setAttribute("aria-pressed", String(b.dataset.letter === L));
+  for (const b of box.querySelectorAll("[data-acc]")) b.setAttribute("aria-pressed", String(!!p && b.dataset.acc === A));
 }
 
 /* 點性質:換掉正在編輯那一格的性質,根音與轉位低音都留著 */
@@ -7851,14 +7985,29 @@ function qualLabel(q){ return q.k ? T(q.k) : q.s; }
 function renderPalette(){
   const rootBox = $("palRoots");
   rootBox.innerHTML = "";
-  for (const r of PAL_ROOTS) {
+  for (const r of PAL_LETTERS) {
     const b = document.createElement("button");
     b.type = "button";
     b.className = "pal-btn";
     b.textContent = r;
-    b.title = T("palRootLabel", { root: r });
+    b.dataset.letter = r;
+    b.title = T("palLetterLabel", { root: r });
     b.setAttribute("aria-label", b.title);
     b.addEventListener("click", () => palRoot(r));
+    rootBox.appendChild(b);
+  }
+  const gap = document.createElement("span");
+  gap.className = "pal-gap";
+  rootBox.appendChild(gap);
+  for (const x of PAL_ACCS) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "pal-btn";
+    b.textContent = x.label || x.a;
+    b.dataset.acc = x.a;
+    b.title = T("palAccLabel", { acc: x.label || x.a });
+    b.setAttribute("aria-label", b.title);
+    b.addEventListener("click", () => palAcc(x.a));
     rootBox.appendChild(b);
   }
   const qualBox = $("palQuals");

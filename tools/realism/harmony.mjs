@@ -43,7 +43,7 @@ await pg.evaluate(() => {
 });
 await pg.click('#playBtn');
 await pg.waitForFunction(s => typeof playing !== 'undefined' && playing && currentBeat() > 8 + s / spb, SECS, { timeout: 300000, polling: 500 });
-const H = await pg.evaluate(() => __H);
+const H = await pg.evaluate(() => Object.assign(__H, { loopBars: voicings.length, countIn: countInBeats }));
 await b.close(); sv.close();
 const chords = Object.values(H.chords).flat().sort((a, b) => a.from - b.from);
 const at = beat => chords.find(c => beat >= c.from - 1e-6 && beat < c.to - 1e-6);
@@ -92,3 +92,40 @@ for (const [k, S] of Object.entries(stats)) S.clash_pct = +(100 * S.clash / S.n)
 console.log(JSON.stringify(out));
 const counts = {}; for (const x of bad) { const k = x.replace(/@拍[0-9.]+ /, '').replace(/\(從拍[0-9.]+/, '('); counts[k] = (counts[k] || 0) + 1; }
 Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 25).forEach(([k, n]) => console.log('  ', n, '×', k));
+/* 頂音檢查:屬七和弦(大三 + 降七)上,**同一下的最高音是七音**的次數。
+   聽的人把最高音當旋律,七音停在最上面、又沒有往下解決,聽起來就是懸著、不和諧。
+   分「過門小節」(一圈的最後一小節)與其他小節 */
+{
+  const nBars = Object.keys(H.chords).length ? Math.max(...Object.values(H.chords).flat().map(c => c.to)) : 0;
+  const barLen = (() => { const c = Object.values(H.chords)[0]; return c ? c[c.length - 1].to - c[0].from : 4; })();
+  const loopBars = H.loopBars || 0;
+  /* 同一下的音**不是同時落下的**(和弦攤開 4–12ms、刷弦一條一條錯開),
+     所以照時間排序、間隔小於 0.1 拍的算同一下,不能用四捨五入的格子切 */
+  const groups = {};
+  const byInst = {};
+  for (const [inst, m, beat] of H.notes) {
+    if (inst === 'bass' || inst === 'padlow') continue;
+    (byInst[inst] || (byInst[inst] = [])).push([beat, m]);
+  }
+  let gi = 0;
+  for (const [inst, arr] of Object.entries(byInst)) {
+    arr.sort((a, b) => a[0] - b[0]);
+    let cur = null;
+    for (const [beat, m] of arr) {
+      if (!cur || beat - cur.last > 0.1) { cur = groups[gi++] = { inst, beat, last: beat, ms: [] }; }
+      cur.ms.push(m); cur.last = beat;
+    }
+  }
+  const T = {};
+  for (const g of Object.values(groups)) {
+    const c = at(g.beat + 0.01); if (!c) continue;
+    const iv = new Set(c.iv); if (!(iv.has(4) && iv.has(10))) continue;
+    const top = Math.max(...g.ms), rel = (((top % 12) - c.root) % 12 + 12) % 12;
+    const barNo = Math.floor((g.beat - (H.countIn || 0)) / barLen + 1e-6);
+    const fill = H.loopBars ? (barNo % H.loopBars) === H.loopBars - 1 : false;
+    const key = g.inst + (fill ? '(過門)' : '');
+    const S = T[key] || (T[key] = { hits: 0, top7: 0 });
+    S.hits++; if (rel === 10) S.top7++;
+  }
+  console.log('屬七和弦上頂音是七音:', JSON.stringify(T));
+}

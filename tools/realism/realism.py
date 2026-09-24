@@ -146,10 +146,62 @@ def cmd_analyze(a):
     txt = txt.split(mark)[0].rstrip() + '\n\n' + mark + '\n' + '\n'.join(lines) + '\n'
     open(path, 'w').write(txt); print('\n'.join(lines))
 
+def _dataset():
+    clips = {c['id']: c for c in jl(os.path.join(DB, 'clips.jsonl'))}
+    by = {}
+    for r in jl(os.path.join(DB, 'ratings.jsonl')): by.setdefault(r['clip'], []).append(r['score'])
+    ids = [i for i in by if i in clips and clip_emb(clips[i]) is not None]
+    y = np.array([np.mean(by[i]) for i in ids])
+    hand = np.array([clips[i]['features']['bandsRel'] + [clips[i]['features'][k] for k in ('crest', 'corr', 'rms', 'bal')] for i in ids])
+    emb = np.array([clip_emb(clips[i]).mean(0) for i in ids])
+    return ids, y, {'聲學特徵': hand, 'VGGish': emb, '兩者合併': np.hstack([hand, emb])}
+
+def _ridge(X, y, lam):
+    mu, sd = X.mean(0), X.std(0) + 1e-6; Z = (X - mu) / sd; ym = y.mean()
+    w = np.linalg.solve(Z.T @ Z + lam * np.eye(Z.shape[1]), Z.T @ (y - ym))
+    return {'mu': mu.tolist(), 'sd': sd.tolist(), 'w': w.tolist(), 'b': float(ym)}
+
+def _pred(m, X):
+    return ((X - np.array(m['mu'])) / np.array(m['sd'])) @ np.array(m['w']) + m['b']
+
+def cmd_learn(a):
+    """學你的耳朵:ridge 回歸,**留一驗證**(每次拿掉一段、用其餘的訓練、猜它)。
+    比的是「猜平均分」這條基準線——贏不了它就代表還沒學到東西,要老實說"""
+    from scipy.stats import spearmanr
+    ids, y, sets = _dataset()
+    n = len(y); print(f'樣本 {n} 段,分數平均 {y.mean():.2f},分數種類 {sorted(set(y.tolist()))}')
+    base = np.mean([abs(y[i] - np.delete(y, i).mean()) for i in range(n)])
+    print(f'基準線(永遠猜平均):平均誤差 {base:.2f} 分')
+    best = None
+    for name, X in sets.items():
+        for lam in (1, 10, 100, 1000):
+            p = np.array([_pred(_ridge(np.delete(X, i, 0), np.delete(y, i), lam), X[i:i + 1])[0] for i in range(n)])
+            mae = np.abs(np.clip(p, 1, 5) - y).mean(); rho = spearmanr(p, y).correlation
+            if best is None or mae < best[0]: best = (mae, name, lam, rho)
+            print(f'  {name:6} λ={lam:<5} 留一驗證平均誤差 {mae:.2f}  排序相關 ρ={rho:+.2f}')
+    mae, name, lam, rho = best
+    m = _ridge(sets[name], y, lam); m.update({'features': name, 'lam': lam, 'looMAE': round(float(mae), 3),
+        'looRho': round(float(rho), 3), 'baselineMAE': round(float(base), 3), 'n': n})
+    json.dump(m, open(os.path.join(DB, 'model.json'), 'w'))
+    verdict = '贏過基準線' if mae < base - 0.05 else '**沒有贏過基準線**(樣本太少,還不能信)'
+    print(f'最好的:{name} λ={lam},誤差 {mae:.2f} vs 基準 {base:.2f} → {verdict}')
+
+def cmd_predict(a):
+    """用學到的模型幫還沒人打分的片段打分"""
+    m = json.load(open(os.path.join(DB, 'model.json')))
+    clips = {c['id']: c for c in jl(os.path.join(DB, 'clips.jsonl'))}
+    rated = {r['clip'] for r in jl(os.path.join(DB, 'ratings.jsonl'))}
+    for i, c in clips.items():
+        e = clip_emb(c)
+        if e is None: continue
+        hand = np.array([c['features']['bandsRel'] + [c['features'][k] for k in ('crest', 'corr', 'rms', 'bal')]])
+        X = {'聲學特徵': hand, 'VGGish': e.mean(0)[None], '兩者合併': np.hstack([hand, e.mean(0)[None]])}[m['features']]
+        print(f"{i} {c['commit']} {c['feel']:9} {c['style']:6} 預測 {float(np.clip(_pred(m, X)[0], 1, 5)):.2f}" + ('  (已有人工分)' if i in rated else ''))
+
 ap = argparse.ArgumentParser(); sp = ap.add_subparsers(dest='cmd', required=True)
 r = sp.add_parser('ref'); rs = r.add_subparsers(dest='sub', required=True)
 ra = rs.add_parser('add'); ra.add_argument('file'); ra.add_argument('--name', required=True); ra.add_argument('--genre', required=True)
 ra.add_argument('--start', type=float); ra.add_argument('--end', type=float); ra.add_argument('--vocal', action='store_true')
-sp.add_parser('score'); sp.add_parser('analyze')
+sp.add_parser('score'); sp.add_parser('analyze'); sp.add_parser('learn'); sp.add_parser('predict')
 a = ap.parse_args()
-{'ref': cmd_ref_add, 'score': cmd_score, 'analyze': cmd_analyze}[a.cmd](a)
+{'ref': cmd_ref_add, 'score': cmd_score, 'analyze': cmd_analyze, 'learn': cmd_learn, 'predict': cmd_predict}[a.cmd](a)

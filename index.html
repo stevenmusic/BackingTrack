@@ -2713,7 +2713,7 @@ let masterHp = null, masterGlue = null, masterSat = null;
 /* 每一條 bus 自己的 EQ / 壓縮 / 空氣 / chorus。預設全部透明(0dB、不壓、wet 0),
    數值寫在 `FEELS[x].mix`,跟 combHp 那一組同一個做法 */
 let keysBus = null, keysEq = null, keysAir = null, keysChorus = null;
-let bassEqN = null, bassCompN = null, bassMk = null, bassDry = null, bassWet = null, drumAir = null, drumMidN = null;
+let bassEqN = null, bassCompN = null, bassMk = null, bassDry = null, bassWet = null, drumAir = null, drumMidN = null, drumRevSend = null;
 let combAir = null, combChorus = null, masterMid = null, masterAirN = null, revTone = null, drumWidth = null, padLp = null;
 let echoBus = null, echoL = null, echoR = null;
 /* 延遲時間跟著速度走:八分與附點八分(那是最常見的一組乒乓)。
@@ -3043,7 +3043,7 @@ function ensureAudio(){
     drumMidN = ctx.createBiquadFilter();
     drumMidN.type = "peaking"; drumMidN.frequency.value = 1000; drumMidN.Q.value = 0.8; drumMidN.gain.value = 0;
     drumGlue.connect(drumMidN); drumMidN.connect(drumAir); drumAir.connect(drumWidth.input); drumWidth.output.connect(masterGain);
-    const dSend = ctx.createGain();
+    const dSend = drumRevSend = ctx.createGain();
     dSend.gain.value = 0.1;
     drumGlue.connect(dSend); dSend.connect(reverbBus);
 
@@ -3799,7 +3799,22 @@ function playDrum(piece, when, gain, vel){
 
   const src = ctx.createBufferSource();
   src.buffer = slot.mid[rr % slot.mid.length];
-  src.connect(g);
+  /* **鼓件的音色 EQ 與悶音**(`FEELS[x].drumTone` / `drumDamp`,沒寫就是原樣)。
+     Virtuosity 是實錄的**爵士鼓組**:鼓皮開著、餘音長、房間大。City Pop 的鼓是
+     八〇年代初錄音室那種**悶住、調緊、乾**的聲音(鼓皮上貼膠帶、大鼓塞枕頭)。
+     分軌跟三首參考曲比,我們的真鼓反而比合成鼓更不像 City Pop——差在音色不在音量。
+     悶音 = 撐 `hold` 秒之後照 `tau` 收掉(真的貼了膠帶的鼓就是這樣:音頭一樣,尾巴沒了) */
+  const f0 = feel();
+  let head = g;
+  const tone = f0.drumTone && f0.drumTone[piece];
+  if (tone) for (let i = tone.length - 1; i >= 0; i--) {
+    const [type, hz, db, q] = tone[i];
+    const bq = ctx.createBiquadFilter(); bq.type = type; bq.frequency.value = hz; bq.gain.value = db; bq.Q.value = q || 0.9;
+    bq.connect(head); head = bq;
+  }
+  src.connect(head);
+  const damp = f0.drumDamp && f0.drumDamp[piece];
+  if (damp) { g.gain.setValueAtTime(g.gain.value, when + damp[0]); g.gain.setTargetAtTime(0, when + damp[0], damp[1]); }
   src.start(when);
   activeSources.add(src);
   src.onended = () => { activeSources.delete(src);
@@ -3817,6 +3832,7 @@ function playDrum(piece, when, gain, vel){
     rsrc.buffer = roomSlot.room[rr % roomSlot.room.length];
     const rg = ctx.createGain();
     rg.gain.value = gain * layerNorm;
+    if (damp) { rg.gain.setValueAtTime(rg.gain.value, when + damp[0]); rg.gain.setTargetAtTime(0, when + damp[0], damp[1] * 1.5); }
     rsrc.connect(rg); rg.connect(roomBus);
     rsrc.start(when);
     activeSources.add(rsrc);
@@ -4965,6 +4981,7 @@ function applyMix(){
   if (bassMk) bassMk.gain.value = m.bassMakeup || 1;
   if (drumAir) { drumAir.frequency.value = m.drumAirHz || 8000; drumAir.gain.value = m.drumAir || 0; }
   if (drumMidN) { drumMidN.frequency.value = m.drumMidHz || 1000; drumMidN.gain.value = m.drumMid || 0; }
+  if (drumRevSend) drumRevSend.gain.value = m.drumRev != null ? m.drumRev : 0.1;
   if (combAir) { combAir.frequency.value = m.gtrAirHz || 6500; combAir.gain.value = m.gtrAir || 0; }
   if (combChorus) combChorus.wet.gain.value = m.gtrChorus || 0;
 }
@@ -5212,6 +5229,15 @@ const FEELS = {
     /* 1.3 → 0.68(−5.6dB):三首參考曲(Midnight Pretenders / Plastic Love / 真夜中のドア)
        分軌之後貝斯相對整軌 −3.4～−6.6dB(平均 −5.2),我們是 −1.5～−2.0,貝斯站得太前面 */
     bassGain: 0.68,
+    /* **鼓件悶音**:[撐幾秒, 收的時間常數]。大鼓塞枕頭、小鼓貼膠帶、tom 調緊——
+       八〇年代初錄音室的鼓(村上ポンタ秀一、青山純)音頭飽滿、尾巴很短 */
+    drumDamp: { kick: [0.14, 0.05], snare: [0.13, 0.05], htom: [0.2, 0.07], ltom: [0.24, 0.08] },
+    /* **鼓件音色**:[濾波器種類, Hz, dB, Q]。大鼓補 60Hz 的肉、挖 400Hz 的紙箱、補 3.5k 的踩點;
+       小鼓補 200Hz 的厚度、挖 900Hz 的鐵皮響 */
+    drumTone: {
+      kick:  [["peaking", 60, 3, 0.9], ["peaking", 400, -6, 1.0], ["peaking", 3500, 3, 1.2]],
+      snare: [["peaking", 200, 2.5, 1.0], ["peaking", 900, -4, 1.2]],
+    },
     /* **pocket**:貝斯落後 4 毫秒、切音吉他往前 2 毫秒。
        110 BPM 的一個十六分是 136 毫秒,所以 4 毫秒只有 3%——
        它不會被聽成「不準」,但那個「浮起來」的感覺就是從這裡來的。
@@ -5303,10 +5329,13 @@ const FEELS = {
               60–250 0.92 → 0.95 → 0.97、3–8k 0.72 → 0.42 → 0.76、8–16k **0.94 → 0.29** → 0.80。
               高頻散掉的來源是鼓(Virtuosity 是一對中距離麥,8k 以上 L/R 只有 0.03),
               不是殘響也不是 chorus(兩個都關掉量過,一點都沒變) */
-           drumWidth: 0.7, roomLevel: 0.5, revLp: 6000, padLp: 3000,
+           drumWidth: 0.5, roomLevel: 0.15, revLp: 6000, padLp: 3000,
            /* 鼓 +7dB、中頻挖 7dB:參考曲的鼓相對整軌 −2.5～−5.2dB(平均 −3.5),我們 −8～−11,
               使用者也寫過「鼓的力度感覺不到」「鼓沒有 punch」。City Pop 的鼓是整首最大聲的那一層 */
-           drumLevel: 2.24, drumMid: -7, drumMidHz: 1000 },
+           drumLevel: 2.24, drumMid: -7, drumMidHz: 1000,
+           /* 方案 A(使用者選的):把實錄爵士鼓改乾——房間麥 0.5 → 0.15、鼓的殘響送 0.1 → 0.05、
+              寬度 0.7 → 0.5(參考曲的鼓 L/R 相關 0.89–0.985,比我們的 0.87 窄) */
+           drumRev: 0.05 },
   },
   /* Blues:shuffle。跟 Pop 同一組鼓件、同一個 backbeat,差別在**八分是三連音的**
      (`swing: 0.66`,不是爵士的 0.58——藍調的搖擺更接近正三連音),

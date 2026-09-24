@@ -2705,7 +2705,7 @@ let masterHp = null, masterGlue = null, masterSat = null;
    數值寫在 `FEELS[x].mix`,跟 combHp 那一組同一個做法 */
 let keysBus = null, keysEq = null, keysAir = null, keysChorus = null;
 let bassEqN = null, bassCompN = null, bassMk = null, bassDry = null, bassWet = null, drumAir = null;
-let combAir = null, combChorus = null;
+let combAir = null, combChorus = null, masterMid = null, masterAirN = null, revTone = null, drumWidth = null;
 let echoBus = null, echoL = null, echoR = null;
 /* 延遲時間跟著速度走:八分與附點八分(那是最常見的一組乒乓)。
    **速度一改就要重算**,不然換速度之後延遲會跟節奏錯開 */
@@ -2852,8 +2852,14 @@ function ensureAudio(){
       return c;
     })();
     masterSat.oversample = "none";
+    /* **參考比對 EQ**:母帶工程師拿一張真的唱片對著調的那一步。
+       一顆寬的中頻鐘形 + 一顆高頻架子,數值在 `FEELS[x].mix.masterMid / masterAir`,
+       沒寫就是 0dB(透明)。City Pop 的數字是對著〈Plastic Love〉前奏量出來的 */
+    masterMid = ctx.createBiquadFilter();
+    masterMid.type = "peaking"; masterMid.Q.value = 0.6; masterMid.frequency.value = 400; masterMid.gain.value = 0;
+    masterAirN = shelf(ctx, "highshelf", 5000);
     masterGain.connect(masterHp);
-    masterHp.connect(masterGlue);
+    masterHp.connect(masterMid); masterMid.connect(masterAirN); masterAirN.connect(masterGlue);
     masterGlue.connect(masterSat);
     masterSat.connect(limiter);
     limiter.connect(outGain);
@@ -2892,7 +2898,12 @@ function ensureAudio(){
     conv.buffer = buildImpulseResponse(2.0, 2.4);
     const wet = ctx.createGain();
     wet.gain.value = 0.26;
-    reverbBus.connect(pre); pre.connect(conv); conv.connect(wet);
+    /* 殘響回來的高頻要能收(`FEELS[x].mix.revLp`,預設 20k = 透明)。
+       八〇年代的 plate / Lexicon 回來是暗的;這份 IR 的高頻左右不相關,
+       不收的話 8k 以上整片變成空氣,hi-hat 就不在正中間了 */
+    revTone = ctx.createBiquadFilter();
+    revTone.type = "lowpass"; revTone.frequency.value = 20000; revTone.Q.value = 0.5;
+    reverbBus.connect(pre); pre.connect(conv); conv.connect(revTone); revTone.connect(wet);
     wet.connect(masterGain);   // 接在 masterGain 之前,殘響一樣受限幅器保護
 
     /* 鼓與貝斯各走自己的匯流排:鼓只沾一點殘響(太濕會糊掉拍點),
@@ -2911,7 +2922,23 @@ function ensureAudio(){
     drumGlue.release.value = 0.12;
     drumBus.connect(drumGlue);
     drumAir = shelf(ctx, "highshelf", 8000);
-    drumGlue.connect(drumAir); drumAir.connect(masterGain);
+    /* 鼓的立體聲寬度(`FEELS[x].mix.drumWidth`,1 = 原樣)。Virtuosity 是一對中距離麥克風,
+       高頻左右幾乎不相關(8k 以上 0.03);八〇年代的 City Pop 是近距離收音、
+       hi-hat 在正中間(〈Plastic Love〉量到 0.94)。L' = L·(1+w)/2 + R·(1−w)/2 */
+    drumWidth = (() => {
+      const sp = ctx.createChannelSplitter(2), mg = ctx.createChannelMerger(2);
+      const inp = ctx.createGain(), g = [0, 1, 2, 3].map(() => ctx.createGain());
+      inp.channelCountMode = "explicit"; inp.channelCount = 2;
+      inp.connect(sp);
+      sp.connect(g[0], 0); g[0].connect(mg, 0, 0);   // L → L
+      sp.connect(g[1], 1); g[1].connect(mg, 0, 0);   // R → L
+      sp.connect(g[2], 1); g[2].connect(mg, 0, 1);   // R → R
+      sp.connect(g[3], 0); g[3].connect(mg, 0, 1);   // L → R
+      const set = (w) => { g[0].gain.value = g[2].gain.value = (1 + w) / 2; g[1].gain.value = g[3].gain.value = (1 - w) / 2; };
+      set(1);
+      return { input: inp, output: mg, set };
+    })();
+    drumGlue.connect(drumAir); drumAir.connect(drumWidth.input); drumWidth.output.connect(masterGain);
     const dSend = ctx.createGain();
     dSend.gain.value = 0.1;
     drumGlue.connect(dSend); dSend.connect(reverbBus);
@@ -4803,6 +4830,14 @@ function applyMix(){
   if (keysEq) { keysEq.frequency.value = m.keysEqHz || 280; keysEq.gain.value = m.keysEq || 0; }
   if (keysAir) { keysAir.frequency.value = m.keysAirHz || 5000; keysAir.gain.value = m.keysAir || 0; }
   if (keysChorus) keysChorus.wet.gain.value = m.keysChorus || 0;
+  if (keysBus) keysBus.gain.value = m.keysLevel || 1;
+  if (revTone) revTone.frequency.value = m.revLp || 20000;
+  if (drumWidth) drumWidth.set(m.drumWidth === undefined ? 1 : m.drumWidth);
+  if (roomBus) roomBus.gain.value = ROOM_BUS_LEVEL * (m.roomLevel === undefined ? 1 : m.roomLevel);
+  if (masterMid) { masterMid.frequency.value = m.masterMidHz || 400; masterMid.gain.value = m.masterMid || 0; }
+  if (masterAirN) { masterAirN.frequency.value = m.masterAirHz || 5000; masterAirN.gain.value = m.masterAir || 0; }
+  if (keysEq) keysEq.Q.value = m.keysEqQ || 1;
+  if (drumBus) drumBus.gain.value = 0.8 * (m.drumLevel || 1);
   if (bassEqN) { bassEqN.frequency.value = m.bassEqHz || 900; bassEqN.gain.value = m.bassEq || 0; }
   if (bassCompN) {
     const on = m.bassComp !== undefined;
@@ -5005,7 +5040,7 @@ const FEELS = {
     swing: 0.5, push: true, sub: 2,
     kickGain: 0.66,
     snarePiece: "snare", snareGain: 0.6,
-    cym: "hihat", cymGain: 0.24,
+    cym: "hihat", cymGain: 0.28,
     bass: "citypop", kit: "electric", meters: ["4/4"],
     /* City Pop 的鍵盤是 Rhodes,不是平台鋼琴——山下達郎、竹內瑪莉亞那個年代
        錄音室裡擺的就是電鋼琴。和聲一模一樣,換掉音色才聽得出是這一種 */
@@ -5042,8 +5077,8 @@ const FEELS = {
     parts: { guitar: "chop", gtone: "clean", glevel: 0.185,
              guitar2: { lvl: 0.12 },
              brass: { lvl: 0.115 },
-             keys: "pad", klevel: 0.038,
-             perc: { kind: "shaker", on: "sub", lvl: 0.24 } },
+             keys: "pad", klevel: 0.032,
+             perc: { kind: "shaker", on: "16", lvl: 0.32 } },
     /* AOR 的貝斯是往前的(後藤次利、細野晴臣那一路),不是墊在後面。
        量到 60Hz 比 Pop 低 2.5dB,補回來 */
     bassGain: 1.3,
@@ -5106,7 +5141,7 @@ const FEELS = {
        那不是「更專業」,是把吉他推到臉上。補償只是把壓下去的補回來,
        不是拿來加音量的——1.5 倍等於 +3.5dB,壓縮器根本沒壓那麼多 */
     mix: { gtrHp: 150, gtrEq: 1.2, gtrEqHz: 3200, gtrComp: -18, gtrRatio: 3, gtrMakeup: 1.0,
-           padHp: 160, padEq: -2.5, padEqHz: 380,
+           padHp: 160,
            /* ── 第二輪:照頻譜與 solo 量出來的四個洞補 ──────────────
               (真的取樣量的;scratchpad 的 `cpan.mjs`)
               - 整首的最高點在 250Hz、2k 以上每個八度掉 5–6dB(一般唱片約 3–4):
@@ -5117,10 +5152,25 @@ const FEELS = {
            /* 高頻的架子要從 2.5–5k 就開始:第一版掛在 5k / 8k / 6.5k,
               低頻補回來了,但 1k→2k 還是掉 6.6dB——缺的是**presence**
               (Rhodes 的鐘聲、小鼓的響線、hi-hat 的顆粒都在 2–5k),不是空氣 */
-           keysEq: -2.5, keysEqHz: 280, keysAir: 3, keysAirHz: 2500, keysChorus: 0.35,
+           keysAir: 3, keysAirHz: 2500, keysChorus: 0.35,
            bassComp: -24, bassRatio: 4, bassMakeup: 1.1, bassEq: 2, bassEqHz: 900,
-           drumAir: 3, drumAirHz: 5000,
-           gtrAir: 3, gtrAirHz: 4000, gtrChorus: 0.4 },
+           gtrChorus: 0.4,
+           /* ── 第三輪:對著〈Plastic Love〉的前奏(20–40 秒,純樂器)調 ──────
+              以 125Hz 對齊比八度頻帶,改之前是 **250–1k 多 7–8dB、4k–16k 少 8–10dB**
+              (中頻箱子聲 + 頂端太暗,正是「不像唱片」的那個聲音)。
+              每一層在 250Hz 都有份(鼓、貝斯、Rhodes、鋪底都在 −18～−21),
+              所以單調一層補不完,主力是母帶的參考比對 EQ(`masterMid` / `masterAir`)。
+              誤差(63–8k 的 RMS)6.42 → 2.44dB,之後再調幾乎不動了 */
+           keysEq: -5, keysEqHz: 800, keysEqQ: 0.6, keysLevel: 0.7,
+           padEq: -4, padEqHz: 400,
+           drumAir: 4, drumAirHz: 6000,
+           gtrAir: 4, gtrAirHz: 3500,
+           masterMid: -6, masterMidHz: 330, masterAir: 6.5, masterAirHz: 3200,
+           /* 立體聲也對著同一首量(八度頻帶的 L/R 相關,原曲 → 改之前 → 現在):
+              60–250 0.92 → 0.95 → 0.97、3–8k 0.72 → 0.42 → 0.76、8–16k **0.94 → 0.29** → 0.80。
+              高頻散掉的來源是鼓(Virtuosity 是一對中距離麥,8k 以上 L/R 只有 0.03),
+              不是殘響也不是 chorus(兩個都關掉量過,一點都沒變) */
+           drumWidth: 0.5, roomLevel: 0.35, revLp: 5000 },
   },
   /* Blues:shuffle。跟 Pop 同一組鼓件、同一個 backbeat,差別在**八分是三連音的**
      (`swing: 0.66`,不是爵士的 0.58——藍調的搖擺更接近正三連音),
@@ -6646,7 +6696,10 @@ function schedulePerc(barStartBeat, b, absBar, isFill){
   const div = divNow(), arc = arcGain(absBar);
   const spec = f.parts.perc;                    // { kind, on, lvl }
   const base = (spec.lvl || 0.3) * p.energy * arc;
-  const step = spec.on === "beat" ? div : Math.max(1, subOf());
+  /* `on: "16"` 是**走滿十六分**:對著〈Plastic Love〉量,7–16kHz 每一個十六分都有起音
+     (八分只稍微重一點),而我們的 hi-hat 只走八分——所以那一層是沙鈴在走。
+     hi-hat 維持八分(走滿就變放克),十六分交給沙鈴 */
+  const step = spec.on === "beat" ? div : spec.on === "16" ? 1 : Math.max(1, subOf());
   for (let k = 0; k < div; k++) {
     const idx = b * div + k;
     let hit = false, lvl = base;
@@ -6655,7 +6708,7 @@ function schedulePerc(barStartBeat, b, absBar, isFill){
     } else if (idx % step === 0) {
       hit = true;
       // 正拍重、反拍輕:一樣大聲就變成噴氣的白噪音
-      lvl = base * (idx % div === 0 ? 1 : 0.6);
+      lvl = base * (idx % div === 0 ? 1 : spec.on === "16" ? (idx % 2 ? 0.66 : 0.8) : 0.6);
       if (st === "pad" && idx % div !== 0) hit = false;
     }
     if (!hit) continue;

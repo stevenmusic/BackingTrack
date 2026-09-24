@@ -134,8 +134,14 @@ async function loadClip(url){
   const my = ++player.token; player.buf = null; player.offset = 0;
   $("play").disabled = true; $("clipSub").textContent = "載入中…";
   try {
+    /* 音檔包在 JSON 裡(base64):附屬檔案的 WAV 會被擋(403),JSON 是平台允許讀的資料格式 */
     const r = await fetch(url); if (!r.ok) throw new Error("HTTP " + r.status);
-    const data = await r.arrayBuffer();
+    let data;
+    if (/\.json($|\?)/.test(url)) {
+      const bin = atob((await r.json()).b64), u8 = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      data = u8.buffer;
+    } else data = await r.arrayBuffer();
     const buf = await new Promise((ok, bad) => ac().decodeAudioData(data, ok, bad));
     if (my !== player.token) return;
     player.buf = buf; $("play").disabled = false; paintTime();

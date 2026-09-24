@@ -12,7 +12,8 @@
 1. 改 index.html
 2. cases.json 加一組新版本  →  node render.mjs          # 錄片段,聲學特徵寫進 db/clips.jsonl
 3. python realism.py score                                # VGGish:P(真)、最近距離、各組 FAD → db/scores.jsonl
-4. 片段放上盲聽台(發佈時帶 files、db 的 clips 集合加一筆)
+4. 片段放上盲聽台:**WAV 包成 base64 的 JSON**(`clips/<id>.json`,`{type, b64}`)再發佈、db 的 clips 集合加一筆。
+   artifact 的附屬檔案**直接放 WAV 會 403**、`<audio>` 也會被擋,JSON + fetch + Web Audio 才播得出來
 5. 你打分 → 讀回 db/ratings.jsonl → python realism.py analyze   # 寫進 KNOWLEDGE.md
 ```
 

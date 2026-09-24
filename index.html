@@ -5042,8 +5042,10 @@ const FEELS = {
     /* 木吉他刷弦 + 鈴鼓疊在 backbeat 上。流行歌的節奏組本來就不只鼓貝鍵,
        那把刷弦的木吉他是「歌手自彈自唱」那一層 */
     /* `gdouble` 是**第二軌吉他**:流行唱片的木吉他一定錄兩遍、左右各一把。
-       0.72 是「聽得出變寬但不會蓋掉鋼琴」的位置 */
-    parts: { guitar: "strum", gtone: "steel", glevel: 0.26, gdouble: 0.72,
+       0.72 是「聽得出變寬但不會蓋掉鋼琴」的位置。
+       `glevel` 0.26 → 0.13:盲聽第二批的 A/B,吉他 −6dB 拿 3 分、原樣 1 分、關掉 2 分——
+       吉他要在,但要退到後面(見 tools/realism/KNOWLEDGE.md) */
+    parts: { guitar: "strum", gtone: "steel", glevel: 0.13, gdouble: 0.72,
              perc: { kind: "tamb", on: "back", lvl: 0.26 } },
   },
   /* City Pop:七〇末到八〇的日本 AOR(山下達郎、竹內瑪莉亞)。
@@ -5250,8 +5252,9 @@ const FEELS = {
     /* 鈴鼓改打 backbeat(跟 Pop 一樣),不要跟十六分 hi-hat 打同一排八分:
        兩層平均分布的高頻疊在一起,十六分的強弱差就聽不出來了,
        而那個強弱差正是放克的律動來源 */
+    /* 風琴 `klevel` 0.05 → 0.025:盲聽第二批 −6dB 拿 3 分、原樣 2 分、關掉 1 分 */
     parts: { guitar: "chop", gtone: "chop", glevel: 0.14,
-             keys: "organ", klevel: 0.05,
+             keys: "organ", klevel: 0.025,
              perc: { kind: "tamb", on: "back", lvl: 0.2 } },
   },
   /* K-Pop:half-time 的十六分 R&B / trap。**三件事同時跟別人不一樣**:

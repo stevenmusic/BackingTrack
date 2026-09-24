@@ -1918,6 +1918,13 @@ function holdUnits(tok){ return HOLD_BEAT.test(tok) ? chordDiv() : 1; }
 /* 一個和弦格 = 幾個排程格。`sub` 是整數倍,所以這個一定是整數 */
 function unitSlots(){ return divNow() / chordDiv(); }
 /* 這顆和弦是不是在第 b 拍**之內**開始的(不一定落在拍點上) */
+/* 這顆和弦**真的**的五度:半減/減七是降五度(Bm7♭5 的五度是 F 不是 F♯)、增是升五度。
+   原本貝斯與 bossa 的拇指一律彈「根音 +7」,Bm7♭5 下面撐了 2.4 拍的 F♯——
+   和聲檢查(`tools/realism/harmony.mjs`)抓到的真的衝突 */
+function chordFifth(chord){
+  const iv = chord && chord.intervals ? chord.intervals.map(x => ((x % 12) + 12) % 12) : [];
+  return iv.indexOf(7) >= 0 ? 7 : iv.indexOf(6) >= 0 ? 6 : iv.indexOf(8) >= 0 ? 8 : 7;
+}
 function startsInBeat(sp, b){ return sp.fromBeat >= b && sp.fromBeat < b + 1; }
 // 這一拍裡有沒有新的和弦開始(有的話 bossa 的拇指要彈新和弦的根音,不換五度)
 function multiStart(spans, b){ return spans.some(sp => sp.v && startsInBeat(sp, b) && sp.fromBeat > 0); }
@@ -6124,7 +6131,8 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord, span){
   const beatTimeAt = (n) => beatTime(barStartBeat + b0 + n);
   const pcOf = (raw) => ((((raw + transposeOn) % 12) + 12) % 12);
   const rootPc = pcOf(chord.bassPc);
-  const fifthPc = pcOf(chord.rootPc + 7);
+  const fifthIv = chordFifth(chord);
+  const fifthPc = pcOf(chord.rootPc + fifthIv);
   // 三度取和弦自己寫的那個三度,小調和弦不會彈成大三度
   const third = chord.intervals.indexOf(3) >= 0 ? 3 : 4;
 
@@ -6197,15 +6205,15 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord, span){
       // 半音接進下一顆根音:從下面還是從上面,看下一顆在哪一邊
       const app = T > R ? [T - 2, T - 1] : [T + 2, T + 1];
       const runs1 = [
-        [R, R + third, R + 7, R + 12],                  // 琶音往上衝
-        [R + 12, R + sev, R + 7, R + 5],                // 從八度滑下來
-        [R, R + 7, app[0], app[1]],                     // 五度再半音走進去
-        [R + 12, R + 7, R + third, app[1]],             // 下行琶音接半音
+        [R, R + third, R + fifthIv, R + 12],                  // 琶音往上衝
+        [R + 12, R + sev, R + fifthIv, R + 5],                // 從八度滑下來
+        [R, R + fifthIv, app[0], app[1]],                     // 五度再半音走進去
+        [R + 12, R + fifthIv, R + third, app[1]],             // 下行琶音接半音
       ];
       const runs2 = [
-        [R, R + third, R + 7, R + 12, R + sev, R + 7, app[0], app[1]],
-        [R, R + 7, R + 12, R + 7, R + 12, R + sev, R + 7, app[1]],
-        [R + 12, R + sev, R + 7, R + 5, R + third, R + 2, R, app[1]],
+        [R, R + third, R + fifthIv, R + 12, R + sev, R + fifthIv, app[0], app[1]],
+        [R, R + fifthIv, R + 12, R + fifthIv, R + 12, R + sev, R + fifthIv, app[1]],
+        [R + 12, R + sev, R + fifthIv, R + 5, R + third, R + 2, R, app[1]],
       ];
       const pool = fillBeats === 2 ? runs2 : runs1;
       const run = pool[Math.floor(hash01(absBar, 197) * pool.length) % pool.length];
@@ -6404,7 +6412,9 @@ function compDur(absBar, idx, at, positions, sp, st){
   const lastOfChord = until === (sp && sp.to != null ? sp.to : end) && next >= until;
   if ((lastOfChord && chance(absBar, 133 + idx, 0.6)) || (idx === 0 && chance(absBar, 134, 0.5)))
     d = Math.max(d, (until - at) * sd * 0.98);
-  return Math.max(0.09, d);
+  /* 上限 0.86:`playNote` 還會再乘音長句法(`artic`,最多 ×1.13),
+     撐到換和弦那一下不留餘地的話會多出一點點撐進下一顆(和聲檢查抓到的) */
+  return Math.max(0.09, Math.min(d, (until - at) * sd * 0.86));
 }
 
 function schedulePiano(spans, barStartBeat, b, transpose, absBar, isFill){
@@ -6427,7 +6437,7 @@ function schedulePiano(spans, barStartBeat, b, transpose, absBar, isFill){
     started = true;
     const len = sp.toBeat - sp.fromBeat;
     playNote(sp.v.bass + transpose, slotTime(barStartBeat, sp.from),
-             spb * (multi ? len : (beats >= 4 ? mid : beats)), 0.52 * lhGain());
+             spb * (multi ? len : (beats >= 4 ? mid : beats)) * 0.88, 0.52 * lhGain());   // ×0.88 留給 artic
   }
   if (!started && !multi && beats >= 4 && b === mid) {
     // 整小節同一顆和弦時才在中間補一下(換和弦的地方已經有新的低音了)
@@ -6440,7 +6450,7 @@ function schedulePiano(spans, barStartBeat, b, transpose, absBar, isFill){
       const t0 = beatTime(barStartBeat + b);
       keysNotes(v.upper).forEach((n, i) =>
         playNote(n + transpose, t0 + chordRoll(t0, 84, i),
-                 spb * (here.toBeat - here.fromBeat),
+                 spb * (here.toBeat - here.fromBeat) * 0.88,
                  humanize(absBar, 84, p.compGain)));
     }
     if (!multi && b === mid && isFill && chance(absBar, 80, 0.55)) {
@@ -6500,7 +6510,7 @@ function schedulePiano(spans, barStartBeat, b, transpose, absBar, isFill){
   if (isFill && b === beats - 1) {
     const tf = slotTime(barStartBeat, slotsInBar() - 1);
     keysNotes((spanAt(spans, slotsInBar() - 1) || here).v.upper).forEach((n, i) =>
-      playNote(n + transpose, tf + chordRoll(tf, 88, i), slotDur(), p.compGain * 0.85));
+      playNote(n + transpose, tf + chordRoll(tf, 88, i), slotDur() * 0.85, p.compGain * 0.85));   // ×0.85 留給 artic
   }
 }
 
@@ -6989,6 +6999,13 @@ function scheduleGuitar(spans, barStartBeat, b, transpose, absBar, isFill){
   const base = (f.parts.glevel || 0.3) * p.energy * arc;
   const here = spanAt(spans, b * div);
   if (!here || !here.v) return;
+  /* **餘音不准撐進下一顆和弦**。刷弦原本撐 1.15 拍、墊底時整個響完,
+     和聲檢查量到 Pop 每 40 秒有 42–72 顆吉他音撐進下一顆和弦(C 的 G 撐進 Am、F 撐進 C)。
+     真的吉他手換和弦時左手一離開指板,上一顆的弦就停了 */
+  const capRing = (sp, idx, r) => {
+    const lim = Math.max(0.08, ((sp && sp.to != null ? sp.to : slotsInBar()) - idx) * slotDur() * 0.95);
+    return r > 0 ? Math.min(r, lim) : lim;
+  };
 
   /* Freddie Green:四分音符,每一拍一下,很短很悶。
      爵士的節奏吉他不打切分也不刷長音——它是節奏組的一部分,不是和聲層 */
@@ -7019,7 +7036,7 @@ function scheduleGuitar(spans, barStartBeat, b, transpose, absBar, isFill){
          盲聽被寫「很機械」——真的 bossa 是拇指與手指分工的 */
       const top = use.length > 3 ? use.slice(1) : use;
       strum(top, slotTime(barStartBeat, idx) + 0.004, base * (idx === 0 ? 0.92 : 0.76) * (0.9 + hash01(absBar, 160 + idx) * 0.2),
-            tone, false, 0.004, st === "pad" ? 0 : spb * (0.7 + hash01(absBar, 170 + idx) * 0.5), transpose);
+            tone, false, 0.004, capRing(sp, idx, st === "pad" ? 0 : spb * (0.7 + hash01(absBar, 170 + idx) * 0.5)), transpose);
     }
     /* **拇指**:一、三拍(4/4)彈低音,第二下換到五度——João Gilberto 那個「咚、咚」
        是 bossa 的心跳,跟手指的切分是兩條線。3/4 與 6/8 只在第一拍 */
@@ -7030,11 +7047,12 @@ function scheduleGuitar(spans, barStartBeat, b, transpose, absBar, isFill){
         const use = sp === here ? notes : guitarNotesFor(sp.chord, "bossa", transpose);
         let bass = use[0];
         if (b > 0 && sp.chord && !multiStart(spans, b)) {
-          const fifth = bass + 7 > 52 ? bass - 5 : bass + 7;          // 五度,往下或往上找近的
+          const fv = chordFifth(sp.chord);                              // 半減和弦是降五度
+          const fifth = bass + fv > 52 ? bass + fv - 12 : bass + fv;    // 五度,往下或往上找近的
           bass = hash01(absBar, 175) < 0.75 ? fifth : bass;
         }
         pluck(bass + transpose, beatTime(barStartBeat + b), base * (b === 0 ? 1.05 : 0.9), tone,
-              st === "pad" ? 0 : spb * 1.8, 0, 0);
+              capRing(sp, b * div, st === "pad" ? 0 : spb * 1.8), 0, 0);
       }
     }
     return;
@@ -7106,7 +7124,7 @@ function scheduleGuitar(spans, barStartBeat, b, transpose, absBar, isFill){
       const use = sp === here ? notes : guitarNotesFor(sp.chord, "strum", transpose);
       strum(isUp ? use.slice(-3) : use, slotTime(barStartBeat, idx),
             base * (idx === 0 ? 1.1 : 0.85), tone, isUp, 0.012,
-            isUp ? spb * 0.5 : ring, transpose);
+            capRing(sp, idx, isUp ? spb * 0.5 : ring), transpose);
     }
   }
 }
@@ -7197,7 +7215,7 @@ function prewarmGuitar(){
       for (const n of guitarNotesFor(sp.chord, f.parts.guitar, transposeOn)) {
         want.add(n + transposeOn);
         // bossa 的拇指第二下換到五度(見 scheduleGuitar),那一顆也要先載
-        if (f.parts.guitar === "bossa") want.add((n + 7 > 52 ? n - 5 : n + 7) + transposeOn);
+        if (f.parts.guitar === "bossa") { const fv = chordFifth(sp.chord); want.add((n + fv > 52 ? n + fv - 12 : n + fv) + transposeOn); }
       }
       /* **第二把吉他的音也要算進來**(它彈的是 `chop` 的聲位 +12)。
          漏掉的話那幾顆在 `gtrSample` 找不到取樣、`pluck` 就掉回 KS,

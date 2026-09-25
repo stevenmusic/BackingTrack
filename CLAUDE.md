@@ -1150,6 +1150,16 @@ Funk −11.4,跟改之前一模一樣。
    使用者指定的商用音源(Prominy SC、NI Electric Mint、Ample Guitar、Orange Tree)授權都不能放進網頁 / App;
    免費可散布的 Fender 取樣是 FreePats「Clean Electric Guitar」(CC0),但這個雲端環境連不到它的網站。
    先做了四把手上的琴 + City Pop 效果鏈(Fender 音箱、單線圈 EQ、壓縮、JC-120 立體聲 chorus)給使用者挑
+- **五軌全部對照真歌(`tools/realism/instgram.py`,每一軌量佔比、一拍四格、音長、音域、亮度、正反拍輕重、跟同一首其他樂器的音準差)**。
+  落在 12 首真歌中間 80% 以外的,第九輪修了:
+  貝斯太大聲(−3.8,真歌 −7.3～−4.7 → `bassGain` 0.24 → 0.19)、撐太長(2 拍,真歌 0.5–1.2 → `bassMaxBeat` 0.7);
+  吉他音域太高(midi 77,真歌 56–68,第二把吉他搬高八度造成的 → `guitar2.oct` 0)、太短(0.34 拍 → `chopLen` 0.6)、
+  十六分 a 太多(`chopGhost` 0.35 → 0.2)、音準高 4.3 音分(音頭過衝 5 → 2);
+  鋼琴太忙(每拍 1.22,真歌 0.23–1.1 → `COMP_CELLS.citypop` 改成一小節兩三下、拍點為主)、
+  音域太低(midi 48,左手太重 → `FEELS.citypop.lh` 0.35)。
+  鼓小 0.3dB、「其他」偏暗與銅管偏反拍還沒動
+- **改完一定要開頁面看 pageerror**:這一輪 `scheduleBass` 裡寫了一個不存在的 `f`,整個排程報錯、
+  harmony.mjs 回「和弦外音 0」但統計是空的——**「0 個違規」要連下數一起看,下數是 0 就是壞了**
 - **使用者提醒:「為什麼每次都要我丟資料給你」——資料能自己查就自己查**(WebSearch 可以用,
   但很多網站被網路政策擋,GitHub 通常通)
 

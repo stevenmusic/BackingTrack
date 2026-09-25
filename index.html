@@ -3781,8 +3781,26 @@ const SMP_EXT = {
        (C4 −21.0、E4 −29.2、A4 −31.2),照原樣彈一個和弦會有一顆突然不見。
        全部拉到 −16.5——那是 Tone.js electric 那組量到的水準,所以 `glevel` 的意思不變 */
     db: [-17.2, -15.8, -15.3, -15.7, -15.7, -18.3, -16.8, -17.5, -17.4, -17.1, -23.7, -18.8, -21.4, -21.3, -23.4, -20.7, -17.2, -18.4, -17.8, -27.6, -21.0, -22.3, -23.0, -22.5, -29.2, -23.2, -24.6, -30.9, -26.9, -31.2, -30.8, -31.4, -30.2, -30.4, -32.3, -29.9, -31.3, -29.4, -26.9, -25.2, -23.3, -23.5, -21.3, -26.7, -21.9, -19.2, -22.8],
-    target: -16.5 },
+    target: -16.5,
+    /* **音準表**(midi 40 起,單位音分;`/tmp/gpitch.py` 用 YIN 逐顆量、相鄰幾顆取中位數):
+       `att` 是音頭(前 0.12 秒)偏高多少、`sus` 是之後落定在哪。
+       斷奏是用力撥下去再悶住,**音頭一定偏高**(弦被撥片拉緊)——這一組在切音那一段
+       (midi 53–68)音頭偏高 **16–37 音分**、之後回到 ±8 以內。切音本來就短,
+       原本 0.2 秒的長度幾乎只聽得到音頭,等於整把吉他一直高二三十音分,
+       跟準的鋼琴疊在一起就是「非常不搭」。`pluck` 照這張表在音頭把音拉下來、
+       0.12 秒內滑回落定的音——**保留 5 音分的過衝**,真的吉他撥下去本來就會高一點 */
+    tune: {
+      att: [45, 43, 39, 37, 37, 36, 29, 25, 25, 29, 29, 24, 24, 29, 37, 37, 32, 30, 29, 16, 16, 19, 19, 21, 18, 11, 11, 7, 19, 17, 28, 26, 21, 21, 18, 31, 14, 14, 4, 0, 0, 0, 0, 0, 0, 0, 0],
+      sus: [0, 0, 0, 2, 3, 3, 5, 6, 6, 6, 6, 5, 4, 3, 3, 4, 4, 8, 7, 4, 4, 3, 3, 1, 1, 2, 2, 1, 0, -1, -2, -1, -2, -4, -6, -8, -8, -6, -8, -3, -3, -4, -5, -4, -4, -3, 3] } },
 };
+/* 這一份取樣的音準修正(音分):[音頭, 落定]。沒有表就是 [0, 0] */
+function smpTune(kit, m){
+  const E = SMP_EXT[kit];
+  if (!E || !E.tune) return null;
+  const i = m - E.lo;
+  const a = E.tune.att[i], s = E.tune.sus[i];
+  return a == null ? null : [Math.max(0, a - 5), s];
+}
 const PC_OF = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 function noteMidi(n){                      // "F#2" → 42、"C4" → 60
   const m = /^([A-G])(#?)(-?\d+)$/.exec(n);
@@ -3878,7 +3896,7 @@ function smpPick(kit, midi, maxStretch){
   for (const k of bank.keys()) if (best < 0 || Math.abs(k - midi) < Math.abs(best - midi)) best = k;
   const got = Math.abs(best - midi) > (maxStretch || 3) ? null
             : { buffer: bank.get(best), rate: Math.pow(2, (midi - best) / 12), at: best,
-                norm: smpNorm(kit, best) };
+                norm: smpNorm(kit, best), tune: smpTune(kit, best) };
   smpPickCache.set(key, got);
   return got;
 }
@@ -3889,7 +3907,7 @@ function gtrSample(midi, toneName, rrSeed){
   if (got && rrSeed != null && smpRRBufs[kit]) {
     const all = (smpRRBufs[kit].get(got.at) || []).filter(Boolean);
     if (all.length > 1) return { buffer: all[Math.floor(hash01(rrSeed, 911) * all.length) % all.length],
-                                 rate: got.rate, at: got.at, norm: got.norm };
+                                 rate: got.rate, at: got.at, norm: got.norm, tune: got.tune };
   }
   return got;
 }
@@ -4316,7 +4334,14 @@ function pluck(midi, when, gain, toneName, mute, str, take){
      兩遍音準偏差一模一樣的話疊起來只是變大聲,不會變寬 */
   const OFFS = [-2.4, 1.6, 3.1, -1.2, 2.2, -0.8];
   const off = OFFS[(((str || 0) + (take ? 3 : 0)) % 6 + 6) % 6];
-  src.playbackRate.value = ks.rate * Math.pow(2, off / 1200);
+  const rate0 = ks.rate * Math.pow(2, off / 1200);
+  src.playbackRate.value = rate0;
+  /* 取樣自己的音準(`smpTune`):音頭拉下來、0.12 秒內滑回落定的音 */
+  if (smp && smp.tune) {
+    const [a, s2] = smp.tune;
+    src.playbackRate.setValueAtTime(rate0 * Math.pow(2, -a / 1200), when);
+    src.playbackRate.setTargetAtTime(rate0 * Math.pow(2, -s2 / 1200), when + 0.02, 0.035);
+  }
   const tone = ctx.createBiquadFilter();
   tone.type = "lowpass";
   /* `bright` 是**為了 KS 訂的**:合成的弦高頻太多太齊,要收掉才不刺。
@@ -5643,8 +5668,13 @@ const FEELS = {
     /* 切音吉他用 Gretsch 的真斷奏錄音(`SMP_EXT.gretsch`):12 段配對 +1.5 ± 0.4、11/12 段贏 */
     parts: { guitar: "chop", gtone: "clean", gkit: "gretsch", glevel: 0.28,
              /* 變化:切音 4 → 8 型、第二把吉他 3 種彈法、銅管 4 → 7 型 */
-             chopCells: [[2, 6, 10, 14], [2, 7, 10, 14], [2, 6, 11, 15], [3, 6, 10, 14],
-                         [2, 6, 10], [6, 10, 14], [2, 5, 10, 13], [3, 7, 11, 14]],
+             /* **照 12 首真歌的吉他分軌重寫**(`tools/realism/gtrgram.py`)。原本 8 型全落在
+                「&」(2 / 6 / 10 / 14)——那是雷鬼 / ska 的反拍刷法,量到我們拍點 0.19–0.24、
+                & 0.89–1.02 下每拍,反拍的力度是拍點的 3 倍;真歌是拍點 0.55 / e 0.3 / & 0.45 / a 0.35,
+                **正拍反拍一樣重**。被說「切音吉他聽起來非常不搭」就是這個。
+                新的 8 型平均每小節 拍點 2.3 / e 1.1 / & 1.8 / a 1.4 */
+             chopCells: [[0, 3, 6, 8, 11, 14], [0, 2, 5, 8, 10, 13], [0, 3, 4, 7, 10, 12, 14], [2, 4, 6, 9, 12, 15],
+                         [0, 3, 6, 10, 12, 15], [0, 1, 4, 6, 8, 11, 14], [0, 2, 4, 7, 8, 10, 13], [3, 4, 6, 8, 11, 12, 14]],
              guitar2: { lvl: 0.18, modes: 3 },
              brass: { lvl: 0.115, cells: [[6, 10], [10, 14], [6, 14], [10], [14], [3, 6], [11, 14]] },
              /* 鋪底 −2dB、過 3kHz 低通:盲聽 6 次寫「太尖銳、太突出、要溫暖一點、不夠後面」 */
@@ -5654,8 +5684,9 @@ const FEELS = {
              /* hi-hat 已經走十六分,沙鈴退回八分、收小:兩層平均的高頻疊在一起會糊 */
              perc: { kind: "shaker", lvl: 0.16 },
              chopGhost: 0.35,
-             /* 切音的長度 0.09 → 0.2 秒:12 首真歌的吉他切音量到約半拍長,我們只有 0.17 拍 */
-             chopLen: 0.2 },
+             /* 切音的長度 0.09 → 0.2 → 0.42 秒:12 首真歌的吉他一下撐 0.25–2 拍(9/12 首 ≥0.9 拍),
+                0.2 秒時量到只有 0.15 拍——只剩撥片那一聲「喀」,能量全在高頻(音域量到 midi 82,真歌 55–74) */
+             chopLen: 0.42 },
     /* AOR 的貝斯是往前的(後藤次利、細野晴臣那一路),不是墊在後面。
        量到 60Hz 比 Pop 低 2.5dB,補回來 */
     /* 1.3 → 0.68(−5.6dB):三首參考曲(Midnight Pretenders / Plastic Love / 真夜中のドア)
@@ -5793,7 +5824,7 @@ const FEELS = {
        500Hz 從 −8.3 到 −5.2,而低頻相對掉了 1.7dB。
        那不是「更專業」,是把吉他推到臉上。補償只是把壓下去的補回來,
        不是拿來加音量的——1.5 倍等於 +3.5dB,壓縮器根本沒壓那麼多 */
-    mix: { gtrHp: 150, gtrEq: 1.2, gtrEqHz: 3200, gtrComp: -18, gtrRatio: 3, gtrMakeup: 1.0,
+    mix: { gtrHp: 150, gtrEq: 0, gtrEqHz: 3200,   /* 1.2 → 0 與下面 gtrAir 4 → 1.5:吉他量到亮度 2100–2590Hz、真歌 770–2230(中位數約 1500) */ gtrComp: -18, gtrRatio: 3, gtrMakeup: 1.0,
            padHp: 160,
            /* ── 第二輪:照頻譜與 solo 量出來的四個洞補 ──────────────
               (真的取樣量的;scratchpad 的 `cpan.mjs`)
@@ -5817,7 +5848,7 @@ const FEELS = {
            keysEq: -3, keysEqHz: 800, keysEqQ: 0.6, keysLevel: 0.55,   /* 1.3 → 0.55(−7.5dB):真歌的鋼琴是點綴,不是主角(配器輪換那節) */
            padEq: -4, padEqHz: 400,
            drumAir: 4, drumAirHz: 6000,
-           gtrAir: 4, gtrAirHz: 3500,
+           gtrAir: 1.5, gtrAirHz: 3500,
            /* **收過一次**:第一版 −6 / +6.5 是把一整首**有人聲、配器不同**的唱片
               頻譜硬套上來,樂器的本體被挖空、刺耳的那段被推出來(被回報「音色更奇怪了」)。
               頻譜比對只能當方向,不能當目標——收到三分之一左右 */

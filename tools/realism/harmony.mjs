@@ -140,7 +140,8 @@ Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 25).forEach(([k, n])
   }
   /* HARM_TOPS=1:鋼琴頂音線有多「活」——用了幾種音、多常換音、色彩音佔幾成 */
   if (process.env.HARM_TOPS) {
-    const ks = groups.filter(g => g.inst === 'keys').sort((a, b) => a.beat - b.beat);
+    // 只看右手:左手的低音常常跟右手不同時落下,單獨成一「下」會把頂音線攪亂
+    const ks = groups.filter(g => g.inst === 'keys' && Math.max(...g.ms) >= 55).sort((a, b) => a.beat - b.beat);
     const tops = ks.map(g => Math.max(...g.ms));
     let moves = 0, steps = 0, color = 0;
     for (let i = 1; i < tops.length; i++) { const d = Math.abs(tops[i] - tops[i - 1]); if (d) { moves++; if (d <= 2) steps++; } }

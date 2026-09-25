@@ -9134,7 +9134,6 @@ const SECTIONS = [
   /* ── Pop:八分平均的流行與搖滾 ───────────────────────────── */
   { text: "C - G - Am - F",            feel: "straight", meter: "4/4", role: "chorus" },  // I-V-vi-IV,流行的萬用循環
   { text: "C - Am - F - G",            feel: "straight", meter: "4/4", role: "verse" },  // I-vi-IV-V,五〇年代
-  { text: "C - Am - Dm - G",           feel: "straight", meter: "4/4", role: "verse" },  // I-vi-ii-V,turnaround
   { text: "C - F - G - C",             feel: "straight", meter: "4/4", role: "chorus" },  // I-IV-V-I,最基本的終止
   { text: "Am - F - G - C",            feel: "straight", meter: "4/4", role: "chorus" },  // vi-IV-V-I,小室進行
   { text: "Am - F - G - Am",           feel: "straight", meter: "4/4", role: "verse" },  // i-VI-VII-i,搖滾
@@ -9143,7 +9142,6 @@ const SECTIONS = [
   { text: "C - E7 - F - Fm",           feel: "straight", meter: "4/4", role: "pre" },  // I-III7-IV-iv,借用小調下屬的那一下
   { text: "C Am | F G",                feel: "straight", meter: "4/4", role: "verse" },  // 五〇年代進行,一小節兩顆(和聲走一倍快)
   { text: "C - G - Am - F - C - G - F - G",                        feel: "straight", meter: "4/4", role: "chorus" },  // I-V-vi-IV,後半收在 V
-  { text: "C - Am - F - G - C - Am - Dm - G",                      feel: "straight", meter: "4/4", role: "verse" },  // 五〇年代,收在 ii-V
   { text: "C - G - Am - Em - F - C - F - G",                       feel: "straight", meter: "4/4", role: "chorus" },  // 卡農進行
   /* 王道進行(4536251)整組搬去 City Pop 了:它配七和弦就是 city pop 的聲音,
      兩邊各放一組只是同一句話講兩次(被指出「POP 那組實際上就是 City Pop 那組」)。
@@ -9176,7 +9174,6 @@ const SECTIONS = [
   { text: "Fmaj7 - Fm7 - Em7 - A7",    feel: "citypop", meter: "4/4", role: "pre" },  // IV-iv-iii-VI7,借用 iv 接 turnaround
   { text: "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",        feel: "citypop", meter: "4/4", role: "chorus" },  // 王道的七和弦聲位
   { text: "Cmaj7 - Fmaj7 - Bm7b5 - E7 - Am7 - D7 - Dm7 - G7",      feel: "citypop", meter: "4/4", role: "verse" },  // 一小節一顆一路走,小調 ii-V 只是經過
-  { text: "Fmaj7 - G7 - Em7 - Am7 - Fmaj7 - G7 - Cmaj7 - Cmaj7",   feel: "citypop", meter: "4/4", role: "chorus" },  // 4536 兩次,第二次收在 I
   /* ── 第八輪:從 12 首真歌抽出來的(`tools/realism/chords.py`,db/chords.json,全部轉成 C 大調)──
      自動辨識不是採譜:根音與大小調可靠,7 / maj7 / sus 的判斷只能當參考。
      使用者給的「City Pop 常用進行」那份清單也對照過,對得上的一併收進來 */
@@ -9204,7 +9201,6 @@ const SECTIONS = [
      所以**一定要自己帶 feel**——光看和弦跟 Pop、City Pop 分不出來,
      差別全在律動與音色。全部 4/4:half-time 要四拍才有「第 3 拍」可以打 */
   { text: "Am7 - Fmaj7 - Cmaj7 - G",   feel: "kpop",    meter: "4/4", role: "chorus" },  // vi-IV-I-V,全世界流行歌最常見的那一圈
-  { text: "Fmaj7 - G - Em7 - Am7",     feel: "kpop",    meter: "4/4", role: "verse" },  // 4536,K-Pop 抒情的骨幹
   { text: "Am7 - Em7 - Fmaj7 - G",     feel: "kpop",    meter: "4/4", role: "verse" },  // vi-iii-IV-V
   { text: "Dm7 - Em7 - Fmaj7 - G7",    feel: "kpop",    meter: "4/4", role: "pre" },  // ii-iii-IV-V,一路往上推的副歌前
   { text: "Am7 - G - Fmaj7 - E7",      feel: "kpop",    meter: "4/4", role: "verse" },  // 安達魯西亞終止,小調 hook 常用
@@ -9219,7 +9215,6 @@ const SECTIONS = [
   { text: "Am7 - Bm7b5 - E7 - Am7 - Dm7 - G7 - Cmaj7 - E7",        feel: "latin",   meter: "4/4", role: "verse" },  // 小調 bossa 一整句(黑色奧菲斯型)
   { text: "Cmaj7 - Dm7 - G7 - Em7 - A7 - Dm7 - G7 - Cmaj7",        feel: "latin",   meter: "4/4", role: "chorus" },  // I-ii-V-iii-VI7-ii-V-I(Laufey「From the Start」那一句)
   { text: "Am7 - Am7 - Dm7 - Dm7 - Bm7b5 - E7 - Am7 - Am7",        feel: "latin",   meter: "4/4", role: "verse" },  // 小調 i-iv-ii°-V-i(Blue Bossa 的前八小節)
-  { text: "Dm7 - G7 - Cmaj7 - Cmaj7 - Dm7 - G7 - Cmaj7 - A7",      feel: "latin",   meter: "4/4", role: "chorus" },  // ii-V-I 兩次,收在 VI7
 
   /* ── Blues:shuffle。全是屬七,八分是三連音的 ───────────────── */
   { text: "C7 - F7 - C7 - G7",         feel: "blues",   meter: "4/4", role: "verse" },  // 四小節的藍調 turnaround

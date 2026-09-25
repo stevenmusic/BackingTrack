@@ -212,7 +212,8 @@ main{
 }
 /* 「組一首」自己一排,貼在清單上面:它是「不想自己挑就按這個」的入口 */
 .ex-song{margin:0 0 6px}
-.ex-song .song-btn{width:100%;font-size:var(--fs-2xs);padding:6px 10px}
+.ex-song .song-btn{width:100%;font-size:var(--fs-2xs);padding:6px 10px;
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* 拍號 + 速度移調綁成一組:右欄用 space-between 分配剩下的高度,
    不綁的話這兩塊中間會被撐開一道縫,但它們講的是同一件事 */
 .tempo-group{display:flex;flex-direction:column;gap:10px}
@@ -1245,7 +1246,7 @@ try {
         <!-- 繞第二圈開始換一兩顆和弦的聲位:C → Cmaj7、G → G/F 這種很常用的。
              第一圈一定照原譜,小節格會跟著顯示真的在響的那幾顆 -->
         <button class="toggle" id="reharmToggle" type="button" aria-pressed="true"
-          data-i18n-attr="title:reharmTip" title="每繞一圈換一兩顆和弦的聲位(C → Cmaj7、G → G/F),只加色彩音不改功能;第一圈照原譜">
+          data-i18n-attr="title:reharmTip" title="第二圈起每圈換一兩顆代理和弦(I → vi、IV → ii、Em → E7、G → G/F…),聽起來還是同一首;第一圈照原譜">
           <span class="box"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5.5 5.5L20 7"/></svg></span>
           <span data-i18n="reharmLabel">和弦變化</span>
         </button>
@@ -1390,7 +1391,7 @@ const I18N = {
     qualMin: "小三",
     savedLabel: "存下來的進行",
     reharmLabel: "和弦變化",
-    reharmTip: "每繞一圈換一兩顆和弦的聲位(C → Cmaj7、G → G/F),只加色彩音不改功能;第一圈照原譜",
+    reharmTip: "第二圈起每圈換一兩顆代理和弦(I → vi、IV → ii、Em → E7、G → G/F…),聽起來還是同一首;第一圈照原譜",
     linkBtn: "複製連結",
     linkTip: "複製一條網址,對方打開就是這個進行與設定",
     linkCopied: "已複製",
@@ -1412,7 +1413,7 @@ const I18N = {
     loopSuffix: " ・ 循環",
     loadingSamples: "載入音色中…",
     loadingSamplesSub: "只抓這次會用到的音;鼓與貝斯第一次載會久一點",
-    roleVerse: "主歌", rolePre: "導歌", roleChorus: "副歌", roleForm: "完整形式",
+    roleVerse: "主歌", rolePre: "導歌", rolePreShort: "導歌", roleChorus: "副歌", roleForm: "完整形式",
     secRoleMeterGroup: "{r} ・ {m}",
     secBuildSong: "組一首 {f}:{seq}({n} 小節)",
     statusSynthKeys: "鍵盤是合成的(K-Pop 的 pluck),不用下載",
@@ -1454,6 +1455,8 @@ const I18N = {
     feelSwingTip: "Jazz: the ride's ding ding-da ding, walking bass; 6/8 is a slow-blues shuffle",
     feelFunkTip: "A sixteenth-note groove with sixteenths on the hats too; 4/4 only",
     feelKpopTip: "Half-time sixteenth R&B: 808 drums, a clap on beat 3 only, electric piano. 4/4 only",
+    reharmLabel: "Chord variation",
+    reharmTip: "From the second loop on, swap one or two chords per loop for substitutes (I → vi, IV → ii, Em → E7, G → G/F…) so it still sounds like the same song; the first loop plays as written",
     meterTip44: "Four beats per bar",
     meterTip34: "Three beats per bar, waltz",
     meterTip68: "Two big beats per bar, three eighths each",
@@ -1533,9 +1536,9 @@ const I18N = {
     loopSuffix: " · looping",
     loadingSamples: "Loading sounds…",
     loadingSamplesSub: "Only what this progression needs; drums and bass take a moment the first time",
-    roleVerse: "Verse", rolePre: "Pre-chorus", roleChorus: "Chorus", roleForm: "Full form",
+    roleVerse: "Verse", rolePre: "Pre-chorus", rolePreShort: "Pre", roleChorus: "Chorus", roleForm: "Full form",
     secRoleMeterGroup: "{r} \u30fb {m}",
-    secBuildSong: "Build a {f} song: {seq} ({n} bars)",
+    secBuildSong: "Build a song: {seq} · {n} bars",
     statusSynthKeys: "Synth keys (the K-Pop pluck) \u2014 nothing to download",
     statusSamples: "{n} samples loaded",
     statusSynth: "Samples failed to load — using a synthesized tone",
@@ -9682,7 +9685,7 @@ function renderSongBtn(){
      有導歌的曲風接出來是五段,寫成四段就對不上按下去的結果 */
   const seq = [];
   for (const e of plan) {
-    const name = T(ROLE_I18N[e.role] || "roleVerse");
+    const name = e.role === "pre" ? T("rolePreShort") : T(ROLE_I18N[e.role] || "roleVerse");
     const last = seq[seq.length - 1];
     if (last && last.name === name) last.n++;
     else seq.push({ name, n: 1 });
@@ -9692,6 +9695,7 @@ function renderSongBtn(){
     seq: seq.map(x => x.n > 1 ? x.name + "×" + x.n : x.name).join(" → "),
     n: plan.reduce((a, e) => a + partGroups(e.text).length, 0),
   });
+  b.title = b.textContent;   // 窄螢幕放不下時切尾巴,完整字樣留在 title
   b.addEventListener("click", () => {
     pushUndo();
     formParts = plan.map(e => ({ text: e.text, role: e.role }));

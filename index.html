@@ -2094,28 +2094,52 @@ function trimTones(intervals, rootInBass){
   return iv;
 }
 
+/* ══ 旋律只准用和弦音 ═══════════════════════════════════════════
+   **規則(使用者訂的):和弦外音不准出現在旋律上。**
+   聽的人把「每一下的最高音」與「單音的線條」當旋律,所以下面兩種音都要過 `melodyOk`:
+   1. 和弦樂器每一下的**頂音**(鋼琴 `buildVoicing`、吉他 `fixTop`;
+      鋪底、銅管、人聲切片、K-Pop 的 lead 都是拿鋼琴聲位的頂音,跟著一起守住)
+   2. **單音線條的每一顆**(K-Pop 的 arp、第二把吉他的琶音)
+   准用的只有**和弦骨架音**:根音、三度、五度(含 ♭5 / ♯5)、六度、七度、sus 的二/四度,
+   以及轉位的低音。九、十一、十三度(色彩音)與任何調外的經過音都不准。
+   **另外屬七和弦的降七度也不准**(被指出「七音在最上面很不和諧」:
+   它是要往下解決的那一顆,停在旋律上就懸著)。
+   色彩音還是可以在**和弦裡面**(頂音底下),那是和聲的顏色,不是旋律。
+   驗證:`tools/realism/harmony.mjs` 的「旋律上的和弦外音」那一行,一定要是 0 */
+function melodyOk(chord, pc){
+  if (!chord || !chord.intervals) return true;
+  pc = ((pc % 12) + 12) % 12;
+  const iv = new Set(chord.intervals.map(x => ((x % 12) + 12) % 12));
+  const rel = (((pc - chord.rootPc) % 12) + 12) % 12;
+  if (iv.has(4) && iv.has(10) && rel === 10) return false;          // 屬七的七音
+  if (chord.bassPc != null && pc === ((chord.bassPc % 12) + 12) % 12) return true;
+  return chord.intervals.some(x => x < 12 && ((x % 12) + 12) % 12 === rel);
+}
+/* 一組和弦音(由低到高)的頂音不合規矩時:四顆以上就拿掉最上面那顆,
+   不然把它移到下面一個八度。**一定收得到**:骨架音至少有根音 */
+function fixTop(chord, notes){
+  if (!chord || !notes || !notes.length) return notes;
+  let out = notes.slice().sort((a, b) => a - b);
+  for (let guard = 0; guard < 8 && out.length && !melodyOk(chord, out[out.length - 1]); guard++) {
+    if (out.length >= 4) { out = out.slice(0, -1); continue; }
+    if (out.length === 1) { out = [out[0]]; break; }
+    const t = out.pop() - 12;
+    if (out.indexOf(t) < 0) out.push(t);
+    out.sort((a, b) => a - b);
+  }
+  return out;
+}
 function buildVoicing(chord, prevUpper){
   const bass = BASS_LOW + chord.bassPc;               // 轉位低音也吃同一個八度
   // 上方聲部用的音級:去掉重複的,但九度(14)要保留它「高一個八度」的身分
-  const pcs = [], tension = new Set();
+  const pcs = [];
   for (const iv of trimTones(chord.intervals, chord.bassPc === chord.rootPc)) {
     const pc = (chord.rootPc + iv) % 12;
     if (!pcs.includes(pc)) {
       pcs.push(pc);
-      /* 九度以上(14 / 17 / 21)是色彩音,不是和弦的骨架。
-         擺在**最上面**很容易變成「怪怪的那一顆」——聽的人會把最高音當旋律,
-         旋律停在 9 或 11 上就像唱到一半斷掉(被回報過)。
-         六度(9)不算:那本來就是很好聽的頂音 */
-      if (iv > 12) tension.add(pc);
     }
   }
 
-  /* **屬七和弦的降七度不擺最上面**(被指出「七音在最上面聽起來很不和諧」)。
-     七音是要往下解決的那一顆,停在頂上又不解決,耳朵聽到的旋律就懸在半空。
-     量到 City Pop 的 C7 / E7 有四分之一的下數頂音是七音。
-     罰 30 分 = 實際上禁止(四顆音一定還有別的轉位),但真的只剩它時還彈得出來 */
-  const iv0 = new Set(chord.intervals.map(x => x % 12));
-  const dom7 = iv0.has(4) && iv0.has(10) ? (chord.rootPc + 10) % 12 : -1;
   const target = prevUpper && prevUpper.length ? mean(prevUpper) : UPPER_TARGET;
   let best = null, bestCost = Infinity;
 
@@ -2133,18 +2157,18 @@ function buildVoicing(chord, prevUpper){
         last = n;
       }
       if (v[v.length - 1] > 84) continue;   // 別疊到太高,鋼琴伴奏不會跑到那上面
-      /* 成本 =「離上一組多遠」+「離舒服音域多遠」+「頂音是不是色彩音」。
-         前者權重最高(聲部連接優先),色彩音在頂上罰 7 分——
-         那大約是「差三個半音的聲部移動」,所以有更順的轉位時一定會避開它,
-         但真的只剩這個選擇時還是彈得出來(不是硬禁止) */
+      /* 成本 =「離上一組多遠」+「離舒服音域多遠」+「頂音守不守規矩」。
+         頂音是旋律:色彩音(9/11/13)與屬七的七音在頂上罰 100 分,等於禁止
+         (見 `melodyOk`)。原本色彩音只罰 7 分、可以「真的沒得選時彈出來」,
+         使用者要的是**一律不准**,所以最後還有 `fixTop` 硬擋一次 */
       const top = v[v.length - 1] % 12;
       const cost = Math.abs(mean(v) - target) * 2 + Math.abs(mean(v) - UPPER_TARGET) * 0.5
-                 + (tension.has(top) ? 7 : 0) + (top === dom7 ? 30 : 0);
+                 + (melodyOk(chord, top) ? 0 : 100);
       if (cost < bestCost) { bestCost = cost; best = v; }
     }
   }
   if (!best) best = pcs.map((pc, i) => 60 + pc + i * 0);   // 理論上到不了,保底不讓它炸掉
-  return { bass, upper: best };
+  return { bass, upper: fixTop(chord, best) };
 }
 
 /* ══ 繞第二圈就換和弦 ═════════════════════════════════════════
@@ -2726,6 +2750,8 @@ let masterHp = null, masterGlue = null, masterSat = null;
 /* 每一條 bus 自己的 EQ / 壓縮 / 空氣 / chorus。預設全部透明(0dB、不壓、wet 0),
    數值寫在 `FEELS[x].mix`,跟 combHp 那一組同一個做法 */
 let keysBus = null, keysEq = null, keysAir = null, keysChorus = null;
+/* 超低頻與「拳頭」的那幾顆(`mix.bassHp` / `drumHp` / `drumLow` / `keysPres`),預設全部透明 */
+let bassHpN = null, drumHpN = null, drumLowN = null, keysPresN = null;
 let bassEqN = null, bassCompN = null, bassMk = null, bassDry = null, bassWet = null, drumAir = null, drumMidN = null, drumRevSend = null;
 let combAir = null, combChorus = null, masterMid = null, masterAirN = null, revTone = null, drumWidth = null, padLp = null;
 let echoBus = null, echoL = null, echoR = null;
@@ -3055,7 +3081,12 @@ function ensureAudio(){
        實錄的爵士鼓組共鳴比 City Pop 那種悶住、調緊的鼓多 */
     drumMidN = ctx.createBiquadFilter();
     drumMidN.type = "peaking"; drumMidN.frequency.value = 1000; drumMidN.Q.value = 0.8; drumMidN.gain.value = 0;
-    drumGlue.connect(drumMidN); drumMidN.connect(drumAir); drumAir.connect(drumWidth.input); drumWidth.output.connect(masterGain);
+    /* 超低頻高通 + 大鼓的「拳頭」(`mix.drumHp` / `drumLow`)。City Pop 分軌量到:
+       鼓在 31Hz 比參考曲多 7dB、63–125Hz 卻少 4–6dB——大鼓是一團次低頻的「嗡」,
+       不是踢在胸口的那一下。預設 20Hz / 0dB = 透明 */
+    drumHpN = ctx.createBiquadFilter(); drumHpN.type = "highpass"; drumHpN.frequency.value = 20; drumHpN.Q.value = 0.7;
+    drumLowN = ctx.createBiquadFilter(); drumLowN.type = "peaking"; drumLowN.frequency.value = 90; drumLowN.Q.value = 0.9; drumLowN.gain.value = 0;
+    drumGlue.connect(drumHpN); drumHpN.connect(drumLowN); drumLowN.connect(drumMidN); drumMidN.connect(drumAir); drumAir.connect(drumWidth.input); drumWidth.output.connect(masterGain);
     const dSend = drumRevSend = ctx.createGain();
     dSend.gain.value = 0.1;
     drumGlue.connect(dSend); dSend.connect(reverbBus);
@@ -3074,7 +3105,10 @@ function ensureAudio(){
     /* **壓縮器有 6ms 的 lookahead**(瀏覽器內建的延遲),所以沒開壓縮的曲風
        要整個繞過它,不然貝斯會無緣無故晚 6ms。開了的曲風在 pocket 裡扣回來 */
     bassDry = ctx.createGain(); bassWet = ctx.createGain(); bassWet.gain.value = 0;
-    bassBus.connect(bassEqN);
+    /* 貝斯的超低頻高通(`mix.bassHp`,預設 20Hz = 透明)。City Pop 分軌量到貝斯在 31Hz
+       比參考曲多 12.6dB:唱片裡的電貝斯在 40Hz 以下本來就是收掉的(那是吃掉音量空間的「嗡」) */
+    bassHpN = ctx.createBiquadFilter(); bassHpN.type = "highpass"; bassHpN.frequency.value = 20; bassHpN.Q.value = 0.7;
+    bassBus.connect(bassHpN); bassHpN.connect(bassEqN);
     bassEqN.connect(bassDry); bassDry.connect(bassMk);
     bassEqN.connect(bassCompN); bassCompN.connect(bassWet); bassWet.connect(bassMk);
     bassMk.connect(masterGain);
@@ -3137,7 +3171,10 @@ function ensureAudio(){
     keysEq.type = "peaking"; keysEq.Q.value = 1; keysEq.gain.value = 0;
     keysAir = shelf(ctx, "highshelf", 5000);
     keysChorus = makeChorus(ctx);
-    keysBus.connect(keysEq); keysEq.connect(keysAir); keysAir.connect(keysChorus.input);
+    /* 鍵盤的 presence(`mix.keysPres`,預設 0dB)。Rhodes 在混音裡 500Hz 多 2.7dB、2kHz 少 4.9dB:
+       太厚又太悶,那是它輸給平台鋼琴的原因——不是音色本身(單獨比 Rhodes 還略勝) */
+    keysPresN = ctx.createBiquadFilter(); keysPresN.type = "peaking"; keysPresN.frequency.value = 2000; keysPresN.Q.value = 0.7; keysPresN.gain.value = 0;
+    keysBus.connect(keysEq); keysEq.connect(keysPresN); keysPresN.connect(keysAir); keysAir.connect(keysChorus.input);
     keysChorus.output.connect(masterGain);
     applyMix();
 
@@ -5157,6 +5194,10 @@ function applyMix(){
   }
   if (bassMk) bassMk.gain.value = m.bassMakeup || 1;
   if (drumAir) { drumAir.frequency.value = m.drumAirHz || 8000; drumAir.gain.value = m.drumAir || 0; }
+  if (bassHpN) bassHpN.frequency.value = m.bassHp || 20;
+  if (drumHpN) drumHpN.frequency.value = m.drumHp || 20;
+  if (drumLowN) { drumLowN.frequency.value = m.drumLowHz || 90; drumLowN.gain.value = m.drumLow || 0; }
+  if (keysPresN) { keysPresN.frequency.value = m.keysPresHz || 2000; keysPresN.gain.value = m.keysPres || 0; }
   if (drumMidN) { drumMidN.frequency.value = m.drumMidHz || 1000; drumMidN.gain.value = m.drumMid || 0; }
   if (drumRevSend) drumRevSend.gain.value = m.drumRev != null ? m.drumRev : 0.1;
   if (combAir) { combAir.frequency.value = m.gtrAirHz || 6500; combAir.gain.value = m.gtrAir || 0; }
@@ -5531,7 +5572,10 @@ const FEELS = {
            drumLevel: 2.24, drumMid: -7, drumMidHz: 1000,
            /* 方案 A(使用者選的):把實錄爵士鼓改乾——房間麥 0.5 → 0.15、鼓的殘響送 0.1 → 0.05、
               寬度 0.7 → 0.5(參考曲的鼓 L/R 相關 0.89–0.985,比我們的 0.87 窄) */
-           drumRev: 0.05 },
+           drumRev: 0.05,
+           /* 超低頻收掉、大鼓的拳頭補回來(分軌對三首參考曲量的:貝斯 31Hz +12.6dB、
+              鼓 31Hz +7dB 而 63–125Hz −4～−6dB) */
+           bassHp: 55, drumHp: 45, drumLow: 4, drumLowHz: 90 },
   },
   /* Blues:shuffle。跟 Pop 同一組鼓件、同一個 backbeat,差別在**八分是三連音的**
      (`swing: 0.66`,不是爵士的 0.58——藍調的搖擺更接近正三連音),
@@ -6711,24 +6755,12 @@ function guitarShape(kind){
   if (kind === "bossa") return { n: 4, from: 40 };  // 拇指加三指
   return { n: 5, from: 40 };                        // 刷弦
 }
-/* **屬七和弦的七音不擺最上面**(跟 `buildVoicing` 同一條)。量到 City Pop 過門小節的
-   C7 有四分之一的切音頂音是 B♭,被指出「聽起來很不和諧」。
+/* 吉他的頂音一樣要守「旋律只准用和弦音」(`fixTop`):量到 City Pop 過門小節的 C7
+   有四分之一的切音頂音是 B♭,被指出「聽起來很不和諧」。
    四條弦以上就不彈最上面那條(少刷一條弦是真的吉他手會做的事);
-   三條弦的切音把七音移到下面(C7:E G B♭ → B♭ E G),顆數不變 */
-function noTop7(chord, notes){
-  if (!chord || !notes || notes.length < 2) return notes;
-  const iv = new Set(chord.intervals.map(x => ((x % 12) + 12) % 12));
-  if (!(iv.has(4) && iv.has(10))) return notes;
-  const b7 = (chord.rootPc + 10) % 12;
-  const out = notes.slice().sort((a, b) => a - b);
-  if ((((out[out.length - 1] - b7) % 12) + 12) % 12 !== 0) return out;
-  if (out.length >= 4) return out.slice(0, -1);
-  const top = out.pop() - 12;
-  if (out.indexOf(top) < 0) out.push(top);
-  return out.sort((a, b) => a - b);
-}
+   三條弦的切音把它移到下面(C7:E G B♭ → B♭ E G),顆數不變 */
 function guitarNotesFor(chord, kind, transpose){
-  return noTop7(chord, guitarNotesRaw(chord, kind, transpose));
+  return fixTop(chord, guitarNotesRaw(chord, kind, transpose));
 }
 function guitarNotesRaw(chord, kind, transpose){
   /* 刷弦與 bossa **照真的吉他把位**(`realShape`),不是從低音往上挑和弦音。
@@ -7045,8 +7077,11 @@ function scheduleGuitar2(spans, barStartBeat, b, transpose, absBar){
     if (idx % step !== 0) continue;
     const sp = spanAt(spans, idx);
     if (!sp || !sp.v) continue;
-    const notes = guitarNotesFor(sp.chord, "chop");
-    if (!notes.length) continue;
+    const notes0 = guitarNotesFor(sp.chord, "chop");
+    if (!notes0.length) continue;
+    // 單音線條的每一顆都是旋律:色彩音與屬七的七音不准(見 `melodyOk`)
+    const okN = notes0.filter(n => melodyOk(sp.chord, n));
+    const notes = okN.length ? okN : notes0;
     /* 琶音:照格號在和弦音之間走上走下。用 `hash01` 決定方向,
        一直往上走會變成音階練習 */
     const dir = hash01(absBar, 151) < 0.5 ? 1 : -1;
@@ -7126,7 +7161,10 @@ function scheduleArp(spans, barStartBeat, b, transpose, absBar){
     if (cell.indexOf(idx) < 0) continue;
     const sp = spanAt(spans, idx);
     if (!sp || !sp.v) continue;
-    const notes = padNotes(sp.v);
+    const all = padNotes(sp.v);
+    // 單音線條的每一顆都是旋律:色彩音與屬七的七音不准(見 `melodyOk`)
+    const okN = all.filter(n => melodyOk(sp.chord, n));
+    const notes = okN.length ? okN : all;
     if (!notes.length) continue;
     // 上上下下跑,不是一路往上(一路往上是音階練習不是 arp)
     const seq = cell.indexOf(idx);

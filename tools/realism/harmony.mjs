@@ -3,7 +3,7 @@
    分類:和弦音 / 可用的延伸音 / 經過音(短、弱拍) / **衝突**(長或落在強拍的非和弦音)/ 跨和弦(延音撐到下一顆和弦卻不是它的音) */
 import { chromium } from 'playwright';
 import http from 'http'; import fs from 'fs';
-const [feel, prog, secsArg, style] = process.argv.slice(2);
+const [feel, prog, secsArg, style, meter] = process.argv.slice(2);
 const SECS = +secsArg || 30;
 const sv = http.createServer((q, s) => { const f = decodeURIComponent(q.url.split('?')[0]); if (!fs.existsSync(f)) { s.writeHead(404); return s.end(); } s.writeHead(200, { 'content-type': f.endsWith('.html') ? 'text/html' : 'application/octet-stream' }); s.end(fs.readFileSync(f)); });
 await new Promise(ok => sv.listen(0, ok));
@@ -12,6 +12,7 @@ const pg = await b.newPage();
 await pg.route(/^https:/, r => r.abort());                       // 取樣不用載:只記「彈了哪些音」
 await pg.goto(`http://127.0.0.1:${sv.address().port}/home/user/BackingTrack/index.html`);
 await pg.fill('#chordInput', prog); await pg.dispatchEvent('#chordInput', 'input');
+if (meter) await pg.click(`[data-meter="${meter}"]`);
 await pg.click(`[data-feel="${feel}"]`); await pg.click(`[data-style="${style || 'comp'}"]`);
 await pg.evaluate(() => {
   window.__H = { notes: [], chords: {} };
@@ -24,6 +25,8 @@ await pg.evaluate(() => {
   wrap('playKeysChord', (ms, t, d, g, kind) => (ms || []).forEach(m => rec(kind === 'low' ? 'padlow' : 'pad', m, t, d)));
   wrap('playBrass', (ms, t, d) => (ms || []).forEach(m => rec('brass', m, t, d)));
   wrap('synthKeyNote', (m, t, d) => rec('synth', m, t, d));
+  wrap('playArp', (m, t, d) => rec('arp', m, t, d));
+  wrap('playVox', (m, t, d) => rec('vox', m, t, d));
   const ob = window.scheduleBeat;
   window.scheduleBeat = function (i, when) {
     const r = ob.apply(this, arguments);
@@ -35,7 +38,7 @@ await pg.evaluate(() => {
         __H.chords[bsb] = voicings[bar].map(sp => ({ from: bsb + sp.from / div, to: bsb + sp.to / div,
           pcs: [...new Set(sp.chord.intervals.map(x => (sp.chord.rootPc + x + transposeOn) % 12))],
           root: (sp.chord.rootPc + transposeOn) % 12, bass: (sp.chord.bassPc + transposeOn) % 12,
-          iv: sp.chord.intervals.map(x => x % 12), name: sp.chord.text || sp.chord.name || '' }));
+          iv: sp.chord.intervals.map(x => x % 12), ivCore: sp.chord.intervals.filter(x => x < 12).map(x => x % 12), name: sp.chord.text || sp.chord.name || '' }));
       }
     } catch (e) {}
     return r;
@@ -58,8 +61,11 @@ function tensions(c){
   return [2, 5, 9];
 }
 const stats = {}; const bad = [];
+const lastTo = chords.length ? chords[chords.length - 1].to : 0;
 for (const [inst, m, beat, dur] of H.notes) {
   const c = at(beat + 0.01); if (!c) continue;
+  // 錄音最後那顆和弦還不知道下一顆是誰,接近音判不出來——不算
+  if (c.to >= lastTo - 1e-6) continue;
   const pc = ((m % 12) + 12) % 12, rel = ((pc - c.root) % 12 + 12) % 12;
   const S = stats[inst] || (stats[inst] = { n: 0, chord: 0, tension: 0, passing: 0, clash: 0, cross: 0 });
   S.n++;
@@ -78,6 +84,10 @@ for (const [inst, m, beat, dur] of H.notes) {
     kind = (dur <= 0.35 && weak) || dur <= 0.2 ? 'passing' : 'clash';
   }
   S[kind]++;
+  /* HARM_DUMP=1:屬七和弦上的「十一度」(大三度上面的四度,避免音)每一顆都印出來 */
+  if (process.env.HARM_CLASH && kind === 'clash') console.log('  [衝突]', inst, m, '拍', beat.toFixed(2), '長', dur.toFixed(2), 'over', c.name, '小節內第', ((beat - (H.countIn||0)) % 3).toFixed(2), '拍,下一顆', (chords.find(x => x.from >= c.to - 1e-6) || {}).name, '從', c.from.toFixed(2), '到', c.to.toFixed(2));
+  if (process.env.HARM_DUMP && c.iv.includes(4) && c.iv.includes(10) && rel === 5)
+    console.log('  [十一度]', inst, m, '拍', beat.toFixed(2), '長', dur.toFixed(2), '歸類', kind, 'over', c.name);
   if (kind === 'clash' && bad.length < 400) bad.push(`${inst} ${['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'][pc]}(${m}) @拍${beat.toFixed(2)} 長${dur.toFixed(2)}拍 over ${c.name}`);
   // 延音撐到下一顆和弦:下一顆不含這個音(也不是它的延伸音)就算跨和弦衝突
   if (kind !== 'passing') {
@@ -92,40 +102,43 @@ for (const [k, S] of Object.entries(stats)) S.clash_pct = +(100 * S.clash / S.n)
 console.log(JSON.stringify(out));
 const counts = {}; for (const x of bad) { const k = x.replace(/@拍[0-9.]+ /, '').replace(/\(從拍[0-9.]+/, '('); counts[k] = (counts[k] || 0) + 1; }
 Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 25).forEach(([k, n]) => console.log('  ', n, '×', k));
-/* 頂音檢查:屬七和弦(大三 + 降七)上,**同一下的最高音是七音**的次數。
-   聽的人把最高音當旋律,七音停在最上面、又沒有往下解決,聽起來就是懸著、不和諧。
-   分「過門小節」(一圈的最後一小節)與其他小節 */
+/* ══ 旋律檢查(規則見 index.html 的 `melodyOk`)════════════════════
+   旋律 = 和弦樂器**每一下的頂音** + 單音線條(arp、人聲切片)的**每一顆**。
+   只准用和弦骨架音(根、三、五、六、七、sus 的二/四、轉位低音),
+   九/十一/十三度與調外音都不准,屬七和弦的降七度也不准。**一定要是 0** */
 {
-  const nBars = Object.keys(H.chords).length ? Math.max(...Object.values(H.chords).flat().map(c => c.to)) : 0;
-  const barLen = (() => { const c = Object.values(H.chords)[0]; return c ? c[c.length - 1].to - c[0].from : 4; })();
-  const loopBars = H.loopBars || 0;
+  const core = (c, pc) => {
+    const rel = ((pc - c.root) % 12 + 12) % 12, iv = new Set(c.iv);
+    if (iv.has(4) && iv.has(10) && rel === 10) return false;
+    if (pc === c.bass) return true;
+    return c.ivCore.includes(rel);
+  };
   /* 同一下的音**不是同時落下的**(和弦攤開 4–12ms、刷弦一條一條錯開),
      所以照時間排序、間隔小於 0.1 拍的算同一下,不能用四捨五入的格子切 */
-  const groups = {};
+  const groups = [];
   const byInst = {};
   for (const [inst, m, beat] of H.notes) {
     if (inst === 'bass' || inst === 'padlow') continue;
     (byInst[inst] || (byInst[inst] = [])).push([beat, m]);
   }
-  let gi = 0;
   for (const [inst, arr] of Object.entries(byInst)) {
     arr.sort((a, b) => a[0] - b[0]);
+    const single = inst === 'arp' || inst === 'vox';
     let cur = null;
     for (const [beat, m] of arr) {
-      if (!cur || beat - cur.last > 0.1) { cur = groups[gi++] = { inst, beat, last: beat, ms: [] }; }
+      if (single || !cur || beat - cur.last > 0.1) { cur = { inst, beat, last: beat, ms: [] }; groups.push(cur); }
       cur.ms.push(m); cur.last = beat;
     }
   }
-  const T = {};
-  for (const g of Object.values(groups)) {
+  const T = {}, ex = {};
+  for (const g of groups) {
     const c = at(g.beat + 0.01); if (!c) continue;
-    const iv = new Set(c.iv); if (!(iv.has(4) && iv.has(10))) continue;
-    const top = Math.max(...g.ms), rel = (((top % 12) - c.root) % 12 + 12) % 12;
-    const barNo = Math.floor((g.beat - (H.countIn || 0)) / barLen + 1e-6);
-    const fill = H.loopBars ? (barNo % H.loopBars) === H.loopBars - 1 : false;
-    const key = g.inst + (fill ? '(過門)' : '');
-    const S = T[key] || (T[key] = { hits: 0, top7: 0 });
-    S.hits++; if (rel === 10) S.top7++;
+    const top = Math.max(...g.ms), pc = ((top % 12) + 12) % 12;
+    const S = T[g.inst] || (T[g.inst] = { 下數: 0, 違規: 0 });
+    S.下數++;
+    if (!core(c, pc)) { S.違規++; const k = `${g.inst} ${['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'][pc]} over ${c.name}`; ex[k] = (ex[k] || 0) + 1; }
   }
-  console.log('屬七和弦上頂音是七音:', JSON.stringify(T));
+  const total = Object.values(T).reduce((a, S) => a + S.違規, 0);
+  console.log('旋律上的和弦外音:', total, JSON.stringify(T));
+  Object.entries(ex).sort((a, b) => b[1] - a[1]).slice(0, 10).forEach(([k, n]) => console.log('   ', n, '×', k));
 }

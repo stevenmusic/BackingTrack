@@ -4555,6 +4555,10 @@ function voicesOf(kind){
      所以要加的是**顆數與不等距**,不是把 ±13 拉得更開——拉開只會更走音。
      刻意用不整齊的數字(−13.5 / 6.5 / 25.5)就是為了不讓拍頻對在一起 */
   if (kind === "supersaw") return [-24, -13.5, -5, 0, 6.5, 15, 25.5];
+  /* **City Pop 的 `pad` 也是同一個病**(被說「pad 聲音那麼怪」):原本兩顆 ±5 音分、左右各一顆,
+     差 10 音分在 C4 上就是**每秒 1.5 次、很規律的「嗡—嗡—」**,耳朵一下就數得出來。
+     四顆不等距(拍頻 0.8–3.2Hz 互不重合)才會糊成一片,不是一個固定的晃動 */
+  if (kind === "pad") return [-7, -2, 3.5, 8.5];
   return [-5, 5];
 }
 function playKeysChord(midis, when, dur, gain, kind){
@@ -4576,8 +4580,12 @@ function playKeysChord(midis, when, dur, gain, kind){
      **靜態而且亮**,它的起伏來自側鏈(`FEELS.kpop.duck.pad`)不是濾波器。
      `pad`(City Pop 的 Prophet-5)**保留那個掃**:那個年代就是這樣按的 */
   const swell = !organ && !low && kind !== "supersaw";
-  lp.frequency.setValueAtTime(low ? 420 : organ ? 2600 : kind === "supersaw" ? 2900 : 900, when);
-  if (swell) lp.frequency.linearRampToValueAtTime(2100, when + Math.min(dur * 0.7, 1.4));
+  /* City Pop 的 `pad`:掃還在(那個年代就是這樣按的),但**短而且不從很暗開始**——
+     原本 900 → 2100Hz 掃 1.4 秒 + 0.34 秒淡入,每換一顆和弦就「哇——」一次,
+     五軌量到「其他」那一軌偏暗(1094Hz,真歌 1216–2783)。改成 1300 → 2600 掃 0.6 秒 */
+  lp.frequency.setValueAtTime(low ? 420 : organ ? 2600 : kind === "supersaw" ? 2900 : kind === "pad" ? 1300 : 900, when);
+  if (swell) lp.frequency.linearRampToValueAtTime(kind === "pad" ? 2600 : 2100,
+                                                  when + Math.min(dur * (kind === "pad" ? 0.4 : 0.7), kind === "pad" ? 0.6 : 1.4));
   let head = lp;
   if (low) {
     const hp = ctx.createBiquadFilter();
@@ -4597,12 +4605,17 @@ function playKeysChord(midis, when, dur, gain, kind){
      一抖就變成會呼吸的低頻,跟 808 的側鏈打架 */
   const lfoAmt = ctx.createGain();
   lfoAmt.gain.value = gain * (organ ? 0.17 : 0.09);
-  if (slowLfo && !low) { try { slowLfo.connect(lfoAmt); lfoAmt.connect(g.gain); } catch (e) {} }
+  /* **`pad` 不掛**:那顆 LFO 是給 Hammond 的 Leslie 用的(0.82Hz、±9% 音量)。鋪底也跟著抖的話,
+     跟失諧的拍頻是兩個不同速度的規律晃動疊在一起——聽起來像暈船 */
+  const useLfo = slowLfo && !low && kind !== "pad";
+  if (useLfo) { try { slowLfo.connect(lfoAmt); lfoAmt.connect(g.gain); } catch (e) {} }
 
   /* supersaw 的起音從 0.16 收到 0.03:160 毫秒的淡入配上那條 1.4 秒的
      濾波器掃,等於整顆和弦都在進場。K-Pop 的那一片是**按下去就在那裡** */
-  const atk = organ ? 0.012 : low ? 0.10 : kind === "supersaw" ? 0.03 : 0.34;
+  const atk = organ ? 0.012 : low ? 0.10 : kind === "supersaw" ? 0.03 : kind === "pad" ? 0.18 : 0.34;
   const rel = organ ? 0.09 : low ? 0.4 : 0.7;
+  // `pad` 從兩顆變四顆失諧:不相干的疊加大約 +3dB,乘 0.71 補回來,整體音量不變
+  if (kind === "pad") gain *= 0.71;
   g.gain.setValueAtTime(0.0001, when);
   g.gain.linearRampToValueAtTime(gain, when + atk);
   g.gain.setTargetAtTime(0.0001, when + Math.max(dur, atk + 0.05), rel / 3);
@@ -4664,7 +4677,7 @@ function playKeysChord(midis, when, dur, gain, kind){
       activeSources.delete(o);
       try { o.disconnect(); } catch (e) {}
       if (--left === 0) {
-        try { if (slowLfo && !low) slowLfo.disconnect(lfoAmt); } catch (e) {}
+        try { if (useLfo) slowLfo.disconnect(lfoAmt); } catch (e) {}
         try { lfoAmt.disconnect(); lp.disconnect(); if (head !== lp) head.disconnect();
               if (spread) for (const sp of spread) sp.disconnect();
               g.disconnect(); if (pan) pan.disconnect(); } catch (e) {}

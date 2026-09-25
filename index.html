@@ -6698,9 +6698,13 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord, span){
        換和弦只該換音高、不該多一下——量過,拆和弦的小節貝斯多了 0.9 下 */
     if (endsBar && b === last && !isFill && nextChord && cell.indexOf(endIdx) < 0) {
       const nextPc = pcOf(nextChord.bassPc);
-      if (nextPc !== rootPc && hash01(absBar, 193 + b0) < 0.5) {
+      /* 骰子只看小節,不看這顆和弦從第幾拍開始(原本是 `193 + b0`):
+         和弦變化把一顆拆成兩顆時,後半那顆的 b0 變 2,同一小節的經過音就換了一次骰子,
+         拆與不拆的小節貝斯會差一下(逐小節量到的唯一差別)。現在只在小節線前接,
+         b0 本來就沒有意義。一格一顆的小節 b0 = 0,跟以前一模一樣 */
+      if (nextPc !== rootPc && hash01(absBar, 193) < 0.5) {
         const target = bassMidiFor(nextPc);
-        playBassNote(target + (hash01(absBar, 194 + b0) < 0.5 ? 1 : -1),
+        playBassNote(target + (hash01(absBar, 194) < 0.5 ? 1 : -1),
                      slotTime(barStartBeat, endIdx), slotDur() * 0.8,
                      humanize(absBar, 195, 0.3));
       }

@@ -261,7 +261,7 @@ C-F-G-F 套 Bossa)。「要用哪種感覺」本來就是和弦決定的,所以*
   (一個換伴奏、一個換清單,使用者分不出差別)。清單跟著 `feelNow` 走就好
 - **段落庫的數字要數「現在這個曲風有幾組」**,不是 `SECTIONS.length`。
   寫 54 會以為每個曲風都有 54 種進行(被問過:「不能全部曲風都是 54 種和弦進行」),
-  實際上 Pop 21、City Pop 25、K-Pop 6、Bossa 7、Blues 6、Swing 14、Funk 5
+  實際上 Pop 21、City Pop 24、K-Pop 6、Bossa 7、Blues 6、Swing 14、Funk 5
 - **曲風膠囊變暗時點下去要連拍號一起換**(在 3/4 點 Funk → 換成 4/4)。
   跟拍號那排同一條規則:變暗是提示不是鎖。擋住的話 Funk 那五組 4/4 的進行
   在 3/4 就永遠碰不到——清單跟著曲風走之後,擋住等於把整頁藏起來
@@ -1610,6 +1610,11 @@ AI City Pop 合集(找空白切成 **16 首**,不是標題寫的 10 首)。**音
 - 性質:I、IV 幾乎都是大七,ii/iii/vi 是小七;調外的 ♭VII(9 首)、♯IVø7(8 首)、♭III / ♭VI(5 首)
 - 因此:三組改成一小節兩顆、新增三組(王道壓成兩顆 + iv、Telephone Number 的 v7-I7-IV、借來的 ♭VIImaj7),
   拿掉沒有根據的 `Cmaj9 - Fmaj9 - Em9 - Am7` 與掛錯歌名的 `Fmaj7 - Em7 - Am7 - A7`。City Pop 26 組
+- **逐步對照(`tools/realism/cpfit.py`)**:每一組拆成「根音從哪走到哪」,算每一步在 12 首裡出現幾首。
+  22 組每一步都 ≥7 首。改兩組:♭VII 那組原本 `♭VII → I`(2 首)→ 改成 `Bbmaj7 Am7`(♭VII→vi,5 首,
+  〈Midnight Joke〉的 `Cmaj7 Bbmaj7 Am7`);八小節那組 `IV → viiø`(2 首)→ `iii → viiø`(5 首)。
+  **刪掉 `Cmaj7 - C#dim7 - Dm7 - G7`**:chords.py 補了減七樣板重抓,減七只佔 0.8%,
+  往上半音的經過減七 12 首裡只有 1 首 1 次。那個顏色交給和弦變化的 `pass°`,段落庫不收。City Pop 24 組
 - **♯IVø7 那組收不進來**:`F♯m7b5 B7` 怎麼寫 `keyOf` 都判成 G 大調(F♯ 與 B7 的 D♯ 都指向 G)。
   要收它得先讓 `keyOf` 認得「經過的 ♯IV」,不要硬塞
 - **整理過一次(使用者:「研究段落庫,不適合的就刪掉」)**,84 組全部解析得了、判調都是 C / A 小調。
@@ -1633,7 +1638,7 @@ AI City Pop 合集(找空白切成 **16 首**,不是標題寫的 10 首)。**音
   曲風跟拍號一樣是推不出來的:丸サ進行是 City Pop 不是 Bossa、`C7 - F7` 是 Blues
   不是「直的屬七」,和弦看不出差別。所以 `SECTIONS` 的每一筆都要填 `feel`,
   漏填的那組點下去曲風不會換,而且**不會報錯**——很難發現
-- 目前 84 組,按曲風分頁:Pop 21、City Pop 25、K-Pop 6、Bossa 7、Blues 6、
+- 目前 83 組,按曲風分頁:Pop 21、City Pop 24、K-Pop 6、Bossa 7、Blues 6、
   Swing 14、Funk 5。同一個曲風裡再按「長度 · 拍號」分區
 - **City Pop 不要停在小調 ii-V**。被回報過
   `Cmaj7 - Cmaj7 - Bm7b5 - E7 - Am7 - Am7 - Dm7 - G7` 聽起來不像 city pop:

@@ -1,1 +1,3 @@
-dsmolken.double-bass/pizz/pizz_bb1_mc.wav
+virtuosity_drums/Samples/mid/hh/mid_hh_open_vl1_rr4.flac
+virtuosity_drums/Samples/mid/hh/mid_hh_open_vl2_rr4.flac
+virtuosity_drums/Samples/mid/hh/mid_hh_open_vl3_rr4.flac

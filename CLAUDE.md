@@ -317,7 +317,8 @@ C-F-G-F 套 Bossa)。「要用哪種感覺」本來就是和弦決定的,所以*
   (4/4 一小節 16 格)。`subOf()` / `divNow()` 是唯一兩個看它的地方,
   `slotTime()`、`slotsInBar()` 之類的都吃 `divNow()` 所以自動跟著變。
   **加新曲風要細分也走 `sub`,不要另外寫一套格子**
-- **City Pop 跟 Funk 差在 hi-hat 走幾分**:Funk 走滿十六分、City Pop 只走八分,
+- **City Pop 跟 Funk 差在 hi-hat 的強弱**(第七輪使用者指定 City Pop 也走十六分,見「City Pop 的鼓照使用者的規格」;
+  以下是原本的寫法,留著當歷史):Funk 走滿十六分、City Pop 只走八分,
   把十六分留給貝斯與大鼓去咬。乾淨的 8 beat 骨架配十六分的低音律動就是 city pop;
   hi-hat 一走滿就變成放克了
 - **Blues 是三連音不是十六分**:`swing: 0.66`(爵士是 0.58,藍調的搖擺更接近正三連音),
@@ -1316,6 +1317,36 @@ Gretsch 20.5、電貝斯 25.4、Tone.js 吉他 29.1(最多 57)**、低音提琴�
   頂音換音 10% → 26%、用到的音 5 → 8;`buildVoicing` 另外對頂音大跳加罰(全曲風,量過幾乎沒動,
   原本的頂音線就已經 53–85% 是級進)
 - **量頂音線要排除左手**:左手的低音常常單獨落下,會被當成「一下」,頂音線整個亂掉(`harmony.mjs` 只看 ≥ midi 55)
+
+## City Pop 的鼓照使用者的規格(第七輪)
+使用者指定:鼓要是「80s Studio / Vintage Acoustic / Jazz-Funk / Disco」那一類;
+大鼓**溫暖、短、sub 不要太強**;小鼓**明亮、中等偏短、一點 80s gated room**;
+hi-hat **乾淨、十六分、輕微 swing**;**大鼓與貝斯非常緊**、小鼓在二四、**open hat 在反拍**、不要完全量化。
+
+- **音色對不對**:大鼓小鼓 hi-hat 是 SM Drums(1960 年代 Ludwig,= Vintage Acoustic),
+  tom / 鈸 / open hat 是 Virtuosity(波士頓實錄的爵士鼓組,= Jazz-Funk)。再用悶音與 EQ 推到 80s 錄音室
+- 大鼓:鼓件自己過 **45Hz 高通**、拿掉 60Hz 的推力、100Hz +2.5(溫暖)、400Hz −5、3kHz +1.5;
+  悶音 0.14 → **0.10 秒**;鼓總線的 `drumLow` +4@90 → +2@110
+- 小鼓:加 **5kHz 以上 +3.5dB 的架子**(明亮)、悶音 0.13 → 0.11 秒
+- **gated room**(`mix.snareGate`,`buildGateIR`):只送小鼓,卷積的脈衝是 6ms 預延遲 + 150ms 幾乎不衰減
+  的雜訊 + 12ms 硬收,過 300Hz–7kHz 回到鼓總線。文獻:Padgham / Lillywhite 1979 在 Townhouse 的
+  石頭房間,重壓縮 + noise gate——「很密的空間聲突然被切斷」,不是一般殘響的慢慢衰減
+- hi-hat **走十六分**(`GROOVES.citypop` 的 `cym` 全 16 格),強弱 `hatAcc` 1 / 0.42 / 0.72 / 0.45
+  ——e 與 a 很輕,那個強弱差是它跟放克分得開的地方(以前「City Pop 只走八分」那條被使用者的規格取代);
+  鼓件過 600Hz 高通(乾淨);`lag16.hat` 的 e / a 晚 7ms = 輕微十六分 swing(約 55:45)。
+  沙鈴退回八分、收到 0.16(兩層平均的高頻疊在一起會糊)
+- **open hat**(`DRUM_LAYERS.ohat` = Virtuosity 的 `hh_open`,`bgPieces` 背景載、`heavy`):
+  第四拍的「&」75%、第二拍的「&」30%(`ohat` / `ohatBeats` / `ohatP`)。
+  **一定要被下一顆 closed hat 掐掉**(`chokeOhat`,12ms 收):取樣會響 8–9 秒,不掐的話反拍一路疊成噪音。
+  還沒載到時照打 closed hat(`drumReady`),不要掉到合成備援
+- **大鼓與貝斯綁在一起**(`timing.tie = { bass: "kick" }`):貝斯直接用大鼓的那一條時間偏差;
+  pocket 的貝斯 −2 → **−6**(貝斯 bus 的壓縮器自帶 6ms lookahead,整個扣回來)。
+  探針量到同一格落下的 81–92 次**全部差 0ms**
+- 探針:`REALISM_PROBE=tools/realism/probe_drum.js node render.mjs …`(open hat 次數與位置、掐音次數、
+  大鼓貝斯同格的時間差、限幅器壓縮量)
+- **編制變密要自己把音量收回來**(`mix.master`,沒寫就是 1):第六輪之後 RMS 衝到 −10.2
+  (限幅器只壓 0.45dB,不是被壓扁,是真的變密)。**收 3dB 才降 1.5dB**——前面的黏著壓縮會吃掉一半。
+  City Pop `master: 0.70` → −11.3
 
 ## 真實度評測(`tools/realism/`):**改音色之前先看這裡**
 使用者說「之前做的方向都錯了」——前幾輪都是**我用數字判斷、你用耳朵驗收**,

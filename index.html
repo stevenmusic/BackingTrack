@@ -2888,7 +2888,7 @@ function installTrueLimiter(){
        舊的 DynamicsCompressor 不在路上了,響度改由 outGain 決定 */
     masterSat.disconnect(); limiter.disconnect(); outGain.disconnect();
     masterSat.connect(outGain); outGain.connect(node); node.connect(softClip);
-    masterGain.gain.value = TL_IN; outGain.gain.value = TL_OUT;
+    masterGain.gain.value = TL_IN; outGain.gain.value = TL_OUT; masterBase = TL_IN; applyMix();
     /* 有了真的限幅器,最後那一關軟削波**永遠碰不到**(輸出被保證在 TL_CEIL 以下),
        所以它的起彎點從 0.72 挪到 0.9:舊的鏈要它在 0.72 就開始彎,是因為那時候
        尖峰真的會穿過去;現在天花板可以回到響度規則的 0.85,整首大聲 1.7dB 又不失真 */
@@ -2897,6 +2897,10 @@ function installTrueLimiter(){
   }).catch(() => {}).finally(() => URL.revokeObjectURL(url));
 }
 const TL_IN = 0.75, TL_OUT = 2.35, TL_CEIL = 0.85;
+/* 進母帶鏈之前的基準增益(看是哪一條鏈),每個曲風再乘 `mix.master`(沒寫就是 1)。
+   **編制變密的曲風要自己往回收**:City Pop 第六輪加了四踩的大鼓、撐滿的貝斯、十六分 hi-hat 之後
+   RMS 從 −12.5 衝到 −10.2(限幅器只壓 0.45dB,所以不是被壓扁,是真的變密了) */
+let masterBase = null;
 function softCurve(t, top){
   const n = 4096, c = new Float32Array(n);
   for (let i = 0; i < n; i++) {
@@ -2916,7 +2920,7 @@ function ensureAudio(){
        masterGain 先把訊號推大 → 限幅器壓住尖峰(擋住和弦疊起來的破音)
        → outGain 把整體拉回接近滿刻度。三段一起調,動其中一個要重新量電平。 */
     masterGain = ctx.createGain();
-    masterGain.gain.value = 1.9;
+    masterGain.gain.value = 1.9; masterBase = 1.9;
     limiter = ctx.createDynamicsCompressor();
     limiter.threshold.value = -10;
     limiter.knee.value = 0;
@@ -3064,6 +3068,13 @@ function ensureAudio(){
     drumGlue.attack.value = 0.01;
     drumGlue.release.value = 0.12;
     drumBus.connect(drumGlue);
+    /* 小鼓的 gated room(`mix.snareGate`,預設 0 = 關):送進一顆 gated 脈衝的卷積,
+       300Hz–7kHz 之間(低頻會讓它變成轟、太亮會變成噴氣),回到鼓總線一起黏 */
+    gateSend = ctx.createGain(); gateSend.gain.value = 0;
+    const gConv = ctx.createConvolver(); gConv.normalize = false; gConv.buffer = buildGateIR();
+    const gHp = ctx.createBiquadFilter(); gHp.type = "highpass"; gHp.frequency.value = 300;
+    const gLp = ctx.createBiquadFilter(); gLp.type = "lowpass"; gLp.frequency.value = 7000;
+    gateSend.connect(gConv); gConv.connect(gHp); gHp.connect(gLp); gLp.connect(drumBus);
     drumAir = shelf(ctx, "highshelf", 8000);
     /* 鼓的立體聲寬度(`FEELS[x].mix.drumWidth`,1 = 原樣)。Virtuosity 是一對中距離麥克風,
        高頻左右幾乎不相關(8k 以上 0.03);八〇年代的 City Pop 是近距離收音、
@@ -3437,7 +3448,15 @@ const DRUM_LAYERS = {
   htom:   { dir: "htom",  name: "htom_center",       rr: 0, vl: [6, 11, 15] },
   ltom:   { dir: "ltom",  name: "ltom_center",       rr: 0, vl: [6, 11, 15] },
   crash:  { dir: "crash", name: "crash_crash",       rr: 4, vl: [1, 2, 3], heavy: true },
+  /* open hi-hat(City Pop 的反拍)。一個檔案 1MB、響 8–9 秒,所以跟鈸一樣標 heavy;
+     **一定要被下一顆 closed hat 掐掉**(`chokeOhat`),真的 hi-hat 一踩下去就停了 */
+  ohat:   { dir: "hh",    name: "hh_open",           rr: 4, vl: [1, 2, 3], heavy: true },
 };
+/* 這一顆鼓的取樣到了沒(808 自己處理,一律算到了) */
+function drumReady(piece){
+  if (drumKit() === "e808") return true;
+  return !!(drumBuffers[piece] && drumBuffers[piece].some(x => x.mid && x.mid.length));
+}
 /* 一顆鼓的一層要抓哪幾個檔案。`mic` 是 "mid"(近) 或 "room"(空間)。
    有 round robin 的檔名帶 `_rrN`,沒有的(小鼓、框邊、tom)就靠力度層本身變化 */
 function drumLayerFiles(piece, vl, mic, maxRR){
@@ -3570,6 +3589,9 @@ function ensureDrums(){
     if (!feelPieceLoading[piece]) feelPieceLoading[piece] = loadDrumSet([piece], true);
     jobs.push(feelPieceLoading[piece]);
   }
+  // `FEELS[x].bgPieces`:要用但不擋播放(open hat 一個檔案 1MB,晚一兩小節到沒關係)
+  for (const piece of ((FEELS[feelNow] || {}).bgPieces || []))
+    if (!feelPieceLoading[piece]) feelPieceLoading[piece] = drumFillGate().then(() => loadDrumSet([piece], true));
   return Promise.all(jobs);
 }
 
@@ -3838,7 +3860,7 @@ function bassMidiFor(pc){
 /* 鼓件在鼓組裡的左右位置(從聽眾的角度)。全部塞在正中間是「合成的」最明顯的特徵:
    真的鼓組 hi-hat 偏右一點、tom 一高一低分開、ride 在右邊。
    幅度都很小(±0.3 以內)——這是把鼓組擺開,不是做效果 */
-const DRUM_PAN = { kick: 0, snare: -0.05, hihat: 0.22, hhped: 0.24, ride: -0.26,
+const DRUM_PAN = { kick: 0, snare: -0.05, hihat: 0.22, hhped: 0.24, ohat: 0.22, ride: -0.26,
                    xstick: -0.05, htom: -0.18, ltom: 0.2, crash: -0.3, clap: 0 };
 
 /* `vel` 是 0–1 的「打多用力」。真的鼓**打輕的時候不只是小聲,還比較暗**——
@@ -3872,6 +3894,35 @@ function pickDrumLayer(piece, vel){
   return best && best.mid.length ? best : null;
 }
 
+/* ── open hat 的掐音 ──────────────────────────────────────────
+   open hat 的取樣會響 8–9 秒,真的 hi-hat 是踩下去就停。下一顆 closed hat(或踩鈸)
+   落下時把還在響的那一顆在 12ms 內收掉——少了這一下,反拍的 open hat 會一路疊成一片噪音 */
+let lastOhat = null;
+function chokeOhat(when){
+  if (!lastOhat || when <= lastOhat.at + 0.02) return;
+  for (const gn of lastOhat.gains) { try { gn.gain.cancelScheduledValues(when); gn.gain.setTargetAtTime(0, when, 0.012); } catch (e) {} }
+  lastOhat = null;
+}
+/* ── 八〇年代的 gated room ─────────────────────────────────────
+   Phil Collins〈In the Air Tonight〉、Hugh Padgham 在 Townhouse 的石頭房間:房間麥被壓得很重、
+   再過一顆 noise gate,所以是**一段很密的空間聲撐住,然後突然切斷**,不是慢慢衰減的殘響。
+   做法是一顆卷積:脈衝響應是 6ms 預延遲 + 150ms 幾乎不衰減的雜訊 + 12ms 硬收。
+   雜訊用固定種子、左右不同(跟 `buildImpulseResponse` 同一條規則)。只有小鼓送進來 */
+let gateSend = null;
+function buildGateIR(){
+  const sr = ctx.sampleRate, len = Math.floor(sr * 0.2);
+  const b = ctx.createBuffer(2, len, sr);
+  for (let c = 0; c < 2; c++) {
+    const d = b.getChannelData(c), rnd = mulberry32(9100 + c * 77);
+    const pre = Math.floor(sr * 0.006), hold = Math.floor(sr * 0.15), rel = Math.floor(sr * 0.012);
+    for (let i = pre; i < Math.min(len, pre + hold + rel); i++) {
+      const t = i - pre;
+      const env = t < hold ? 1 - 0.3 * t / hold : Math.max(0, 0.7 * (1 - (t - hold) / rel));
+      d[i] = (rnd() * 2 - 1) * env * 0.35;
+    }
+  }
+  return b;
+}
 function playDrum(piece, when, gain, vel){
   /* 鼓也要抖,但**比別人緊**:它是整個樂團對時間的基準。
      大鼓最緊(2.5ms)、鈸最鬆(4.5ms)——真的鼓手右手比右腳鬆,
@@ -3883,6 +3934,8 @@ function playDrum(piece, when, gain, vel){
   when += humanTime(pk, when, 303 + piece.length);
   // 實錄鼓組的大鼓也要能觸發側鏈(原本只有 808 的大鼓會);給不給看 FEELS[x].duck
   if (piece === "kick") duckBass(when);
+  // closed hat / 踩鈸落下時,上一顆還在響的 open hat 要停(808 的 open hat 另外有 D808_CUT)
+  if (piece === "hihat" || piece === "hhped") chokeOhat(when);
   /* 808 先用真的取樣,載不到才掉回合成(`synth808` 是備援不是主角) */
   if (drumKit() === "e808") {
     if (!play808Sample(piece, when, gain)) synth808(piece, when, gain);
@@ -3891,7 +3944,7 @@ function playDrum(piece, when, gain, vel){
   /* 沒特別給 vel 的話就拿音量當力度。鼓件自己的基準音量差很多
      (hi-hat 的 0.3 已經是很用力了、小鼓的 0.3 是幽靈音),
      所以要除掉那個基準才是真的「打多用力」 */
-  const ref = piece === "hihat" || piece === "hhped" || piece === "ride" ? 0.34
+  const ref = piece === "hihat" || piece === "hhped" || piece === "ride" || piece === "ohat" ? 0.34
             : piece === "kick" ? 0.9 : 0.7;
   const v = Math.max(0, Math.min(1, vel === undefined ? gain / ref : vel));
   // City Pop 的大鼓、小鼓、hi-hat 走 SM Drums(載不到就往下走原本的 Virtuosity)
@@ -3912,6 +3965,8 @@ function playDrum(piece, when, gain, vel){
   g.gain.value = gain * layerNorm;
   if (pan) { pan.pan.value = DRUM_PAN[piece] || 0; g.connect(pan); pan.connect(drumBus); }
   else g.connect(drumBus);
+  if (gateSend && (piece === "snare" || piece === "clap")) g.connect(gateSend);
+  if (piece === "ohat") lastOhat = { gains: [g], at: when };
 
   const src = ctx.createBufferSource();
   src.buffer = slot.mid[rr % slot.mid.length];
@@ -3948,6 +4003,7 @@ function playDrum(piece, when, gain, vel){
     rsrc.buffer = roomSlot.room[rr % roomSlot.room.length];
     const rg = ctx.createGain();
     rg.gain.value = gain * layerNorm;
+    if (piece === "ohat" && lastOhat) lastOhat.gains.push(rg);
     if (damp) { rg.gain.setValueAtTime(rg.gain.value, when + damp[0]); rg.gain.setTargetAtTime(0, when + damp[0], damp[1] * 1.5); }
     rsrc.connect(rg); rg.connect(roomBus);
     rsrc.start(when, leadOf(src.buffer));   // 跟近麥跳過同一段,兩支麥克風才對得齊
@@ -4663,6 +4719,7 @@ function playSMSample(piece, when, gain, v){
   const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
   if (pan) { pan.pan.value = DRUM_PAN[piece] || 0; g.connect(pan); pan.connect(drumBus); }
   else g.connect(drumBus);
+  if (gateSend && piece === "snare") g.connect(gateSend);
   const src = ctx.createBufferSource();
   src.buffer = buf;
   // 鼓件音色與悶音照樣吃 FEELS[x].drumTone / drumDamp(跟 playDrum 同一套)
@@ -5174,9 +5231,13 @@ function driftAt(beat, seed){
 }
 const LAYER_SEED = { keys: 11, gtr: 23, bass: 37, kick: 41, snare: 53, hat: 67 };
 function humanTime(name, when, salt){
-  const ms = microOf(name);
   const T = feel().timing;
-  if (!T || !playing || !spb) return micro(when, salt, ms) + pocket(name) / 1000;
+  /* `tie`:這一層直接用另一層的偏差(同一個種子、同一個量、同一組 lag16)。
+     貝斯綁大鼓 = 兩個人同一格落下時是同一個時間;pocket 還是各自的 */
+  const own = name;
+  if (T && T.tie && T.tie[name]) { name = T.tie[name]; salt = 303 + name.length; }
+  const ms = microOf(name);
+  if (!T || !playing || !spb) return micro(when, salt, ms) + pocket(own) / 1000;
   const tick = tickAt(when), beat = tick / TICKS;
   const q = tick % TICKS, pos = q / (TICKS / 4);
   const k = Math.round(pos) % 4, onGrid = Math.abs(pos - Math.round(pos)) < 0.2;
@@ -5190,7 +5251,7 @@ function humanTime(name, when, salt){
   let dev = Math.sqrt(corr) * drift * Math.sqrt(3) + Math.sqrt(1 - corr) * white;   // 兩部分都是「±1 均勻」的尺度
   dev *= onBeat ? (T.strong || 1) : (T.weak || 1);
   const lag = onGrid && T.lag16 && T.lag16[name] ? T.lag16[name][k] || 0 : 0;
-  return dev * ms / 1000 + (lag + pocket(name)) / 1000;
+  return dev * ms / 1000 + (lag + pocket(own)) / 1000;
 }
 /* 這一層抖幾毫秒。**寫在 `FEELS[x].micro` 裡,沒寫就是 0**——
    一個曲風一個曲風調,沒調到的那幾種一個取樣都不會動 */
@@ -5271,6 +5332,8 @@ function applyMix(){
   if (drumLowN) { drumLowN.frequency.value = m.drumLowHz || 90; drumLowN.gain.value = m.drumLow || 0; }
   if (keysPresN) { keysPresN.frequency.value = m.keysPresHz || 2000; keysPresN.gain.value = m.keysPres || 0; }
   if (drumMidN) { drumMidN.frequency.value = m.drumMidHz || 1000; drumMidN.gain.value = m.drumMid || 0; }
+  if (gateSend) gateSend.gain.value = m.snareGate || 0;
+  if (masterGain && masterBase) masterGain.gain.value = masterBase * (m.master || 1);
   if (drumRevSend) drumRevSend.gain.value = m.drumRev != null ? m.drumRev : 0.1;
   if (combAir) { combAir.frequency.value = m.gtrAirHz || 6500; combAir.gain.value = m.gtrAir || 0; }
   if (combChorus) combChorus.wet.gain.value = m.gtrChorus || 0;
@@ -5518,7 +5581,8 @@ const FEELS = {
              keys: "pad", klevel: 0.025,
              /* 沙鈴從十六分退回八分、−1.4dB:三首參考曲分軌量到高頻每拍 2.5–3 下,
                 我們是 5.4 下(hi-hat 八分 + 沙鈴十六分)——太碎 */
-             perc: { kind: "shaker", lvl: 0.22, extra16: { e: 0.15, a: 0.45, vel: 0.5 } },
+             /* hi-hat 已經走十六分,沙鈴退回八分、收小:兩層平均的高頻疊在一起會糊 */
+             perc: { kind: "shaker", lvl: 0.16 },
              chopGhost: 0.35 },
     /* AOR 的貝斯是往前的(後藤次利、細野晴臣那一路),不是墊在後面。
        量到 60Hz 比 Pop 低 2.5dB,補回來 */
@@ -5530,8 +5594,12 @@ const FEELS = {
     padVar: 3,                                                   // 墊底的鋼琴三種彈法
     /* ── 像真人的時間與力度(第六輪:對三首參考曲分軌量 + 文獻,見 `humanTime` 與 CLAUDE.md)── */
     timing: { corr: 0.6, anti: 0.5, ens: 0.4, strong: 0.85, weak: 1.35,
-              lag16: { kick: [0, 7, 6, 5], snare: [0, 7, 7, 6], hat: [0, 2, 2, 0],
-                       bass: [0, 8, 4, 8], keys: [0, 6, 3, 8], gtr: [0, 6, 3, 8] } },
+              /* hat 的 e / a 晚 7ms = 輕微的十六分 swing(105 BPM 一格 143ms,約 55:45) */
+              lag16: { kick: [0, 7, 6, 5], snare: [0, 7, 7, 6], hat: [0, 7, 2, 7],
+                       bass: [0, 7, 6, 5], keys: [0, 6, 3, 8], gtr: [0, 6, 3, 8] },
+              /* **大鼓與貝斯綁在一起**:貝斯用大鼓的那一條時間偏差(同一個種子、同一個量),
+                 兩個人同一格落下時是同一個時間——「Kick + Bass 要非常緊」 */
+              tie: { bass: "kick" } },
     kickAcc: [1, 0.72, 0.68, 0.78],
     topMove: 0.25,
     ghostGain: 0.13,
@@ -5549,13 +5617,28 @@ const FEELS = {
              [null, "snare", "snare", null, "snare", "htom", "ltom", "snare"]],
     /* **鼓件悶音**:[撐幾秒, 收的時間常數]。大鼓塞枕頭、小鼓貼膠帶、tom 調緊——
        八〇年代初錄音室的鼓(村上ポンタ秀一、青山純)音頭飽滿、尾巴很短 */
-    drumDamp: { kick: [0.14, 0.05], snare: [0.13, 0.05], htom: [0.2, 0.07], ltom: [0.24, 0.08] },
+    /* ── 使用者指定的鼓(第七輪)──────────────────────────────────────
+       大鼓:溫暖、短一些、不要太強的 sub;小鼓:明亮、中等偏短、一點八〇年代 gated room;
+       hi-hat:乾淨、十六分、輕微 swing;open hat 在反拍;大鼓與貝斯非常緊 */
+    drumDamp: { kick: [0.10, 0.04], snare: [0.11, 0.05], htom: [0.2, 0.07], ltom: [0.24, 0.08],
+                ohat: [0.32, 0.07] },
     /* **鼓件音色**:[濾波器種類, Hz, dB, Q]。大鼓補 60Hz 的肉、挖 400Hz 的紙箱、補 3.5k 的踩點;
        小鼓補 200Hz 的厚度、挖 900Hz 的鐵皮響 */
     drumTone: {
-      kick:  [["peaking", 60, 3, 0.9], ["peaking", 400, -6, 1.0], ["peaking", 3500, 3, 1.2]],
-      snare: [["peaking", 200, 2.5, 1.0], ["peaking", 900, -4, 1.2]],
+      /* 大鼓:60Hz 的推力拿掉、鼓件自己過 45Hz 高通(sub 收掉),溫暖留在 100Hz,
+         400Hz 的紙箱聲照挖,3kHz 的踏板聲只給一點 */
+      kick:  [["highpass", 45, 0, 0.7], ["peaking", 100, 2.5, 1.0], ["peaking", 400, -5, 1.2], ["peaking", 3000, 1.5, 1.0]],
+      /* 小鼓:5kHz 以上的架子 +3.5dB 是響線的亮度(明亮) */
+      snare: [["peaking", 200, 2.5, 1.0], ["peaking", 900, -4, 1.2], ["highshelf", 5000, 3.5, 0.7]],
+      /* hi-hat:600Hz 以下是鼓棒碰到鈸身的「噹」與別的鼓的串音,切掉才乾淨 */
+      hihat: [["highpass", 600, 0, 0.7]],
+      ohat:  [["highpass", 600, 0, 0.7]],
     },
+    /* open hat 在反拍:第四拍的「&」多半有、第二拍的「&」偶爾(disco 的做法,但沒有每拍都打) */
+    ohat: [2], ohatBeats: [1, 3], ohatP: { 1: 0.3, 3: 0.75 },
+    bgPieces: ["ohat"],                      // 背景載,載好之前那一下照打 closed hat
+    /* hi-hat 走十六分(使用者指定),但 e / a 要輕——強弱差是它跟放克分得開的地方 */
+    hatAcc: [1, 0.42, 0.72, 0.45],
     /* **pocket**:貝斯落後 4 毫秒、切音吉他往前 2 毫秒。
        110 BPM 的一個十六分是 136 毫秒,所以 4 毫秒只有 3%——
        它不會被聽成「不準」,但那個「浮起來」的感覺就是從這裡來的。
@@ -5564,7 +5647,8 @@ const FEELS = {
        村上ポンタ那種「躺著打」的二四,加上貝斯落後,整個節奏組是往後靠的,
        只有 hi-hat 跟切音吉他在往前推——前後拉開那幾毫秒就是「律動」 */
     /* 貝斯寫 −2 不是 +4:它的壓縮器自己帶 6ms 的 lookahead,實際還是落後 4ms */
-    pocket: { bass: -2, gtr: -2, snare: 3, hat: -1 },
+    /* 貝斯 −6:貝斯 bus 的壓縮器自帶 6ms lookahead,**整個扣回來**,大鼓與貝斯才會真的緊 */
+    pocket: { bass: -6, gtr: -2, snare: 3, hat: -1 },
     // Rhodes 的音長每一下差 ±12%:同一個型每一下放開的時間都一樣就是在「按鍵」
     artic: { keys: 0.24 },
     /* 微時值、和弦不同時落下、樂句換氣、力度範圍——**這四項只有 City Pop 開著**,
@@ -5656,7 +5740,11 @@ const FEELS = {
            drumRev: 0.05,
            /* 超低頻收掉、大鼓的拳頭補回來(分軌對三首參考曲量的:貝斯 31Hz +12.6dB、
               鼓 31Hz +7dB 而 63–125Hz −4～−6dB) */
-           bassHp: 55, drumHp: 45, drumLow: 4, drumLowHz: 90 },
+           bassHp: 55, drumHp: 45, drumLow: 2, drumLowHz: 110,
+           /* 八〇年代的 gated room(Phil Collins / Hugh Padgham):只送小鼓,
+              一段很密的房間聲撐 0.15 秒就被硬切掉。「一點」= 送 0.14 */
+           snareGate: 0.14,
+           master: 0.70 },                    // 把 RMS 拉回目標帶(−11～−13.5);前面的黏著壓縮會吃掉一部分,所以要收 3dB 才降 1.5dB
   },
   /* Blues:shuffle。跟 Pop 同一組鼓件、同一個 backbeat,差別在**八分是三連音的**
      (`swing: 0.66`,不是爵士的 0.58——藍調的搖擺更接近正三連音),
@@ -5850,7 +5938,8 @@ const GROOVES = {
      大鼓與貝斯去咬。走滿十六分就變成放克了——city pop 的鼓是乾淨的 8 beat 骨架
      配十六分的低音律動,那個對比就是它的味道 */
   citypop: {
-    "4/4": { snare: [4, 12], cym: [0,2,4,6,8,10,12,14], push: 14, ghost: 11 },
+    /* hi-hat 走十六分(使用者指定);強弱靠 `FEELS.citypop.hatAcc`,e / a 很輕 */
+    "4/4": { snare: [4, 12], cym: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], push: 14, ghost: 11 },
   },
   /* K-Pop 是 half-time:hi-hat 跟放克一樣走滿十六分,但**拍手只打第 3 拍**。
      少了二四的 backbeat,整個律動就慢了一半——同樣的速度聽起來比放克鬆。
@@ -6311,7 +6400,7 @@ function scheduleDrums(barStartBeat, b, absBar, isFill){
       const shuffled = f.swing > 0.5;
       const acc = f.cym === "ride"
         ? (off ? 0.46 : (beatIdx % 2 === 1 ? 1.05 : 0.88))
-        : (div === 4 ? (k === 0 ? 1 : k === 2 ? 0.78 : 0.5)
+        : (div === 4 ? (f.hatAcc ? f.hatAcc[k] : (k === 0 ? 1 : k === 2 ? 0.78 : 0.5))
                      : (off ? (shuffled ? 0.45 : 0.68) : 1));
       /* **開放 hi-hat 是往下一小節衝過去的那一下**(`FEELS[x].ohat`)。
          trap 與 K-Pop 幾乎都打在「四的後半」——它不是裝飾,是句子的呼吸口。
@@ -6320,7 +6409,12 @@ function scheduleDrums(barStartBeat, b, absBar, isFill){
          十六分 hi-hat,力度與時間都有「兩小節一個週期」的型——手有自己的習慣,
          每兩小節重複同一組輕重,不是每一下各自亂數。種子固定,所以整首都是同一組 */
       const cyc = f.hatCycle ? 1 + f.hatCycle * (hash01((absBar % 2) * 16 + idx, 777) * 2 - 1) : 1;
-      const opens = f.ohat && f.ohat.indexOf(k) >= 0 && b === beatsInBar() - 1;
+      /* `ohatBeats` / `ohatP`(沒寫就照舊只在最後一拍):哪幾拍的「&」、各自多少機率。
+         open hat 還沒載到(背景載)就照打 closed hat——合成的備援聽起來不像 open hat */
+      const oBeat = f.ohatBeats ? f.ohatBeats.indexOf(b) >= 0 : b === beatsInBar() - 1;
+      const oP = f.ohatP ? (f.ohatP[b] || 0) : 1;
+      const opens = f.ohat && f.ohat.indexOf(k) >= 0 && oBeat && drumReady("ohat") &&
+                    (oP >= 1 || hash01(absBar * 16 + idx, 778) < oP);
       playDrum(opens ? "ohat" : f.cym, t,
                humanize(absBar, idx + 60, f.cymGain * acc * cyc * (opens ? 1.15 : 1) * p.energy * arc));
     }

@@ -104,6 +104,8 @@ for (const cs of cfg.cases) {
   /* A/B 用的覆寫:點曲風之前併進 FEELS[曲風](null = 拿掉那一層) */
   if (ovr) await pg.evaluate(([f, o]) => { const m = (t, x) => { for (const k in x) { if (x[k] && typeof x[k] === 'object' && !Array.isArray(x[k])) { t[k] = t[k] || {}; m(t[k], x[k]); } else t[k] = x[k]; } }; m(FEELS[f], JSON.parse(o)); }, [cs.feel, ovr]);
   await pg.click(`[data-feel="${cs.feel}"]`); await pg.click(`[data-style="${cs.style}"]`);
+  /* REALISM_PROBE=<js 檔>:按播放之前在頁面裡跑(包函式記錄用),錄完呼叫 window.__probeReport() 印出來 */
+  if (process.env.REALISM_PROBE) await pg.evaluate(fs.readFileSync(process.env.REALISM_PROBE, 'utf8'));
   await pg.click('#playBtn');
   await pg.waitForFunction(() => typeof playing !== 'undefined' && playing, null, { timeout: 120000 });
   await pg.waitForFunction(b => currentBeat() >= b, FROM_BEAT, { timeout: 180000, polling: 5 });
@@ -111,6 +113,7 @@ for (const cs of cfg.cases) {
   await pg.waitForFunction(s => __rec.L.length * 4096 >= s * ctx.sampleRate, SECS, { timeout: 120000, polling: 50 });
   const r = await pg.evaluate((s) => { const cat = a => { const n = a.reduce((q, x) => q + x.length, 0), o = new Float32Array(n); let p = 0; for (const x of a) { o.set(x, p); p += x.length; } return o; };
     const L = cat(__rec.L), R = cat(__rec.R), n = Math.floor(s * ctx.sampleRate); return { L: Array.from(L.subarray(0, n)), R: Array.from(R.subarray(0, n)), sr: ctx.sampleRate, bpm: Math.round(60 / spb) }; }, SECS);
+  if (process.env.REALISM_PROBE) console.log('probe', cs.feel, cs.style, JSON.stringify(await pg.evaluate(() => window.__probeReport ? window.__probeReport() : null)));
   await pg.close();
   /* 有取樣沒載到的話,錄到的是合成備援的聲音——那一筆不能收,補抓之後重跑 */
   if (caseMissing) { console.log('retry', id, cs.feel, cs.style, '(缺', caseMissing, '個取樣)'); continue; }

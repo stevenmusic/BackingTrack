@@ -138,6 +138,15 @@ Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 25).forEach(([k, n])
     S.下數++;
     if (!core(c, pc)) { S.違規++; const k = `${g.inst} ${['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'][pc]} over ${c.name}`; ex[k] = (ex[k] || 0) + 1; }
   }
+  /* HARM_TOPS=1:鋼琴頂音線有多「活」——用了幾種音、多常換音、色彩音佔幾成 */
+  if (process.env.HARM_TOPS) {
+    const ks = groups.filter(g => g.inst === 'keys').sort((a, b) => a.beat - b.beat);
+    const tops = ks.map(g => Math.max(...g.ms));
+    let moves = 0, steps = 0, color = 0;
+    for (let i = 1; i < tops.length; i++) { const d = Math.abs(tops[i] - tops[i - 1]); if (d) { moves++; if (d <= 2) steps++; } }
+    for (const g of ks) { const c = at(g.beat + 0.01); if (c && !c.ivCore.includes((((Math.max(...g.ms) - c.root) % 12) + 12) % 12)) color++; }
+    console.log('頂音線:', JSON.stringify({ 下數: tops.length, 用了幾種音: new Set(tops).size, 換音比例: +(moves / Math.max(1, tops.length - 1)).toFixed(2), 級進佔換音: +(steps / Math.max(1, moves)).toFixed(2), 色彩音比例: +(color / Math.max(1, tops.length)).toFixed(2) }));
+  }
   const total = Object.values(T).reduce((a, S) => a + S.違規, 0);
   console.log('旋律上的和弦外音:', total, JSON.stringify(T));
   Object.entries(ex).sort((a, b) => b[1] - a[1]).slice(0, 10).forEach(([k, n]) => console.log('   ', n, '×', k));

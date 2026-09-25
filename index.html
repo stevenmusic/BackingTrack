@@ -4561,6 +4561,74 @@ function voicesOf(kind){
   if (kind === "pad") return [-7, -2, 3.5, 8.5];
   return [-5, 5];
 }
+/* ── 連奏鋪底(`FEELS[x].parts.padLegato`,City Pop)──────────────────────────
+   被說「嘟一聲嘟一聲的感覺,很突兀」:原本每顆和弦都 `playKeysChord` 一次,
+   **整組音一起淡入、一起收掉**,共同音也照樣重來——那就是每小節一個「嘟」。
+   真的鋪底(弦樂、Prophet)是**按住不放**:共同音一直撐著,只有要換的音換過去。
+   做法:每一個音一個常駐聲部(`padVoices`,midi → 聲部)。
+   - 新和弦還有這個音 → 不動它(只把音量帶到新的量)
+   - 新和弦沒有這個音 → 從新和弦進來那一刻慢慢收掉(時間常數 `rel`)
+   - 新的音 → 慢慢淡入(`atk`),跟收掉的那幾顆交疊
+   每一顆起來的時候先排一個「如果沒人接手就收掉」(`relAt`),下一顆和弦接手時用
+   `cancelScheduledValues` 把它取消——這樣段落在這裡停(編曲讓鋪底休息)也會自己收乾淨 */
+const padVoices = new Map();
+function padVoiceStop(v, at){
+  for (const o of v.oscs) { try { o.stop(at); } catch (e) {} }
+}
+function padLegato(midis, when, dur, gain, spec){
+  const atk = spec.atk || 0.45, rel = spec.rel || 0.35;
+  gain *= 0.71;                                  // 四顆失諧疊起來 +3dB,補回來(跟 `playKeysChord` 一樣)
+  // 已經收乾淨很久的聲部先清掉
+  for (const [m, v] of padVoices) if (v.relAt < when - 2) { padVoiceStop(v, when); padVoices.delete(m); }
+  const want = new Set(midis);
+  for (const [m, v] of padVoices) {
+    if (want.has(m)) continue;
+    v.g.gain.cancelScheduledValues(when);
+    v.g.gain.setTargetAtTime(0.0001, when, rel);
+    padVoiceStop(v, when + rel * 6);
+    padVoices.delete(m);
+  }
+  for (const m of want) {
+    let v = padVoices.get(m);
+    if (v) {
+      v.g.gain.cancelScheduledValues(when);
+      v.g.gain.setTargetAtTime(gain, when, 0.3);
+    } else {
+      v = padVoiceMake(m, when, gain, atk);
+      padVoices.set(m, v);
+    }
+    // 沒人接手就在這顆和弦結束後收掉(下一顆和弦接手時會被 cancel)
+    v.relAt = when + dur + 0.08;
+    v.g.gain.setTargetAtTime(0.0001, v.relAt, rel);
+  }
+}
+function padVoiceMake(m, when, gain, atk){
+  const f0 = 440 * Math.pow(2, (m - 69) / 12);
+  const g = ctx.createGain();
+  const lp = ctx.createBiquadFilter();
+  lp.type = "lowpass"; lp.frequency.value = 2400; lp.Q.value = 0.7;
+  lp.connect(g); g.connect(padBus);
+  g.gain.setValueAtTime(0.0001, when);
+  g.gain.linearRampToValueAtTime(gain, when + atk);
+  const vl = voicesOf("pad"), vmax = Math.max(...vl.map(Math.abs)) || 1;
+  const oscs = [];
+  for (const c of vl) {
+    const o = ctx.createOscillator();
+    o.setPeriodicWave(waveOf("pad", PAD_PARTS));
+    o.frequency.value = f0 * Math.pow(2, c / 1200);
+    let dst = lp;
+    if (ctx.createStereoPanner) {
+      const sp = ctx.createStereoPanner();
+      sp.pan.value = c === 0 ? 0 : Math.sign(c) * 0.7 * Math.sqrt(Math.abs(c) / vmax);
+      sp.connect(lp); dst = sp;
+    }
+    o.connect(dst); o.start(when);
+    oscs.push(o); activeSources.add(o);
+    o.onended = () => { activeSources.delete(o); try { o.disconnect(); } catch (e) {} };
+  }
+  return { g, lp, oscs, relAt: Infinity };
+}
+
 function playKeysChord(midis, when, dur, gain, kind){
   if (!midis.length) return;
   const organ = kind === "organ";
@@ -5713,6 +5781,8 @@ const FEELS = {
              brass: { lvl: 0.115, cells: [[6, 10], [10, 14], [6, 14], [10], [14], [3, 6], [11, 14]] },
              /* 鋪底 −2dB、過 3kHz 低通:盲聽 6 次寫「太尖銳、太突出、要溫暖一點、不夠後面」 */
              keys: "pad", klevel: 0.025,
+             /* 連奏鋪底(見 `padLegato`):淡入 0.45 秒、收掉的時間常數 0.35 秒 */
+             padLegato: { atk: 0.45, rel: 0.35 },
              /* 沙鈴從十六分退回八分、−1.4dB:三首參考曲分軌量到高頻每拍 2.5–3 下,
                 我們是 5.4 下(hi-hat 八分 + 沙鈴十六分)——太碎 */
              /* hi-hat 已經走十六分,沙鈴退回八分、收小:兩層平均的高頻疊在一起會糊 */
@@ -5745,10 +5815,10 @@ const FEELS = {
     orchs: [
       /* 1 銅管弦樂型(〈SPARKLE〉〈WINDY LADY〉〈Telephone Number〉〈Tokai〉):銅管每小節、鋪底亮 */
       { name: "brass", parts: { klevel: 0.05, brass: { lvl: 0.15, every: 1 } },
-        mix: { padLp: 5500 }, arrange: { layers: { brass: "01110111", keys: "11111111" } } },
+        mix: { padLp: 5500 }, arrange: { layers: { brass: "01110111", keys: "00110111" } } },
       /* 2 合成器鋪底型(〈Midnight Joke〉〈Midnight Pretenders〉):大片合成器鋪底,銅管很少 */
       { name: "synth", parts: { klevel: 0.075, glevel: 0.22, brass: { every: 4 } },
-        mix: { padLp: 4500 }, arrange: { layers: { keys: "11111111", brass: "00000001" } } },
+        mix: { padLp: 4500 }, arrange: { layers: { keys: "01111110", brass: "00000001" } } },
       /* 3 鋼琴型(〈Plastic Love〉):鋼琴往前,其他照常 */
       { name: "piano", mix: { keysLevel: 1.1 } },
       /* 4 雙吉他型(〈Fantasy〉〈STAY BY ME〉):兩把吉他一直都在,鋪底淡 */
@@ -5842,7 +5912,9 @@ const FEELS = {
         guitar:  "11110111",
         guitar2: "00001111",
         brass:   "00010001",
-        keys:    "00111111",
+        /* 鋪底 8 小節裡只上 4 小節:12 首真歌的「其他」軌只有 39–66% 的時間在響,
+           不是從頭鋪到尾(原本 6/8、配器輪換裡還有 8/8) */
+        keys:    "00111100",
         perc:    "11111111",
       },
       /* 力度也要跟著樂句走:前兩小節收 0.6dB、句尾推 0.5dB。
@@ -7732,7 +7804,13 @@ function keysChordAt(here, barStartBeat, transpose, absBar){
   const len = (here.toBeat - here.fromBeat) * spb;
   const lvl = (f.parts.klevel || 0.16) * (st === "drive" ? 1.12 : st === "pad" ? 0.9 : 1)
             * arcGain(absBar);
-  playKeysChord(notes, slotTime(barStartBeat, here.from), len * 0.96, lvl, kind);
+  if (f.parts.padLegato && kind === "pad") {
+    /* 真歌的「其他」軌有聲音的時候同時 2–3 個音(Basic Pitch 轉 12 首,`tools/realism/padgram.py`),
+       我們一上來就是 4 顆——只留上面 3 顆 */
+    padLegato(notes.slice(-3), slotTime(barStartBeat, here.from), len, lvl, f.parts.padLegato);
+  } else {
+    playKeysChord(notes, slotTime(barStartBeat, here.from), len * 0.96, lvl, kind);
+  }
   /* **低音鋪底是獨立的一層**(`klow`),不是把 `keys` 調大。
      量出來 K-Pop 在 120–250Hz 比 Pop 低 10dB:808 的正弦擠在 30–60、
      pluck 從 250 才開始,中間那段「身體」沒有人在,聽起來就是單薄。
@@ -8005,6 +8083,7 @@ function stopPlayback(){
   if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
   for (const s of [...activeSources]) { try { s.stop(); } catch (e) {} }
   activeSources.clear();
+  padVoices.clear();
   setPlayIcon(false);
   clearHighlight();
   updateTransportIdle();

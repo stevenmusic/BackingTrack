@@ -23,6 +23,7 @@ await pg.evaluate(() => {
   wrap('playBassNote', (m, t, d) => rec('bass', m, t, d));
   wrap('pluck', (m, t, g, tone, mute) => rec('gtr', m, t, mute > 0 ? mute : 0.5 * spb));
   wrap('playKeysChord', (ms, t, d, g, kind) => (ms || []).forEach(m => rec(kind === 'low' ? 'padlow' : 'pad', m, t, d)));
+  wrap('padLegato', (ms, t, d) => (ms || []).forEach(m => rec('pad', m, t, d)));
   wrap('playBrass', (ms, t, d) => (ms || []).forEach(m => rec('brass', m, t, d)));
   wrap('synthKeyNote', (m, t, d) => rec('synth', m, t, d));
   wrap('playArp', (m, t, d) => rec('arp', m, t, d));

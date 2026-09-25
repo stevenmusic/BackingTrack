@@ -3918,8 +3918,18 @@ function buildGateIR(){
     for (let i = pre; i < Math.min(len, pre + hold + rel); i++) {
       const t = i - pre;
       const env = t < hold ? 1 - 0.3 * t / hold : Math.max(0, 0.7 * (1 - (t - hold) / rel));
-      d[i] = (rnd() * 2 - 1) * env * 0.35;
+      d[i] = (rnd() * 2 - 1) * env;
     }
+  }
+  /* **能量一定要正規化**(兩聲道各自平方和開根號 = 1)。第一版沒做,150ms 的雜訊每個取樣 0.35,
+     卷積出來比乾的小鼓大 **28dB**——送 0.14 的「一點」gated 其實比小鼓本身還大聲,
+     鼓那一軌的相似度從 112% 掉到 56%(`消去法8`,拿掉 gated 就回來)。
+     正規化之後送量就等於「比乾的小鼓小幾 dB」:0.3 ≈ −10dB */
+  for (let c = 0; c < 2; c++) {
+    const d = b.getChannelData(c); let e = 0;
+    for (let i = 0; i < len; i++) e += d[i] * d[i];
+    const k = e > 0 ? 1 / Math.sqrt(e) : 0;
+    for (let i = 0; i < len; i++) d[i] *= k;
   }
   return b;
 }
@@ -5571,11 +5581,11 @@ const FEELS = {
        那不是混音決定,是壓縮器的副作用——要收回來,
        壓縮留下的是「顆粒變齊」不是「變大聲」 */
     /* 切音吉他用 Gretsch 的真斷奏錄音(`SMP_EXT.gretsch`):12 段配對 +1.5 ± 0.4、11/12 段贏 */
-    parts: { guitar: "chop", gtone: "clean", gkit: "gretsch", glevel: 0.185,
+    parts: { guitar: "chop", gtone: "clean", gkit: "gretsch", glevel: 0.28,
              /* 變化:切音 4 → 8 型、第二把吉他 3 種彈法、銅管 4 → 7 型 */
              chopCells: [[2, 6, 10, 14], [2, 7, 10, 14], [2, 6, 11, 15], [3, 6, 10, 14],
                          [2, 6, 10], [6, 10, 14], [2, 5, 10, 13], [3, 7, 11, 14]],
-             guitar2: { lvl: 0.12, modes: 3 },
+             guitar2: { lvl: 0.18, modes: 3 },
              brass: { lvl: 0.115, cells: [[6, 10], [10, 14], [6, 14], [10], [14], [3, 6], [11, 14]] },
              /* 鋪底 −2dB、過 3kHz 低通:盲聽 6 次寫「太尖銳、太突出、要溫暖一點、不夠後面」 */
              keys: "pad", klevel: 0.025,
@@ -5588,7 +5598,10 @@ const FEELS = {
        量到 60Hz 比 Pop 低 2.5dB,補回來 */
     /* 1.3 → 0.68(−5.6dB):三首參考曲(Midnight Pretenders / Plastic Love / 真夜中のドア)
        分軌之後貝斯相對整軌 −3.4～−6.6dB(平均 −5.2),我們是 −1.5～−2.0,貝斯站得太前面 */
-    bassGain: 0.68,
+    /* 0.68 → 0.34(−6dB,第七輪):第六輪把貝斯改成撐滿(連奏)、多了幾顆、起音空白也修掉之後,
+       分軌量到貝斯佔三軌總和的 −1.4dB(參考曲 −5.3、第六輪之前 −2.7),其他樂器掉到 −12.3(參考 −6.4)——
+       整體伴奏相似度從 98.8% 掉到 32–55%,每一軌單獨看卻都正常。**是比例壞了,不是哪一件樂器壞了** */
+    bassGain: 0.24,     // 四組並排量過:0.34 → 伴奏 89.5%、0.24(加上鍵盤吉他各推一點)→ 101.9%
     drumSet: "sm",   // 大鼓、小鼓、hi-hat 用 SM Drums(見 `SM_KIT`)
     /* **變化**(使用者:「每個模式都多幾種彈法,過門也是」)。全部走通用欄位,沒寫的曲風零差異 */
     padVar: 3,                                                   // 墊底的鋼琴三種彈法
@@ -5719,7 +5732,7 @@ const FEELS = {
               每一層在 250Hz 都有份(鼓、貝斯、Rhodes、鋪底都在 −18～−21),
               所以單調一層補不完,主力是母帶的參考比對 EQ(`masterMid` / `masterAir`)。
               誤差(63–8k 的 RMS)6.42 → 2.44dB,之後再調幾乎不動了 */
-           keysEq: -3, keysEqHz: 800, keysEqQ: 0.6, keysLevel: 0.85,
+           keysEq: -3, keysEqHz: 800, keysEqQ: 0.6, keysLevel: 1.3,
            padEq: -4, padEqHz: 400,
            drumAir: 4, drumAirHz: 6000,
            gtrAir: 4, gtrAirHz: 3500,
@@ -5743,8 +5756,8 @@ const FEELS = {
            bassHp: 55, drumHp: 45, drumLow: 2, drumLowHz: 110,
            /* 八〇年代的 gated room(Phil Collins / Hugh Padgham):只送小鼓,
               一段很密的房間聲撐 0.15 秒就被硬切掉。「一點」= 送 0.14 */
-           snareGate: 0.14,
-           master: 0.70 },                    // 把 RMS 拉回目標帶(−11～−13.5);前面的黏著壓縮會吃掉一部分,所以要收 3dB 才降 1.5dB
+           snareGate: 0.15,          // ≈ 比乾的小鼓小 16dB;0.3 時鼓那一軌掉到 87%,0.15 是 101%
+           master: 0.95 },                    // 把 RMS 拉回目標帶(−11～−13.5);前面的黏著壓縮會吃掉一部分,所以要收 3dB 才降 1.5dB
   },
   /* Blues:shuffle。跟 Pop 同一組鼓件、同一個 backbeat,差別在**八分是三連音的**
      (`swing: 0.66`,不是爵士的 0.58——藍調的搖擺更接近正三連音),

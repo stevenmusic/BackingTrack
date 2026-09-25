@@ -9,7 +9,7 @@ import sys, glob, os, json, numpy as np, soundfile as sf, librosa, collections
 SR = 22050
 N = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
 Q = {'': [0, 4, 7], 'm': [0, 3, 7], '7': [0, 4, 7, 10], 'maj7': [0, 4, 7, 11], 'm7': [0, 3, 7, 10],
-     'm7b5': [0, 3, 6, 10], '7sus4': [0, 5, 7, 10]}
+     'm7b5': [0, 3, 6, 10], '7sus4': [0, 5, 7, 10], 'dim7': [0, 3, 6, 9]}
 def load(d, s):
     x, sr = sf.read(os.path.join(d, s + '.wav'), always_2d=True, dtype='float32')
     return librosa.resample(x.mean(1), orig_sr=sr, target_sr=SR)
@@ -38,7 +38,8 @@ for d in sorted(glob.glob(sys.argv[1])):
         c = cs[:, i:i + 2].mean(1); b = bs[:, i:i + 2].mean(1)
         c = c / (np.linalg.norm(c) + 1e-9); bn = b / (b.max() + 1e-9)
         # sus4 的樣板四顆音、又跟很多九度和弦重疊,不打折的話到處都是 7sus4(第一版踩過)
-        sc = [((float(v @ c) + 0.25 * bn[r]) * (0.9 if 'sus' in q else 1.0), r, q) for r, q, v in T]
+        # 減七是對稱的(四個音哪一顆都可以當根音),根音只能靠貝斯分;打一點折扣,不然會搶走半減七
+        sc = [((float(v @ c) + 0.25 * bn[r]) * (0.9 if 'sus' in q else 0.95 if q == 'dim7' else 1.0), r, q) for r, q, v in T]
         _, r, q = max(sc)
         seq.append(N[(r - k) % 12] + q)                      # 轉成 C 大調的級數寫法
     # 小節線:試 0 / 1 個「兩拍」的位移,挑「和弦換在小節開頭」最多的那個
@@ -60,5 +61,5 @@ for d in sorted(glob.glob(sys.argv[1])):
     for role in ('主歌', '副歌'):
         cnt = collections.Counter(' | '.join(b['bars']) for b in blocks if b['role'] == role)
         for s, n in cnt.most_common(3): print(f'   {role} ×{n}: {s}')
-p = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'db', 'chords.json')
+p = os.environ.get('CHORDS_OUT') or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'db', 'chords.json')
 json.dump(res, open(p, 'w'), ensure_ascii=False, indent=1)

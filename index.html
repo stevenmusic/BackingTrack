@@ -9173,7 +9173,7 @@ const SECTIONS = [
   { text: "Cmaj7 - Em7 - Fmaj7 - G7",  feel: "citypop", meter: "4/4", role: "pre" },  // I-iii-IV-V,一路往上走
   { text: "Fmaj7 - Fm7 - Em7 - A7",    feel: "citypop", meter: "4/4", role: "pre" },  // IV-iv-iii-VI7,借用 iv 接 turnaround
   { text: "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",        feel: "citypop", meter: "4/4", role: "chorus" },  // 王道的七和弦聲位
-  { text: "Cmaj7 - Fmaj7 - Bm7b5 - E7 - Am7 - D7 - Dm7 - G7",      feel: "citypop", meter: "4/4", role: "verse" },  // 一小節一顆一路走,小調 ii-V 只是經過
+  { text: "Cmaj7 - Em7 - Bm7b5 - E7 - Am7 - D7 - Dm7 - G7",      feel: "citypop", meter: "4/4", role: "verse" },  // 一小節一顆一路走,小調 ii-V 只是經過。第二顆原本是 Fmaj7,但 IV→viiø 在 12 首裡只有 2 首;iii→viiø 有 5 首
   /* ── 第八輪:從 12 首真歌抽出來的(`tools/realism/chords.py`,db/chords.json,全部轉成 C 大調)──
      自動辨識不是採譜:根音與大小調可靠,7 / maj7 / sus 的判斷只能當參考。
      使用者給的「City Pop 常用進行」那份清單也對照過,對得上的一併收進來 */
@@ -9190,7 +9190,7 @@ const SECTIONS = [
   { text: "Dm7 - Dm7 - G7 - G7",        feel: "citypop", meter: "4/4", role: "verse" },  // ii-V 各兩小節的 vamp,量到〈WINDY LADY〉的主歌
   { text: "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7", feel: "citypop", meter: "4/4", role: "verse" },  // ii-V-I-vi-IV-iii,量到〈STAY BY ME〉的主歌
   { text: "Cmaj7 | Gm7 C7 | Fmaj7 | Dm7 G7", feel: "citypop", meter: "4/4", role: "verse" },  // I-v7+I7-IV:往 IV 的 ii-V,量到〈Telephone Number〉的主歌(v7 - I7 - IVM7 重複兩次)
-  { text: "Cmaj7 | Bbmaj7 | Cmaj7 | Dm7 G7", feel: "citypop", meter: "4/4", role: "verse" },  // 借來的 ♭VIImaj7:12 首裡 9 首用到 ♭VII(多半是大七)
+  { text: "Cmaj7 | Bbmaj7 Am7 | Dm7 | G7", feel: "citypop", meter: "4/4", role: "verse" },  // 借來的 ♭VIImaj7 半音滑到 vi7:12 首裡 9 首用到 ♭VII,最常接 vi(5 首),〈Midnight Joke〉就是 Cmaj7 Bbmaj7 Am7。原本寫 ♭VII 回 I,那一步只有 2 首
   { text: "Fmaj7 Cmaj7 | Fmaj7 Cmaj7 | Fmaj7 Cmaj7 | Dm7 G7", feel: "citypop", meter: "4/4", role: "verse" },  // IV-I 擠在同一小節:12 首裡最常見的「一小節兩顆」(IVM7 IM7,6 首 40 次)
   // 導歌:最後一小節接進副歌
   { text: "Cmaj7 - Am7 - Dm7 - F/G",    feel: "citypop", meter: "4/4", role: "pre" },  // 最後一顆 F/G(IV/V):都會感的懸空,等著副歌

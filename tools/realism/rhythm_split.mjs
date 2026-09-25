@@ -13,6 +13,7 @@ await pg.route(/^https:/, r => r.abort());
 await pg.goto(`http://127.0.0.1:${sv.address().port}/home/user/BackingTrack/index.html`);
 await pg.fill('#chordInput', prog); await pg.dispatchEvent('#chordInput', 'input');
 await pg.click(`[data-feel="${feel}"]`); await pg.click('[data-style="comp"]');
+if (process.env.NOSPLIT) await pg.evaluate(() => { for (const r of SUB_RULES) if (r.split) r.ok = () => false; });
 await pg.evaluate(() => {
   window.__R = { notes: [], bars: {} };
   const tb = t => anchorBeat + (t - anchorTime) / spb;
@@ -50,5 +51,8 @@ for (const [key, L] of Object.entries(per)) for (const [g, v] of Object.entries(
   const nb = new Set(Object.entries(R.bars).filter(([k, x]) => x.pos + '|' + (x.split ? 'S' : 'N') === key).map(([k]) => k)).size;
   (out[key] ||= {})[g] = +(v.hits.size / nb).toFixed(2);
 }
+if (process.env.DUMP) { const pb = {}; for (const [inst, beat] of R.notes) { const mb = beat - R.ci; if (mb < 0) continue; const bar = Math.floor(mb / R.beats); const g = inst.startsWith('drum:') ? 'drums' : inst; const slot = Math.round((mb - bar * R.beats) * R.div * 2); ((pb[bar] ||= {})[g] ||= new Set()).add(slot); }
+  const o = {}; for (const [bar, L] of Object.entries(pb)) { o[bar] = { split: !!(R.bars[bar] && R.bars[bar].split), names: R.bars[bar] && R.bars[bar].names }; for (const [g, v] of Object.entries(L)) o[bar][g] = [...v].sort((a, b) => a - b); }
+  fs.writeFileSync(process.env.DUMP, JSON.stringify(o)); }
 const names = {}; for (const x of Object.values(R.bars)) if (x.split) names[x.pos] = (names[x.pos] || new Set()).add(x.names);
 for (const k of Object.keys(out).sort()) console.log(k.padEnd(5), JSON.stringify(out[k]), k.endsWith('S') ? [...names[k.split('|')[0]]].join(' / ') : '');

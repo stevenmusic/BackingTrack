@@ -38,6 +38,7 @@
 | 電貝斯 | [Black And Blue Basses](https://github.com/sfzinstruments/karoryfer.black-and-blue-basses) | Karoryfer Samples | CC0 |
 | 低音提琴 | [dsmolken.double-bass](https://github.com/sfzinstruments/dsmolken.double-bass) | D. Smolken | CC0 |
 | 電吉他(City Pop) | [Black And Green Guitars](https://github.com/sfzinstruments/karoryfer.black-and-green-guitars) | Karoryfer Samples(Brian Wood 錄音) | CC0 |
+| 管樂(City Pop) | [VSCO-2-CE](https://github.com/sgossner/VSCO-2-CE) | Versilian Studios(Sam Gossner) | CC0 |
 | 木吉他、尼龍弦、電吉他 | [tonejs-instruments](https://github.com/nbrosowsky/tonejs-instruments) | Nicholaus P. Brosowsky 整理 | 程式 MIT、取樣標示 CC BY 3.0 |
 | 鼓的節奏(City Pop) | [Groove MIDI Dataset](https://magenta.tensorflow.org/datasets/groove) | Google Magenta(Gillick, Roberts, Engel, Eck, Bamman) | CC BY 4.0 |
 | 字型 | Noto Serif TC / Noto Sans TC(Google Fonts) | Google | SIL OFL 1.1 |

@@ -81,6 +81,8 @@ https://bassmagazine.jp/player/interveiw-itokoki202204/
   2. 電鋼琴幾乎每首都有(名單沒寫廠牌;Rhodes 是推定)
   3. 弦樂:真弦樂團為主,也有 KORG Λ 合成弦樂 → 我們的合成鋪底對應的是「弦樂機」那一種
   4. 吉他:山下達郎本人用 Telecaster;我們切音用的是 Hofner 取樣
+- 可商用的 Telecaster 取樣(2026-09-26 找過,**沒有**):Karoryfer shinyguitar = 爵士空心琴(archtop)、emilyguitar = Epiphone 雙線圈、
+  FreePats「Electric Guitar FSBS」(CC0)照片是 Squier Stratocaster HSS、錄的是琴橋的**雙線圈**。都不比現在的 Hofner Club 更接近 → 切音吉他維持 Hofner
 - 可商用的真管樂取樣:VSCO-2-CE(CC0,github.com/sgossner/VSCO-2-CE)有 Trumpet / Tenor Trombone 的 **stac(斷奏)**與 sus;沒有薩克斯
 
 ## 還缺的(權威但沒讀到)

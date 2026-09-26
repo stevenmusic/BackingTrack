@@ -16,6 +16,7 @@
 | 電貝斯 | Black And Blue Basses(Karoryfer) | CC0 1.0 | ✅ 可以 | 不要求 |
 | 低音提琴 | dsmolken.double-bass(D. Smolken) | CC0 1.0 | ✅ 可以 | 不要求 |
 | 電吉他(City Pop) | Black And Green Guitars(Karoryfer,Brian Wood 錄) | CC0 1.0 | ✅ 可以 | 不要求 |
+| 管樂(City Pop:小號、長號斷奏) | VSCO-2-CE(Versilian Studios Chamber Orchestra 2 Community Edition,Sam Gossner) | CC0 1.0 | ✅ 可以 | 不要求 |
 | 鋼弦木吉他(Pop) | tonejs-instruments `guitar-acoustic` ← University of Iowa MIS | Iowa:任何用途不受限;整理者標 CC BY 3.0 | ✅ 可以 | 署名 Brosowsky(CC BY 3.0) |
 | 電吉他(Swing、Funk) | tonejs-instruments `guitar-electric` ← Karoryfer | 整理者標 CC BY 3.0(原始是 Karoryfer 的免費取樣) | ✅ 大概可以 | 署名 Brosowsky |
 | 尼龍弦吉他(Bossa) | tonejs-instruments `guitar-nylon` ← Freesound pack 11573(quartertone) | 整理者標 CC BY 3.0;**Freesound 原頁的授權讀不到** | ⚠️ 不確定 | 至少署名 quartertone + Brosowsky |
@@ -85,6 +86,10 @@
 - LICENSE 檔:`CC0 1.0 Universal`
 - readme.txt:
   > 1958 Otto Rubner double bass played and mapped by D. Smolken. … Royalty-free for all commercial and non-commercial use. Copyright 2013 D. Smolken.
+
+### VSCO-2-CE
+- 來源:https://github.com/sgossner/VSCO-2-CE(用到 `Brass/Trumpet/stac/`、`Brass/Tenor Trombone/stac/` 的 v3 力度層)
+- LICENSE 檔:`CC0 1.0 Universal`
 
 ### Black And Green Guitars
 - 來源:https://github.com/sfzinstruments/karoryfer.black-and-green-guitars

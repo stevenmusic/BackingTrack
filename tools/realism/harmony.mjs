@@ -118,9 +118,10 @@ Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 25).forEach(([k, n])
   };
   /* 同一下的音**不是同時落下的**(和弦攤開 4–12ms、刷弦一條一條錯開、
      鋪底 `padVar` 1 由下往上撥開每顆晚 35–60ms),所以照時間排序、
-     間隔小於 max(0.1 拍, 75ms) 的算同一下,不能用四捨五入的格子切。
-     只用 0.1 拍的話,快歌的撥開會被切成好幾下,底下那顆被誤當頂音 */
-  const gap = Math.max(0.1, 0.075 / (H.spb || 1));
+     間隔小於 0.1 拍的算同一下,不能用四捨五入的格子切。
+     **例外只有鋪底疏密的鋼琴**:撥開的那一下放寬到 max(0.1 拍, 75ms),不然快一點的歌會被切成好幾下、
+     底下那顆被誤當頂音。其他層不放寬——快歌的十六分(240 BPM = 62ms)會被併成一下、把違規藏起來 */
+  const gapOf = inst => inst === 'keys' && (style || 'comp') === 'pad' ? Math.max(0.1, 0.075 / (H.spb || 1)) : 0.1;
   const groups = [];
   const byInst = {};
   for (const [inst, m, beat] of H.notes) {
@@ -132,7 +133,7 @@ Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 25).forEach(([k, n])
     const single = inst === 'arp' || inst === 'vox';
     let cur = null;
     for (const [beat, m] of arr) {
-      if (single || !cur || beat - cur.last > gap) { cur = { inst, beat, last: beat, ms: [] }; groups.push(cur); }
+      if (single || !cur || beat - cur.last > gapOf(inst)) { cur = { inst, beat, last: beat, ms: [] }; groups.push(cur); }
       cur.ms.push(m); cur.last = beat;
     }
   }

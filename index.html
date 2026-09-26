@@ -2123,25 +2123,32 @@ function melodyOk(chord, pc){
 function fixTop(chord, notes){
   if (!chord || !notes || !notes.length) return notes;
   let out = notes.slice().sort((a, b) => a - b);
+  /* 全部都不合規(切音不彈根音、7alt 沒有五音,剩下的全是變化音與七音):
+     底下的迴圈只會把音一顆一顆往下搬好幾個八度、掉進貝斯音域,所以**不進迴圈**,
+     在原來的高度補一顆最近的骨架音(根音或三度),只差半音就直接換掉頂音;
+     頂上放不下(> 78)就把頂音換成它下面最近的骨架音 */
+  if (!out.some(n => melodyOk(chord, n))) {
+    const top = out[out.length - 1];
+    const pcs = [0].concat(chord.intervals.filter(x => x < 12)).map(x => (chord.rootPc + x) % 12)
+                   .filter(pc => melodyOk(chord, pc));
+    if (!pcs.length) return out;
+    const up = Math.min(...pcs.map(pc => top + 1 + ((((pc - top - 1) % 12) + 12) % 12)));
+    if (up <= 78 && up - top > 1) out.push(up);
+    else if (up <= 78) { out[out.length - 1] = up; }          // 只差半音:換掉頂音,不在最上面疊小二度
+    else {
+      const down = Math.max(...pcs.map(pc => top - 1 - ((((top - 1 - pc) % 12) + 12) % 12)));
+      out = out.slice(0, -1);
+      if (out.indexOf(down) < 0) out.push(down);
+      out.sort((a, b) => a - b);
+    }
+    return out;
+  }
   for (let guard = 0; guard < 8 && out.length && !melodyOk(chord, out[out.length - 1]); guard++) {
     if (out.length >= 4) { out = out.slice(0, -1); continue; }
     if (out.length === 1) { out = [out[0]]; break; }
     const t = out.pop() - 12;
     if (out.indexOf(t) < 0) out.push(t);
     out.sort((a, b) => a - b);
-  }
-  /* 全部都不合規(切音不彈根音、7alt 沒有五音,剩下的全是變化音與七音):
-     在頂上補一顆最近的骨架音(根音或三度),不然 G7alt 的切音頂音會停在 ♯9 */
-  if (out.length && !melodyOk(chord, out[out.length - 1])) {
-    const top = out[out.length - 1];
-    let best = null;
-    for (const iv of [0].concat(chord.intervals.filter(x => x < 12))) {
-      const pc = (chord.rootPc + iv) % 12;
-      if (!melodyOk(chord, pc)) continue;
-      const v = top + 1 + ((((pc - top - 1) % 12) + 12) % 12);
-      if (best == null || v < best) best = v;
-    }
-    if (best != null) out.push(best);
   }
   return out;
 }

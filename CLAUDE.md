@@ -20,7 +20,7 @@
 4. 有阻擋問題時,修完再叫審查員審一次,**最多 3 輪**;第 3 輪後仍有阻擋問題,停下來在 PR 描述寫明,等 Steven 決定
 5. 審查員看不到的背景如果讓意見的前提錯誤,用【反駁】直接指出,不要照做
 6. 審查員會列「下一步」;**照清單自己改完再送審,不要停下來問**。只有【待 Steven 決定】的事才停。
-   `CLAUDE.md` 其他寫「先問」的規則(換音色、重做真人片段庫、「刻意不做」的項目)一律算【待 Steven 決定】,不因為照清單就跳過
+   `CLAUDE.md` 其他寫「先問」的規則(重做真人片段庫、「刻意不做」的項目)一律算【待 Steven 決定】,不因為照清單就跳過
 - 議題與會議紀錄在 `docs/REVIEW.md`;每一輪把狀態更新進去
 - **effort 分工**(Steven 2026-09-26 授權):審查員 `reviewer` 是 high;照指令跑量測、整理數字交給 `runner`(low);
   同一個問題審查連續兩輪都卡住,那一件改用 Fable 5.1(Agent 的 `model` 參數)。主對話的 effort 由 Steven 自己設
@@ -155,7 +155,10 @@
 | Blues | Salamander | Virtuosity | 電貝斯(boogie) | Hammond(很輕),不給吉他 |
 | Swing | Salamander | Virtuosity(ride) | 低音提琴 | archtop Freddie Green |
 | Funk | Rhodes | Virtuosity | 電貝斯 | 悶音切音、鈴鼓 backbeat |
-- 使用者**不能單獨選音色**,不要加那個選單。換音色要先問;音色與聲位是兩件事,不要混著改
+- 使用者**不能單獨選音色**,不要加那個選單。音色與聲位是兩件事,不要混著改
+- **換音色不用先問(Steven 2026-09-26:「換音色時,以真實歌曲使用的音色為基準,之後不要問我」)**:
+  基準是唱片樂手名單上那一層真的是什麼(`docs/SOURCES.md` C1)。還是要過下面「取樣比合成好」的兩個條件,
+  也不推翻 Steven 親耳退回過的(`docs/HISTORY.md`)
 - 取樣來源(細節與授權見 README 與 `docs/LICENSES.md`):Salamander(Tonejs/audio)、jRhodes3c、Virtuosity Drums(`Samples/mid/`)、
   SM Drums、Black And Blue Basses(`darkblack` mf)、dsmolken 低音提琴(`pizz/`)、Black And Green Guitars(Gretsch stac / Hofner ord)、
   nbrosowsky tonejs-instruments(鋼弦/尼龍/電吉他 mp3)、tidalcycles Dirt-Samples 808(WAV)。
@@ -163,8 +166,9 @@
 - **新增音源 / 資料集只收 CC0、CC BY、MIT 這一類可商用的**,加進 `docs/LICENSES.md`;非商業授權(jRhodes3c 那種)要上架前換掉
 - 每個檔都走 `fetchDecode()` 多來源(jsDelivr → raw.githubusercontent,鋼琴多 tonejs.github.io)。新增音源照這個模式
 - 取樣表照真的檔案列,不准照公式推(Rhodes 兩層拼、吉他有洞、tonejs 的 G5 指錯檔不收);換撥弦取樣先量音頭音準(`SMP_EXT[x].tune`)與音量(`smpNorm`)
-- 合成的(刻意不換):Hammond(`PeriodicWave`)、K-Pop 的 pluck/supersaw/808 低音、City Pop 鋪底、銅管(Tone.js 管樂量過不能當 stab)。
-  **判準是「真的唱片裡那一層怎麼來的」**;弦樂鋪底不准換回取樣
+- 合成的(刻意不換):Hammond(`PeriodicWave`)、K-Pop 的 pluck/supersaw/808 低音、City Pop 鋪底(唱片也有 KORG λ 弦樂機)。
+  **判準是「真的唱片裡那一層怎麼來的」**;弦樂鋪底不准換回取樣(Steven 盲聽退回過)。
+  取樣只在兩條都成立時比合成好:(a) 要「一組人」時真的有一組人(不是同一顆取樣疊四次)(b) 取樣撐得住聲部的長度
 - 合成的東西算完要存(`ksBuffer`、`hat808Buf`、`noiseBuf`),`prewarmGuitar` 要在按播放前算好/載好,用到 `pluck` 的新層要把音加進 `want`;
   解碼一顆一顆排隊;每顆合成音起音要 1–1.5ms 斜坡
 - 殘響 IR 用固定種子、左右不同種子;任何卷積 IR 要正規化能量

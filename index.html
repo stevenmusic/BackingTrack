@@ -5852,7 +5852,8 @@ const FEELS = {
              guitar2: { lvl: 0.14, modes: 3, oct: 0 },
              /* Sustained 時兩把吉他一小節只剩一下(切音一下、第二把一下),前後沒東西,整段最突出的就是它。
                 −6dB:Steven 2026-09-26「Synthesizer有一個東一下東一下的,那個也太大聲」
-                (錄影那段是 Sustained,銅管不吹;拆軌量到吉他軌每小節一下、比自己的中位高約 20dB) */
+                (錄影那段是 Sustained,銅管不吹。各 bus 單獨錄音 `fold.py`:每小節峰值 吉他 −5.5dBFS、Rhodes −13.2、鋪底 −8.2
+                → 改後吉他 −11.4;探針記到吉他排在每小節第一拍) */
              padLone: 0.5,
              brass: { lvl: 0.06, cells: [[6, 10], [10, 14], [6, 14], [10], [14], [3, 6], [11, 14]] },
              /* 鋪底 −2dB、過 3kHz 低通:盲聽 6 次寫「太尖銳、太突出、要溫暖一點、不夠後面」 */
@@ -5891,7 +5892,7 @@ const FEELS = {
        每一組是**蓋在這個曲風上的覆寫**,寫法跟 render.mjs 的 ovr 一樣 */
     orchs: [
       /* 1 銅管弦樂型(〈SPARKLE〉〈WINDY LADY〉〈Telephone Number〉〈Tokai〉):銅管每小節、鋪底亮 */
-      { name: "brass", parts: { klevel: 0.025, brass: { lvl: 0.075, every: 1 } },   // 銅管約 −6dB(0.115 → 0.06 是 −5.7dB、這組 0.15 → 0.075 是 −6.0dB):Steven「Synthesizer有一個東一下東一下的,那個也太大聲」
+      { name: "brass", parts: { klevel: 0.025, brass: { lvl: 0.075, every: 1 } },   // 銅管約 −6dB(0.115 → 0.06 是 −5.7dB、這組 0.15 → 0.075 是 −6.0dB):Steven「Synthesizer…太大聲」「可能是Pad+lead」。錄影 20–36 秒是 Mixed,銅管在吹,City Pop 唯一的合成 stab 就是它;Sustained 那段的「東一下」另見 `padLone`
         mix: { padLp: 5500 }, arrange: { layers: { brass: "01110111", keys: "00110111" } } },
       /* 2 合成器鋪底型(〈Midnight Joke〉〈Midnight Pretenders〉):大片合成器鋪底,銅管很少 */
       { name: "synth", parts: { klevel: 0.0375, glevel: 0.17, brass: { every: 4 } },

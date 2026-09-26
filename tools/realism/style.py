@@ -8,6 +8,7 @@
   /tmp/abx/bin/python style.py [組…] [--reuse]
     組 = /tmp/sty/sep_<組>/htdemucs_6s/*/,預設 real suno ours;只重算指定的組,其餘保留在 db/style.json
     --reuse:已經在 db/style.json 的組不重算(例如只加 oursmel:`style.py oursmel --reuse`)
+    --merge-mix:把 realmix(真歌合集)併進真歌再排名(不改 style.json)
 輸出:db/style.json(每一段的特徵)、db/style_report.json(排名與 bootstrap 95% 區間、各組樣本數)
 
 特徵(都是「聽得出來」的,不是十六分格子的細節):
@@ -121,6 +122,9 @@ def main():
         groups[g] = {os.path.basename(d.rstrip('/')): feats(d) for d in dirs}
         print(g, len(dirs), '段', flush=True)
     json.dump(groups, open(cache, 'w'), ensure_ascii=False, indent=1, default=float)
+    # --merge-mix:真歌合集(realmix,照時間碼切的 13 首)併進真歌。併之前先確認兩組分不開(REVIEW.md 第一輪 B3)
+    if '--merge-mix' in sys.argv and 'realmix' in groups:
+        groups = dict(groups, real={**groups['real'], **{'mix_' + k: v for k, v in groups['realmix'].items()}})
     rng = np.random.default_rng(0)
     keys = sorted({k for g in ('real', 'suno', 'ours') for f in groups[g].values() for k in f})
     rows = []

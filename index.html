@@ -5855,7 +5855,8 @@ const FEELS = {
                 (錄影那段是 Sustained,銅管不吹。各 bus 單獨錄音 `fold.py`:每小節峰值 吉他 −5.5dBFS、Rhodes −13.2、鋪底 −8.2
                 → 改後吉他 −11.4;探針記到吉他排在每小節第一拍) */
              padLone: 0.5,
-             brass: { lvl: 0.06, cells: [[6, 10], [10, 14], [6, 14], [10], [14], [3, 6], [11, 14]] },
+             /* `smp: true`:真管樂(小號 + 長號斷奏,VSCO-2-CE),載不到的聲部退回合成。唱片名單上是真人管樂組(SOURCES C1) */
+             brass: { lvl: 0.06, smp: true, cells: [[6, 10], [10, 14], [6, 14], [10], [14], [3, 6], [11, 14]] },
              /* 鋪底 −2dB、過 3kHz 低通:盲聽 6 次寫「太尖銳、太突出、要溫暖一點、不夠後面」 */
              keys: "pad", klevel: 0.0125,   /* 0.025 → 0.0125(−6dB):Steven 2026-09-26「City pop的pad超級吵」,配器輪換同比例 */
              /* 連奏鋪底(見 `padLegato`):淡入 0.45 秒、收掉的時間常數 0.35 秒 */
@@ -7627,8 +7628,113 @@ function scheduleVox(spans, barStartBeat, b, transpose, absBar){
    真的銅管吹下去的瞬間亮度會先衝過穩態再掉回來,那一下就是銅管的身分。
    只有「開一點低通」會得到一片鋸齒鋪底,不是銅管。
    再加一點點音頭的音高上滑(吹嘴咬合的那一下),25 毫秒內滑到位 */
+/* ── 真管樂(`parts.brass.smp`,沒寫就是合成銅管,零差異)────────────────
+   **唱片上的管樂是真人管樂組**(`docs/SOURCES.md` C1:FOR YOU 的 SPARKLE 等 3 首、Plastic Love 都是
+   小號 ×2、長號 ×2、次中音 + 上低音薩克斯),名單上沒有合成銅管。Steven 2026-09-26:
+   「換音色時,以真實歌曲使用的音色為基準」。
+   以前不用取樣的理由是 Tone.js 的長號 / 薩克斯是漸強長音(1–6 秒才到峰值),不能打 stab。
+   VSCO-2-CE(CC0)有**斷奏(stac)**:量過到峰值 0.02–0.13 秒、長 0.3–0.5 秒,正好是 stab
+   - 一組人(CLAUDE.md 取樣條件 a):上面兩聲小號、最低那聲在長號音域就給長號;
+     每一聲是**不同音高的取樣**,兩聲剛好對到同一顆時用不同的 round robin(不同次錄音),不會同一顆疊兩次
+   - 撐得住長度(條件 b):stab 只要 0.2–0.3 秒,取樣本身 0.3 秒以上
+   - 薩克斯沒有可商用的斷奏取樣,次中音 / 上低音那兩聲省略(長號在名單上本來就有)
+   - 表是照真的檔案量的(`/tmp/vsco` 的 v3 力度層,YIN 量音高):[midi, 檔名的音名, 音分偏差 [rr1, rr2], 前 150ms dB [rr1, rr2]]。
+     **檔名的八度比標準低一個**(`A2` = midi 57) */
+const SRC_BRASS = [
+  "https://cdn.jsdelivr.net/gh/sgossner/VSCO-2-CE@master/Brass/",
+  "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/master/Brass/",
+];
+const BRASS_SMP = {
+  tpt: { dir: "Trumpet/stac/", file: (lab, r) => `Sum_SHTrumpet_stac_${lab}_v3_rr${r}.wav`,
+    notes: [[53, "F2", [-14, -14], [-40.9, -42.0]], [57, "A2", [4, -18], [-34.5, -35.0]], [60, "C3", [-9, -7], [-33.9, -32.8]],
+            [63, "D#3", [-3, -3], [-29.4, -31.0]], [65, "F3", [-2, 1], [-36.8, -37.2]], [67, "G3", [6, 0], [-31.3, -30.2]],
+            [70, "A#3", [-5, -5], [-27.6, -26.1]], [74, "D4", [-4, 2], [-21.7, -24.1]], [77, "F4", [-13, -9], [-21.1, -20.0]],
+            [81, "A4", [-8, -4], [-21.9, -20.8]], [84, "C5", [-1, 3], [-17.9, -22.7]]] },
+  tbn: { dir: "Tenor Trombone/stac/", file: (lab, r) => `tenortbn_stac_${lab}_v3_rr${r}.wav`,
+    notes: [[34, "A#0", [5, -7], [-46.3, -45.1]], [41, "F1", [2, -3], [-37.8, -36.6]], [46, "A#1", [-1, 0], [-29.9, -29.3]],
+            [53, "F2", [1, -2], [-36.2, -36.3]], [58, "A#2", [-1, -1], [-30.4, -30.1]], [62, "D3", [1, 1], [-31.1, -30.9]],
+            [65, "F3", [1, 1], [-29.1, -28.8]]] },
+};
+/* 每顆拉到同一個音頭響度(錄音音量差到 25dB,最多放大 6 倍),再乘 `BRASS_GAIN`:
+   校到跟合成銅管**每一下的 RMS 一樣**(銅管單獨錄、總線降 20dB 不碰限幅器:
+   合成 −33.2 / −31.6、取樣未乘時 −45.9 / −45.5,差 13.3dB)——保留 Steven 調過的銅管音量(`lvl`),只換音色 */
+const BRASS_TARGET = -24, BRASS_MAXNORM = 6, BRASS_GAIN = 4.6;
+const brassBufs = { tpt: new Map(), tbn: new Map() }, brassLoading = {}, brassFailed = new Set();
+/* 這一聲給誰吹:由上往下數,前兩聲小號;第三聲起在長號音域(≤ 67)就給長號 */
+function brassParts(midis){
+  const up = midis.slice().sort((a, b) => b - a);
+  return up.map((m, i) => ({ m, ins: i < 2 && m >= 55 ? "tpt" : m <= 67 ? "tbn" : "tpt" }));
+}
+/* 最近的一顆取樣,差超過 3 個半音就不拉(拉太多琴身的共振會跟著搬走) */
+function brassEntry(ins, m){
+  let best = null;
+  for (const e of BRASS_SMP[ins].notes) if (!best || Math.abs(e[0] - m) < Math.abs(best[0] - m)) best = e;
+  return best && Math.abs(best[0] - m) <= 3 ? best : null;
+}
+function loadBrassOne(ins, e){
+  const key = ins + ":" + e[0];
+  if (brassLoading[key]) return brassLoading[key];
+  const B = BRASS_SMP[ins];
+  const path = r => encodeURI(B.dir + B.file(e[1], r)).replace(/#/g, "%23");
+  /* 兩個 round robin 都要:同一顆被兩聲用到時要用不同次錄音 */
+  brassLoading[key] = fetchDecode(SRC_BRASS, path(1))
+    .then(b1 => fetchDecode(SRC_BRASS, path(2)).then(b2 => [b1, b2], () => [b1]))
+    .then(bufs => { brassBufs[ins].set(e[0], bufs); })
+    .catch(() => { brassFailed.add(key); });
+  return brassLoading[key];
+}
+/* 這次會吹到的音才抓(一顆一顆排隊,跟吉他取樣同一個理由:解碼在主執行緒上) */
+function ensureBrass(midiSets){
+  const want = new Map();
+  for (const ms of midiSets) for (const p of brassParts(ms)) {
+    const e = brassEntry(p.ins, p.m);
+    if (e) want.set(p.ins + ":" + e[0], [p.ins, e]);
+  }
+  return [...want.values()].reduce((c, [ins, e]) => c.then(() => loadBrassOne(ins, e)), Promise.resolve());
+}
+/* 吹得到的聲部用取樣吹,回傳沒有取樣的那幾聲(交給合成銅管,備援) */
+function playBrassSmp(midis, when, dur, gain){
+  const rest = [];
+  const SPREAD = [-0.42, 0.06, 0.4];
+  const used = new Map();
+  brassParts(midis).forEach((p, i) => {
+    const e = brassEntry(p.ins, p.m);
+    const bufs = e && brassBufs[p.ins].get(e[0]);
+    if (!bufs) {
+      if (e && !brassFailed.has(p.ins + ":" + e[0])) ensureBrass([[p.m]]);   // 背景補,不等
+      rest.push(p.m);
+      return;
+    }
+    const uk = p.ins + ":" + e[0];
+    const r = (used.get(uk) || 0) % bufs.length;
+    used.set(uk, (used.get(uk) || 0) + 1);
+    const src = ctx.createBufferSource();
+    src.buffer = bufs[r];
+    src.playbackRate.value = Math.pow(2, (p.m - e[0] - e[2][r] / 100) / 12);
+    const norm = BRASS_GAIN * Math.min(BRASS_MAXNORM, Math.pow(10, (BRASS_TARGET - e[3][r]) / 20));
+    const g = ctx.createGain();
+    const sp = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+    src.connect(g);
+    if (sp) { sp.pan.value = SPREAD[i % SPREAD.length]; g.connect(sp); sp.connect(combBus); } else g.connect(combBus);
+    g.gain.setValueAtTime(0.0001, when);
+    g.gain.linearRampToValueAtTime(gain * norm, when + 0.0012);
+    // 斷奏本身就短;stab 的長度到了再收(真的吹奏者是用舌頭斷音)
+    g.gain.setTargetAtTime(0.0001, when + Math.max(dur, 0.22), 0.07);
+    src.start(when, leadOf(src.buffer));
+    src.stop(when + Math.max(dur, 0.22) + 0.6);
+    activeSources.add(src);
+    src.onended = () => { activeSources.delete(src); try { src.disconnect(); g.disconnect(); if (sp) sp.disconnect(); } catch (e2) {} };
+  });
+  return rest;
+}
+
 function playBrass(midis, when, dur, gain){
   if (!midis.length || !combBus) return;
+  const bsp = (feel().parts && feel().parts.brass) || {};
+  if (bsp.smp) {
+    midis = playBrassSmp(midis, when, dur, gain * (bsp.smpGain || 1));
+    if (!midis.length) return;
+  }
   const bus = ctx.createGain();
   bus.gain.value = 1;
   bus.connect(combBus);
@@ -8096,7 +8202,12 @@ function prewarmGuitar(){
   // 808 的金屬音色也先算好(1.3 秒的 buffer,算一次就一直用)
   if (drumKit() === "e808") hat808Buf();
   noiseBuf();
-  if (!f.parts || !f.parts.guitar) return Promise.resolve();
+  /* 真管樂(`parts.brass.smp`):銅管吹的是 `padNotes` 上面三顆(見 `scheduleBrass`),那幾顆先抓 */
+  const brassP = f.parts && f.parts.brass && f.parts.brass.smp
+    ? ensureBrass((voicings || []).flatMap(spans => (spans || []).filter(sp => sp && sp.v)
+        .map(sp => padNotes(sp.v).slice(-3).map(n => n + transposeOn))))
+    : Promise.resolve();
+  if (!f.parts || !f.parts.guitar) return brassP;
   const tone = f.parts.gtone || "nylon";
   const want = new Set();
   for (const spans of (voicings || [])) {
@@ -8142,9 +8253,9 @@ function prewarmGuitar(){
      兩件都在按下播放之前做完就完全不影響播放。
      而且取樣蓋得到的那幾顆**根本不用算 KS**——KS 只是備援,
      真的用不到就不要花那個時間(Pop 的 14 顆音本來每一顆都要算) */
-  return ensureSmp(gtrKitFor(tone), [...want]).then(() => {
+  return Promise.all([brassP, ensureSmp(gtrKitFor(tone), [...want]).then(() => {
     for (const m of want) if (!gtrSample(m, tone)) ksBuffer(m, tone);
-  });
+  })]);
 }
 
 function scheduleExtras(spans, barStartBeat, b, transpose, absBar, isFill){

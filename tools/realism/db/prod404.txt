@@ -1,3 +1,12 @@
-virtuosity_drums/Samples/mid/hh/mid_hh_open_vl1_rr4.flac
-virtuosity_drums/Samples/mid/hh/mid_hh_open_vl2_rr4.flac
-virtuosity_drums/Samples/mid/hh/mid_hh_open_vl3_rr4.flac
+dsmolken.double-bass/pizz/pizz_bb1_ma.wav
+dsmolken.double-bass/pizz/pizz_bb1_mb.wav
+dsmolken.double-bass/pizz/pizz_bb1_mc.wav
+dsmolken.double-bass/pizz/pizz_d2_ma.wav
+dsmolken.double-bass/pizz/pizz_d2_mb.wav
+dsmolken.double-bass/pizz/pizz_d2_mc.wav
+dsmolken.double-bass/pizz/pizz_eb1_ma.wav
+dsmolken.double-bass/pizz/pizz_eb1_mb.wav
+dsmolken.double-bass/pizz/pizz_eb1_mc.wav
+dsmolken.double-bass/pizz/pizz_g1_ma.wav
+dsmolken.double-bass/pizz/pizz_g1_mb.wav
+dsmolken.double-bass/pizz/pizz_g1_mc.wav

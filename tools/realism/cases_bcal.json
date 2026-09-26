@@ -1,0 +1,66 @@
+{
+ "_note": "銅管單獨(probe_brassonly.js)合成 vs 取樣 校音量;WORKTREE,錄完看 hits.py",
+ "progressions": {},
+ "cases": [
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "brass_syn",
+   "ovr": {
+    "orchFix": 0,
+    "parts": {
+     "brass": {
+      "smp": false
+     }
+    }
+   }
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "brass_syn",
+   "ovr": {
+    "orchFix": 0,
+    "parts": {
+     "brass": {
+      "smp": false
+     }
+    }
+   }
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "brass_smp",
+   "ovr": {
+    "orchFix": 0,
+    "parts": {
+     "brass": {
+      "smp": true
+     }
+    }
+   }
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "brass_smp",
+   "ovr": {
+    "orchFix": 0,
+    "parts": {
+     "brass": {
+      "smp": true
+     }
+    }
+   }
+  }
+ ]
+}

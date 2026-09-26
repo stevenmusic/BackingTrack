@@ -108,6 +108,8 @@ for (const cs of cfg.cases) {
   // REALISM_SOLO=<bus 名>:給 probe_solo.js 用(只留那條 bus)
   if (process.env.REALISM_SOLO) await pg.evaluate(b => { window.__soloBus = b; }, process.env.REALISM_SOLO);
   if (process.env.REALISM_PROBE) await pg.evaluate(fs.readFileSync(process.env.REALISM_PROBE, 'utf8'));
+  /* REALISM_CPU=6:CPU 降速 6×(效能量測,配 probe_perf.js) */
+  if (process.env.REALISM_CPU) { const c = await pg.context().newCDPSession(pg); await c.send('Emulation.setCPUThrottlingRate', { rate: +process.env.REALISM_CPU }); }
   await pg.click('#playBtn');
   await pg.waitForFunction(() => typeof playing !== 'undefined' && playing, null, { timeout: 120000 });
   await pg.waitForFunction(b => currentBeat() >= b, FROM_BEAT, { timeout: 180000, polling: 5 });

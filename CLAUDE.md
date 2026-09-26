@@ -49,7 +49,7 @@
 - 解析失敗要擋住播放並明講是哪一個 token,不准猜
 - **整份檔案不准出現 `Math.random()`**:變化一律 `hash01(絕對位置, salt)`(兩輪 murmur,不要簡化)或 `mulberry32` 固定種子
 - 任何取樣播放都要 `start(when, leadOf(buffer))`(跳過起音前的空白)
-- 「取樣一定載得到」這個假設永遠不成立:每一種取樣都要有備援(鋼琴→三角波、鼓→`synthDrum`、吉他→KS、Rhodes→平台鋼琴、808→`synth808`)
+- 「取樣一定載得到」這個假設永遠不成立:每一種取樣都要有備援(鋼琴→三角波、鼓→`synthDrum`、吉他→KS、Rhodes→平台鋼琴、808→`synth808`、真管樂→合成銅管)
 - 排程裡**不准針對某一個曲風寫 if**:差異一律寫成 `FEELS[x]` 的欄位,**沒寫的曲風要零差異**
 
 ## 和弦語法(`normalizeSymbol` / `parseProgression`)
@@ -149,7 +149,7 @@
 | 曲風 | 鍵盤 | 鼓 | 貝斯 | 第四層 |
 | --- | --- | --- | --- | --- |
 | Pop | Salamander | Virtuosity | 電貝斯 | 鋼弦刷弦×2、鈴鼓 backbeat |
-| City Pop | Rhodes(jRhodes3c,非商用授權,商用前要換) | SM Drums(大小鼓、hi-hat)+ Virtuosity(tom、鈸、open hat) | 電貝斯 | Hofner 切音 + 第二把吉他、合成銅管、合成鋪底、沙鈴八分;配器輪換 `orchs` |
+| City Pop | Rhodes(jRhodes3c,非商用授權,商用前要換) | SM Drums(大小鼓、hi-hat)+ Virtuosity(tom、鈸、open hat) | 電貝斯 | Hofner 切音 + 第二把吉他、真管樂(VSCO-2-CE 小號/長號斷奏,`brass.smp`)、合成鋪底、沙鈴八分;配器輪換 `orchs` |
 | K-Pop | 合成 pluck | 808 取樣 | 808 合成 sub | supersaw、低音鋪底 `klow`、arp、沙鈴+指響、乒乓延遲 |
 | Bossa | Salamander | Virtuosity(cross stick) | 低音提琴 | 尼龍弦 clave、cabasa |
 | Blues | Salamander | Virtuosity | 電貝斯(boogie) | Hammond(很輕),不給吉他 |
@@ -161,7 +161,7 @@
   也不推翻 Steven 親耳退回過的(`docs/HISTORY.md`)
 - 取樣來源(細節與授權見 README 與 `docs/LICENSES.md`):Salamander(Tonejs/audio)、jRhodes3c、Virtuosity Drums(`Samples/mid/`)、
   SM Drums、Black And Blue Basses(`darkblack` mf)、dsmolken 低音提琴(`pizz/`)、Black And Green Guitars(Gretsch stac / Hofner ord)、
-  nbrosowsky tonejs-instruments(鋼弦/尼龍/電吉他 mp3)、tidalcycles Dirt-Samples 808(WAV)。
+  nbrosowsky tonejs-instruments(鋼弦/尼龍/電吉他 mp3)、tidalcycles Dirt-Samples 808(WAV)、VSCO-2-CE 管樂斷奏(`Brass/…/stac`,v3 力度層)。
   VCSL 是管弦打擊樂,不准拿來當爵士鼓
 - **新增音源 / 資料集只收 CC0、CC BY、MIT 這一類可商用的**,加進 `docs/LICENSES.md`;非商業授權(jRhodes3c 那種)要上架前換掉
 - 每個檔都走 `fetchDecode()` 多來源(jsDelivr → raw.githubusercontent,鋼琴多 tonejs.github.io)。新增音源照這個模式

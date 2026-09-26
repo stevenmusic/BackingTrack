@@ -45,7 +45,7 @@
 - `KNOWLEDGE.md` 知識庫:人工整理的結論 + `analyze` 自動產生的相關分析
 
 ## 風格尺(2026-09-26)
-- `style.py [組…] [--reuse]`:真歌與 Suno 都當正確答案,找兩邊一致、我們不一樣的特徵(各樂器佔比、亮度、寬度、密度、小節起伏、
+- `style.py [組…] [--reuse] [--merge-mix]`:真歌與 Suno 都當正確答案,找兩邊一致、我們不一樣的特徵(各樂器佔比、亮度、寬度、密度、小節起伏、
   殘響、和聲色彩兩套模板),附 bootstrap 95% 區間。分軌放 `/tmp/sty/sep_<組>/htdemucs_6s/`,結果 `db/style.json`、`db/style_report.json`
 - `leak_melody.py`:人聲滲漏實驗,在我們的伴奏上混一條合成人聲旋律,再拆軌量一次
-- `review_stats.py drums|leak`:`docs/REVIEW.md` 裡數字的重現腳本(只讀)
+- `review_stats.py drums|leak|mix|sub|dup`:`docs/REVIEW.md` 裡數字的重現腳本(只讀;`dup` 要給原始 mp3 的資料夾)

@@ -4,7 +4,8 @@
   python3 review_stats.py leak [--merge-mix]  → 人聲滲漏表(db/style.json 的 ours vs oursmel,逐段配對,bootstrap 2000 次,種子 0);
                                               比例 = 滲漏 ÷ (參考平均 − 我們平均),參考 = 真歌 + Suno(加 --merge-mix 時真歌含合集)
   python3 review_stats.py mix     → 合集 vs 上傳真歌的分離度檢定(隨機對半切 300 次,種子 0)
-  python3 review_stats.py dup     → 重複檢查(CENS chroma 滑動相關;要 /root/.claude/uploads 裡的原始 mp3,音檔不進 repo)"""
+  python3 review_stats.py sub     → 只用上傳 13 首真歌(不併合集)+ Suno 16:亮度與貝斯密度的 z、區間、分離度上限
+  python3 review_stats.py dup <上傳資料夾>  → 重複檢查(CENS chroma 滑動相關;要原始 mp3,音檔不進 repo)"""
 import json, os, sys, numpy as np
 H = os.path.dirname(os.path.abspath(__file__))
 
@@ -64,7 +65,7 @@ def mix():
 
 def dup():
     import glob, librosa
-    U = '/root/.claude/uploads/2c5326f4-7bc2-5dd3-ad14-f2c1c9bfad8a'
+    U = sys.argv[2]
     def c(f, a=0, dd=None):
         y, sr = librosa.load(f, sr=11025, mono=True, offset=a, duration=dd)
         return librosa.feature.chroma_cens(y=y, sr=sr, hop_length=2048)
@@ -89,4 +90,17 @@ def dup():
     for s_, a_, b_ in r[:5]:
         print(f'  {s_:.2f} {a_} ↔ {b_}')
 
-{'drums': drums, 'leak': leak, 'mix': mix, 'dup': dup}[sys.argv[1] if len(sys.argv) > 1 else 'drums']()
+def sub():
+    d = json.load(open(os.path.join(H, 'db', 'style.json'))); rng = np.random.default_rng(0)
+    auc = lambda a, b: float(np.mean([(x > y) + 0.5 * (x == y) for x in a for y in b]))
+    for k in ('other.亮度Hz', 'guitar.亮度Hz', 'piano.亮度Hz', 'bass.每拍起音', '和聲7.延伸音'):
+        v = {g: np.array([f[k] for f in d[g].values() if k in f]) for g in ('real', 'suno', 'ours')}
+        zf = lambda v: (v['ours'].mean() - np.r_[v['real'], v['suno']].mean()) / (np.r_[v['real'], v['suno']].std() + 1e-9)
+        sf_ = lambda v: abs(auc(list(v['real']), list(v['suno'])) - 0.5) * 2
+        bz, bs = [], []
+        for _ in range(2000):
+            w = {g: rng.choice(x, len(x)) for g, x in v.items()}; bz.append(zf(w)); bs.append(sf_(w))
+        print(f'{k:12s} z {zf(v):+.2f} [{np.percentile(bz,2.5):+.2f},{np.percentile(bz,97.5):+.2f}]  分離度 {sf_(v):.2f} 上限 {np.percentile(bs,97.5):.2f}  '
+              f'n={len(v["real"])}/{len(v["suno"])}/{len(v["ours"])}  真歌中位 {np.median(v["real"]):.3f}')
+
+{'drums': drums, 'leak': leak, 'mix': mix, 'dup': dup, 'sub': sub}[sys.argv[1] if len(sys.argv) > 1 else 'drums']()

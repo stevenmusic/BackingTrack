@@ -5797,7 +5797,7 @@ const FEELS = {
     swing: 0.5, push: true, sub: 2,
     kickGain: 0.66,
     snarePiece: "snare", snareGain: 0.6,
-    cym: "hihat", cymGain: 0.28,
+    cym: "hihat", cymGain: 0.2,     /* 0.28 → 0.2(−3dB):timbre.py 鼓分軌亮度 1439Hz,真歌 395 [178, 622](2026-09-26) */
     bass: "citypop", kit: "electric", meters: ["4/4"],
     /* **鍵盤是 Rhodes**(Steven 2026-09-26:「Rhodes要用,因為city pop應該不用平台鋼琴」;
        竹內瑪莉亞「Plastic Love」名單:中西康晴 electric piano,docs/SOURCES.md)。
@@ -5834,7 +5834,10 @@ const FEELS = {
        那不是混音決定,是壓縮器的副作用——要收回來,
        壓縮留下的是「顆粒變齊」不是「變大聲」 */
     /* 切音吉他用 Gretsch 的真斷奏錄音(`SMP_EXT.gretsch`):12 段配對 +1.5 ± 0.4、11/12 段贏 */
-    parts: { guitar: "chop", gtone: "clean", gkit: "hofner", glevel: 0.28,
+    /* 吉他全部 −3.4dB(glevel 0.28 → 0.19、guitar2 0.18 → 0.12,配器輪換同比例):Steven「聽起來很不舒服,不確定是吉他還是電鋼琴太吵」。
+       timbre.py(拆軌量尺先用單獨錄音驗證:吉他佔比固定偏 −3.1dB、誤差 ±0.1):我們吉他佔伴奏 −7.2dB,
+       真歌 26 首中位 −11.5 [−16.4, −9.8]、Suno −22.5——吉他太大聲 */
+    parts: { guitar: "chop", gtone: "clean", gkit: "hofner", glevel: 0.19,
              /* 變化:切音 4 → 8 型、第二把吉他 3 種彈法、銅管 4 → 7 型 */
              /* **照 12 首真歌的吉他分軌重寫**(`tools/realism/gtrgram.py`)。原本 8 型全落在
                 「&」(2 / 6 / 10 / 14)——那是雷鬼 / ska 的反拍刷法,量到我們拍點 0.19–0.24、
@@ -5845,7 +5848,7 @@ const FEELS = {
                          [0, 3, 6, 10, 12, 15], [0, 1, 4, 6, 8, 11, 14], [0, 2, 4, 7, 8, 10, 13], [3, 4, 6, 8, 11, 12, 14]],
              /* `oct: 0`:第二把在切音那把的**同一個八度**彈(原本 +12)。量到吉他整軌的音域 midi 77、
                 真歌 56–68——高出來的就是這一把(midi 65–80)。八度奏法那一種本來就是八度,照舊 */
-             guitar2: { lvl: 0.18, modes: 3, oct: 0 },
+             guitar2: { lvl: 0.12, modes: 3, oct: 0 },
              brass: { lvl: 0.115, cells: [[6, 10], [10, 14], [6, 14], [10], [14], [3, 6], [11, 14]] },
              /* 鋪底 −2dB、過 3kHz 低通:盲聽 6 次寫「太尖銳、太突出、要溫暖一點、不夠後面」 */
              keys: "pad", klevel: 0.025,
@@ -5886,12 +5889,12 @@ const FEELS = {
       { name: "brass", parts: { klevel: 0.05, brass: { lvl: 0.15, every: 1 } },
         mix: { padLp: 5500 }, arrange: { layers: { brass: "01110111", keys: "00110111" } } },
       /* 2 合成器鋪底型(〈Midnight Joke〉〈Midnight Pretenders〉):大片合成器鋪底,銅管很少 */
-      { name: "synth", parts: { klevel: 0.075, glevel: 0.22, brass: { every: 4 } },
+      { name: "synth", parts: { klevel: 0.075, glevel: 0.15, brass: { every: 4 } },
         mix: { padLp: 4500 }, arrange: { layers: { keys: "01111110", brass: "00000001" } } },
       /* 3 鋼琴型(〈Plastic Love〉):鋼琴往前,其他照常 */
       { name: "piano", mix: { keysLevel: 0.7 } },     // 1.1 → 0.7:跟 keysLevel 同比例(Rhodes 大 4dB)
       /* 4 雙吉他型(〈Fantasy〉〈STAY BY ME〉):兩把吉他一直都在,鋪底淡 */
-      { name: "guitars", parts: { glevel: 0.34, guitar2: { lvl: 0.24 }, klevel: 0.035 },
+      { name: "guitars", parts: { glevel: 0.23, guitar2: { lvl: 0.16 }, klevel: 0.035 },
         arrange: { layers: { guitar2: "11111111", guitar: "11111111" } } },
     ],
     /* ── 像真人的時間與力度(第六輪:對三首參考曲分軌量 + 文獻,見 `humanTime` 與 CLAUDE.md)── */
@@ -6029,7 +6032,7 @@ const FEELS = {
               250–500Hz 多 1.8dB——放回原本平台鋼琴版的平衡(Steven 聽過、微調很多次的那一版),只換音色不換比例 */
            keysEq: -3, keysEqHz: 600, keysEqQ: 0.4, keysLevel: 0.35,   // 600Hz、Q 0.4:250–500 與 800–1k 都收到
            padEq: -4, padEqHz: 400,
-           drumAir: 4, drumAirHz: 6000,
+           drumAir: 1, drumAirHz: 6000,   /* 4 → 1:鼓太亮(同上) */
            gtrAir: 1.5, gtrAirHz: 3500,
            /* **收過一次**:第一版 −6 / +6.5 是把一整首**有人聲、配器不同**的唱片
               頻譜硬套上來,樂器的本體被挖空、刺耳的那段被推出來(被回報「音色更奇怪了」)。

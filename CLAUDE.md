@@ -24,8 +24,13 @@
 - 議題與會議紀錄在 `docs/REVIEW.md`;每一輪把狀態更新進去
 - **effort 分工**(Steven 2026-09-26 授權):審查員 `reviewer` 是 high;照指令跑量測、整理數字交給 `runner`(low);
   同一個問題審查連續兩輪都卡住,那一件改用 Fable 5.1(Agent 的 `model` 參數)。主對話的 effort 由 Steven 自己設
-- **Steven 已授權(2026-09-26):審查全部開綠燈**。審查員沒有阻擋就可以自己合併 PR;跟審查員討論到雙方都覺得及格,
-  再帶著結果與盲聽檔找 Steven。聽感最後仍由 Steven 決定(盲聽沒過的不改預設)
+- **Steven 已授權(2026-09-26):審查全部開綠燈**。審查員沒有阻擋就可以自己合併 PR
+- **不再給 Steven 盲測(2026-09-26:「不要給我盲測了,交給你分析,選擇A或B」)**。改預設由 Claude 決定,四條都要過:
+  ① **編曲規則有權威出處**(`docs/SOURCES.md`:樂手訪談、樂器雜誌、唱片名單)② 規則全過(旋律 0 違規、下數 ≠ 0、peak ≤ 0.85)
+  ③ 不推翻 Steven 以前親耳退回的方向(`docs/HISTORY.md`)。
+  **所有規則建立在編曲規則之上,不是測量分數**(Steven 2026-09-26):量尺只用來擋壞掉的東西(外音、下數 0、爆音),
+  除非量尺本身被驗證過是對的,否則分數不能當採用或退回的理由。
+  每一項的決定與理由寫進 `docs/REVIEW.md`;Steven 主動說不好聽的,照他說的退回
 
 ## 產品方向(2026-09-26 使用者定的)
 - **公開網站給其他人用,暫時不做 App**
@@ -100,7 +105,7 @@
 - 拆一顆成兩顆(`sus→V`、`拆ii-V`):只拆單獨一顆且沒寫時值的,一圈最多一顆,拆出來的標 `added` 不佔選取序號;律動只換音高不加下數
 - 改規則要跑 scratchpad 式的機器驗證(`tools/realism/mood_check.mjs`、`harmony.mjs`),不要靠讀
 
-## 旋律只准用和弦音(沒有例外)
+## 旋律只准用和弦音(唯一例外見下)
 - 「旋律」= 每一下和聲的頂音(鋼琴、兩把吉他、鋪底、銅管、人聲切片、lead)+ 單音線條(arp、第二把吉他)。貝斯不算
 - **唯一的例外(Steven 2026-09-26)**:City Pop 切音吉他照ギター・マガジン的指型(`parts.chopForms`,`docs/SOURCES.md` G1)時,
   **吉他和弦的頂音可以是九度**(只在九度在調內、和弦沒有 ♭9/♯9 時);鋼琴、鋪底、銅管、第二把吉他的單音線不放寬。驗證加 `HARM_GTR9=1`
@@ -141,7 +146,7 @@
 | 曲風 | 鍵盤 | 鼓 | 貝斯 | 第四層 |
 | --- | --- | --- | --- | --- |
 | Pop | Salamander | Virtuosity | 電貝斯 | 鋼弦刷弦×2、鈴鼓 backbeat |
-| City Pop | Salamander | SM Drums(大小鼓、hi-hat)+ Virtuosity(tom、鈸、open hat) | 電貝斯 | Hofner 切音 + 第二把吉他、合成銅管、合成鋪底、沙鈴八分;配器輪換 `orchs` |
+| City Pop | Rhodes(jRhodes3c,非商用授權,商用前要換) | SM Drums(大小鼓、hi-hat)+ Virtuosity(tom、鈸、open hat) | 電貝斯 | Hofner 切音 + 第二把吉他、合成銅管、合成鋪底、沙鈴八分;配器輪換 `orchs` |
 | K-Pop | 合成 pluck | 808 取樣 | 808 合成 sub | supersaw、低音鋪底 `klow`、arp、沙鈴+指響、乒乓延遲 |
 | Bossa | Salamander | Virtuosity(cross stick) | 低音提琴 | 尼龍弦 clave、cabasa |
 | Blues | Salamander | Virtuosity | 電貝斯(boogie) | Hammond(很輕),不給吉他 |

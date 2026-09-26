@@ -49,7 +49,7 @@ await pg.evaluate(() => {
 });
 await pg.click('#playBtn');
 await pg.waitForFunction(s => typeof playing !== 'undefined' && playing && currentBeat() > 8 + s / spb, SECS, { timeout: 300000, polling: 500 });
-const H = await pg.evaluate(() => Object.assign(__H, { loopBars: voicings.length, countIn: countInBeats, spb, div: divNow() }));
+const H = await pg.evaluate(() => Object.assign(__H, { loopBars: voicings.length, countIn: countInBeats, spb, div: divNow(), key: (typeof keyOf === 'function' && parsed && parsed.bars) ? keyOf(parsed.bars) : null }));
 await b.close(); sv.close();
 const chords = Object.values(H.chords).flat().sort((a, b) => a.from - b.from);
 const at = beat => chords.find(c => beat >= c.from - 1e-6 && beat < c.to - 1e-6);
@@ -148,7 +148,10 @@ Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 25).forEach(([k, n])
     S.下數++;
     /* HARM_GTR9=1:切音吉他照雜誌指型(`parts.chopForms`)時,**吉他的和弦**頂音可以是九度
        (Steven 2026-09-26 同意,只放寬切音吉他;單音 = 第二把吉他照舊) */
-    const gtr9 = process.env.HARM_GTR9 && g.inst === 'gtr' && g.ms.length >= 2 && ((pc - c.root) % 12 + 12) % 12 === 2 && !c.iv.some(x => x % 12 === 1 || x % 12 === 3 && c.iv.includes(4));
+    // 跟 index.html 的 chopFormNotes 同一個守門:九度在調內、和弦沒有 ♭9 / ♯9 / ♭13(♯5)
+    const inKey = H.key != null && [0, 2, 4, 5, 7, 9, 11].includes(((c.root + 2 - H.key) % 12 + 12) % 12);
+    const gtr9 = process.env.HARM_GTR9 && g.inst === 'gtr' && g.ms.length >= 2 && ((pc - c.root) % 12 + 12) % 12 === 2 && inKey &&
+                 !c.iv.some(x => x === 1 || x === 13 || x === 8 || x === 20 || (x % 12 === 3 && c.iv.includes(4)));
     if (!core(c, pc) && !gtr9) { S.違規++; const k = `${g.inst} ${['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'][pc]} over ${c.name}`; ex[k] = (ex[k] || 0) + 1; }
   }
   /* HARM_TOPS=1:鋼琴頂音線有多「活」——用了幾種音、多常換音、色彩音佔幾成 */

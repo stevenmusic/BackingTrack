@@ -55,7 +55,7 @@ for f in sorted(glob.glob(os.path.join(src, '*.wav'))):
         b, a = ss.butter(2, [fc * 0.85 / (sr / 2), fc * 1.15 / (sr / 2)], btype='band')
         v += g * ss.lfilter(b, a, mel)
     acc = np.sqrt(np.mean(x ** 2)); vr = np.sqrt(np.mean(v ** 2)) + 1e-9
-    v *= acc / vr * 10 ** (-3 / 20)
+    v *= acc / vr * 10 ** (float(os.environ.get('MEL_DB', '-3')) / 20)   # MEL_DB:旋律比伴奏大幾 dB(預設 −3,B1 的數字用這個)
     y = x + v[:, None] * np.array([0.5, 0.5])[None, :] * 2 ** 0.5
     y /= max(1.0, np.abs(y).max() / 0.95)
     sf.write(os.path.join(out, tag + '.wav'), y, sr)

@@ -1,0 +1,38 @@
+{
+ "_note": "樂器單獨錄音(REALISM_PROBE 把其他 bus 關掉),驗證分軌量尺用",
+ "progressions": {},
+ "cases": [
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "solo",
+   "batch": "solo"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "solo",
+   "batch": "solo"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "solo",
+   "batch": "solo"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "solo",
+   "batch": "solo"
+  }
+ ]
+}

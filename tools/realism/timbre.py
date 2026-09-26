@@ -42,7 +42,8 @@ def feats(y):
 def stem_set(get):
     """get(stem) → 音訊;回每條的特徵 + 佔比"""
     ys = {s: get(s) for s in STEMS}
-    tot = sum(np.mean(y ** 2) for y in ys.values()) + 1e-12
+    ys['keys+other'] = ys['piano'] + ys['other']       # demucs 把 Rhodes 歸到 other(驗證表),鍵盤要兩軌合起來看
+    tot = sum(np.mean(ys[s] ** 2) for s in STEMS) + 1e-12
     out = {}
     for s, y in ys.items():
         f = feats(y)
@@ -57,9 +58,10 @@ KEYS = ['佔比dB', '亮度Hz', '刺耳%', '嘶%']
 def verify():
     rows = [json.loads(l) for l in open('/tmp/solo/full/clips.jsonl')]
     errs = {s: {k: [] for k in KEYS} for s in STEMS}
+    solo = {b: {json.loads(l)['prog']: json.loads(l)['id'] for l in open(f'/tmp/solo/{b}/clips.jsonl')} for b in BUS.values()}
     for r in rows:
         cid = r['id']
-        truth = stem_set(lambda s: load(f'/tmp/solo/{BUS[s]}/clips/{cid}.wav'))
+        truth = stem_set(lambda s: load(f'/tmp/solo/{BUS[s]}/clips/{solo[BUS[s]][r["prog"]]}.wav'))
         sep = stem_set(lambda s: load(f'/tmp/solo/sep/htdemucs_6s/{cid}/{s}.wav'))
         for s in STEMS:
             for k in KEYS:
@@ -76,11 +78,11 @@ def verify():
 def compare():
     groups = {'真歌': glob.glob('/tmp/sty/sep_real/htdemucs_6s/*/') + glob.glob('/tmp/sty/sep_realmix/htdemucs_6s/*/'),
               'Suno': glob.glob('/tmp/sty/sep_suno/htdemucs_6s/*/'),
-              '我們': glob.glob('/tmp/solo/sep/htdemucs_6s/*/')}
+              '我們': glob.glob(os.environ.get('OURS', '/tmp/solo/sep/htdemucs_6s/*/'))}
     res = {}
     for g, dirs in groups.items():
         res[g] = [stem_set(lambda s, d=d: load(os.path.join(d, s + '.wav'))) for d in dirs]
-    for s in ['guitar', 'piano', 'other', 'bass', 'drums']:
+    for s in ['guitar', 'keys+other', 'bass', 'drums']:
         print(f'\n{s}')
         for k in KEYS:
             line = f'  {k:6s}'

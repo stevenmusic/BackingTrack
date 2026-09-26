@@ -6569,8 +6569,13 @@ function schedulePhraseDrums(barStartBeat, b, absBar, isFill){
   const lvl = { k: f.kickGain, s: f.snareGain, x: f.snareGain * 0.8, h: f.cymGain, p: f.cymGain * 0.9,
                 o: f.cymGain * 1.1, t: 0.6, l: 0.6, c: 0.5, r: f.cymGain };
   let hatAt = [];
+  /* `phrTight`(沒寫就是 1 = 原樣):把每一下離十六分格子的偏差**等比例縮小**。
+     偏差的形狀(誰先誰後、長程相關、拍點緊拍點間鬆)全部保留,只是整體收緊——
+     Groove MIDI 的鼓手在拍點上的偏差 SD 約 18ms,City Pop 錄音室樂手約 11ms */
+  const tight = f.phrTight || 1;
   for (const [pos1000, pc, v] of bar) {
-    const pos = pos1000 / 1000;
+    const raw = pos1000 / 1000, g16 = Math.round(raw * 4) / 4;
+    const pos = g16 + (raw - g16) * tight;
     const beatIdx = pos < 0 ? 0 : Math.floor(pos);
     if (beatIdx !== b) continue;                    // scheduleDrums 一拍呼叫一次:只排這一拍的
     if (st === "pad" && (pc === "h" || pc === "o") && Math.abs(pos - Math.round(pos)) > 0.1) continue;   // 墊底:鈸只打正拍
@@ -7933,7 +7938,7 @@ function scheduleGuitar(spans, barStartBeat, b, transpose, absBar, isFill){
         const sp = spanAt(spans, idx);
         if (!sp || !sp.v) continue;
         strum(guitarNotesFor(sp.chord, "chop"), slotTime(barStartBeat, idx),
-              base * 0.3, tone, true, 0.004, 0.035, transpose);
+              base * (f.parts.chopGhostVel || 0.3), tone, true, 0.004, 0.035, transpose);
       }
     }
     return;

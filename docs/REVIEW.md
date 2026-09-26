@@ -409,3 +409,12 @@ Steven 聽了之後:「整體聽起來非常機械,比之前開始製作還糟�
 - 建議 11:/tmp/leak、/tmp/def4 大檔已刪
 - 鍵盤(Rhodes)與鋪底**沒有動**:量尺判斷不了鍵盤,不代表鍵盤沒問題;Steven 還覺得吵的話,下一個嫌疑就是鍵盤
 
+
+## 第九輪(2026-09-26):鋪底與合成銅管太吵(Steven 耳朵)
+- Steven:「City pop的pad超級吵」「Synthesizer有一個東一下東一下的,那個也太大聲」「可能是Pad+lead」;附螢幕錄影(City Pop、
+  `Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7`、移調 +1、110 BPM,Sustained → Mixed)
+- City Pop 沒有 lead 層;「東一下」是合成銅管 stab(「銅管組」配器 8 小節打 6 小節、lvl 0.15)
+- 改法(照 Steven 的耳朵,CLAUDE.md 判準 ③ 的反面:Steven 主動說不好聽的照他說的退回):
+  鋪底 −6dB(klevel 0.025 → 0.0125,配器同比例)、銅管 −6dB(lvl 0.115 → 0.06、銅管組 0.15 → 0.075)
+- 同設定錄音對照(`tools/realism/cases_rec.json`,main e64eac9 對修改後,demucs 拆軌;other = Rhodes + 鋪底 + 銅管):
+  Sustained other −9.8 → −14.9dB、最大 2 秒格 −5.9 → −11.7;Mixed other −6.7 → −10.7、最大格 −2.4 → −6.5

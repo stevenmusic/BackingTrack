@@ -5850,7 +5850,7 @@ const FEELS = {
              /* `oct: 0`:第二把在切音那把的**同一個八度**彈(原本 +12)。量到吉他整軌的音域 midi 77、
                 真歌 56–68——高出來的就是這一把(midi 65–80)。八度奏法那一種本來就是八度,照舊 */
              guitar2: { lvl: 0.14, modes: 3, oct: 0 },
-             brass: { lvl: 0.115, cells: [[6, 10], [10, 14], [6, 14], [10], [14], [3, 6], [11, 14]] },
+             brass: { lvl: 0.06, cells: [[6, 10], [10, 14], [6, 14], [10], [14], [3, 6], [11, 14]] },
              /* 鋪底 −2dB、過 3kHz 低通:盲聽 6 次寫「太尖銳、太突出、要溫暖一點、不夠後面」 */
              keys: "pad", klevel: 0.0125,   /* 0.025 → 0.0125(−6dB):Steven 2026-09-26「City pop的pad超級吵」,配器輪換同比例 */
              /* 連奏鋪底(見 `padLegato`):淡入 0.45 秒、收掉的時間常數 0.35 秒 */
@@ -5887,7 +5887,7 @@ const FEELS = {
        每一組是**蓋在這個曲風上的覆寫**,寫法跟 render.mjs 的 ovr 一樣 */
     orchs: [
       /* 1 銅管弦樂型(〈SPARKLE〉〈WINDY LADY〉〈Telephone Number〉〈Tokai〉):銅管每小節、鋪底亮 */
-      { name: "brass", parts: { klevel: 0.025, brass: { lvl: 0.15, every: 1 } },
+      { name: "brass", parts: { klevel: 0.025, brass: { lvl: 0.075, every: 1 } },   // 銅管 −6dB(0.115 → 0.06、這組 0.15 → 0.075):Steven「Synthesizer有一個東一下東一下的,那個也太大聲」
         mix: { padLp: 5500 }, arrange: { layers: { brass: "01110111", keys: "00110111" } } },
       /* 2 合成器鋪底型(〈Midnight Joke〉〈Midnight Pretenders〉):大片合成器鋪底,銅管很少 */
       { name: "synth", parts: { klevel: 0.0375, glevel: 0.17, brass: { every: 4 } },

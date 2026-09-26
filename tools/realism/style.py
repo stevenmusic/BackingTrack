@@ -5,13 +5,16 @@
 但使用者聽起來 Suno 是好的 City Pop。風格特徵應該是**真歌與 Suno 共有**的東西。
 
 輸入:htdemucs_6s 的分軌資料夾(drums / bass / guitar / piano / other / vocals.wav)
-  /tmp/abx/bin/python style.py            → 讀 /tmp/sty/sep_{real,suno,ours}/htdemucs_6s/*/
-輸出:db/style.json(每一段的特徵)+ 印出排名
+  /tmp/abx/bin/python style.py [組…] [--reuse]
+    組 = /tmp/sty/sep_<組>/htdemucs_6s/*/,預設 real suno ours;只重算指定的組,其餘保留在 db/style.json
+    --reuse:已經在 db/style.json 的組不重算(例如只加 oursmel:`style.py oursmel --reuse`)
+輸出:db/style.json(每一段的特徵)、db/style_report.json(排名與 bootstrap 95% 區間、各組樣本數)
 
 特徵(都是「聽得出來」的,不是十六分格子的細節):
 - 各樂器佔伴奏的 dB(人聲不算)、亮度(頻譜重心)、立體聲寬度(1 − L/R 相關)
 - 每拍幾個起音(密度)、小節之間的音量起伏(編曲有沒有在動)
-- 和聲色彩:和聲樂器(吉他 + 鋼琴 + 其他)的能量有多少落在三和弦之外(七、九、十一、十三度)
+- 和聲色彩:和聲樂器(吉他 + 鋼琴 + 其他)的能量有多少落在和弦模板之外。兩套模板並列:
+  `和聲.*` 只有大小三和弦、`和聲7.*` 加上 maj7 / m7 / 7 / m7b5;`延伸音` = 九、十一、十三度
 - 殘響感:起音之後 150–400ms 的能量佔比
 """
 import glob, os, json, sys
@@ -109,9 +112,10 @@ def boot(v, fn, rng):
 
 def main():
     cache = os.path.join(H, 'db', 'style.json')
-    groups = json.load(open(cache)) if os.path.exists(cache) and '--reuse' in sys.argv else {}
+    # 一律先讀舊檔,只覆寫這次指定的組(不然 oursmel 那種實驗組會被蓋掉);--reuse = 已經有的組也不重算
+    groups = json.load(open(cache)) if os.path.exists(cache) else {}
     for g in GROUPS:
-        if g in groups:
+        if g in groups and '--reuse' in sys.argv:
             continue
         dirs = sorted(glob.glob(f'/tmp/sty/sep_{g}/htdemucs_6s/*/'))
         groups[g] = {os.path.basename(d.rstrip('/')): feats(d) for d in dirs}

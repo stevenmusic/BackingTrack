@@ -8,7 +8,7 @@
 
 | 用在 | 來源 | 授權 | 付費 App | 出處要求 |
 | --- | --- | --- | --- | --- |
-| 鋼琴(全曲風,Funk 以外) | Salamander Grand Piano v3(Alexander Holm) | CC BY 3.0 | ✅ 可以 | 要署名 + 附授權連結 |
+| 鋼琴(全曲風,Funk、City Pop 以外) | Salamander Grand Piano v3(Alexander Holm) | CC BY 3.0 | ✅ 可以 | 要署名 + 附授權連結 |
 | 電鋼琴(Funk、City Pop) | jRhodes3c(Jeff Learman) | 散布取樣要 **CC BY-NC 4.0**;商用要另外取得授權 | ❌ **不行**(除非作者另外授權) | 署名 |
 | 鼓(大部分曲風) | Virtuosity Drums(Versilian Studios × Karoryfer) | CC0 1.0 | ✅ 可以 | 不要求(建議仍署名) |
 | 鼓(City Pop 的大鼓、小鼓、hi-hat) | SM Drums(Scott McLean、Tod Stillwell、Suleiman Ali) | 作者網站聲明免費、免版稅、任何用途;**倉庫裡沒有 LICENSE 檔** | ⚠️ 大概可以,待確認 | 不明 |

@@ -5855,9 +5855,7 @@ const FEELS = {
                 我們是 5.4 下(hi-hat 八分 + 沙鈴十六分)——太碎 */
              /* hi-hat 已經走十六分,沙鈴退回八分、收小:兩層平均的高頻疊在一起會糊 */
              perc: { kind: "shaker", lvl: 0.16 },
-             /* ギター・マガジン指型 + 右手一直刷(docs/SOURCES.md G1 / G2;2026-09-26 依四條判準採用)。
-                chopBrush 開著時 chopGhost 不作用 */
-             /* chopForms / chopBrush 同上退回(預設不開) */
+             /* chopForms / chopBrush 預設不開:見 docs/REVIEW.md 第七輪「退回」 */
              chopGhost: 0.2,     /* 0.35 → 0.2:吉他在十六分「a」上量到 0.57 下每拍(真歌 0.22–0.46),多出來的是這一層 */
              /* 切音的長度 0.09 → 0.2 → 0.42 秒:12 首真歌的吉他一下撐 0.25–2 拍(9/12 首 ≥0.9 拍),
                 0.2 秒時量到只有 0.15 拍——只剩撥片那一聲「喀」,能量全在高頻(音域量到 midi 82,真歌 55–74) */
@@ -5905,10 +5903,6 @@ const FEELS = {
                  兩個人同一格落下時是同一個時間——「Kick + Bass 要非常緊」 */
               tie: { bass: "kick" } },
     kickAcc: [1, 0.72, 0.68, 0.78],
-    /* 大鼓整段固定、貝斯跟著大鼓(docs/SOURCES.md D2 青山純 / B2 伊藤広規)。
-       Steven 2026-09-26 盲聽 kb marusa 選改後:「整體平衡聽起來比較舒服」 */
-    /* 內聲部色彩音(ext2):風格尺延伸音 0.154 → 0.182(真歌 0.184),G1 指型本來就帶九度。
-       2026-09-26 由 Claude 依四條判準採用(docs/PLAN.md) */
     /* 2026-09-26 退回:color(ext2)、kickHold、bassFollowKick 一起開之後 Steven:「整體聽起來非常機械,比之前開始製作還糟」。
        欄位留著(預設不開),要再開必須先解決「每一下都一樣」的問題(docs/REVIEW.md 第七輪) */
     topMove: 0.25,
@@ -6033,7 +6027,7 @@ const FEELS = {
               誤差(63–8k 的 RMS)6.42 → 2.44dB,之後再調幾乎不動了 */
            /* keysLevel 0.55 → 0.35(−4dB)、keysEq 800 → 400Hz:鍵盤換回 Rhodes(Steven 指定)時,鍵盤單獨量比平台鋼琴大 4.1dB、
               250–500Hz 多 1.8dB——放回原本平台鋼琴版的平衡(Steven 聽過、微調很多次的那一版),只換音色不換比例 */
-           keysEq: -3, keysEqHz: 400, keysEqQ: 0.6, keysLevel: 0.35,
+           keysEq: -3, keysEqHz: 600, keysEqQ: 0.4, keysLevel: 0.35,   // 600Hz、Q 0.4:250–500 與 800–1k 都收到
            padEq: -4, padEqHz: 400,
            drumAir: 4, drumAirHz: 6000,
            gtrAir: 1.5, gtrAirHz: 3500,
@@ -6643,9 +6637,7 @@ function scheduleDrums(barStartBeat, b, absBar, isFill){
 
     /* 大鼓。爵士的底下一直有很輕的四分 feathering,cell 抽到的那顆才是重音;
        其餘感覺就照 cell 打 */
-    /* `f.kickHold`(沒寫 = 每小節抽,零差異):**大鼓整段固定一個型,只在句尾換**。
-       編曲教學的共識是「大鼓與小鼓固定成簡單的型,律動的波浪交給 hi-hat」;
-       每小節抽一個型的大鼓,聽起來是鼓手每小節都在換想法 */
+    /* 大鼓型由 `kickCellAt` 決定(沒寫 `kickHold` = 每小節抽一個型) */
     const kickCell = kickCellAt(absBar);
     let kick = kickCell.indexOf(idx) >= 0;
     /* 推進的推力要照感覺與拍號換位置:流行搖滾推中間那一拍的後半、
@@ -7759,7 +7751,7 @@ function scheduleGuitar2(spans, barStartBeat, b, transpose, absBar){
       const top = notes[notes.length - 1];
       pluck(top + transpose, t0, gl * 0.75, tone, ring, 0, 1);
       // 高八度超過 83(Hofner 取樣上限)就改低八度:chopForms 的頂音常在 72–77
-      pluck((top + 12 > 83 ? top - 12 : top + 12) + transpose, t0 + 0.004, gl * 0.75, tone, ring, 1, 1);
+      pluck((top + 12 + transpose > 83 ? top - 12 : top + 12) + transpose, t0 + 0.004, gl * 0.75, tone, ring, 1, 1);
     } else {
       pluck(notes[pick] + (spec.oct == null ? 12 : spec.oct) + transpose, t0, gl, tone, ring, pick, 1);
     }
@@ -8115,8 +8107,8 @@ function prewarmGuitar(){
          這正是這一節第一條規則說的事,自己又踩了一次 */
       if (f.parts.guitar2)
         for (const n of guitarNotesFor(sp.chord, "chop")) {
-          want.add(n + 12 + transposeOn);
-          if (n + 12 > 83) want.add(n - 12 + transposeOn);   // 八度奏法超過上限時改彈低八度
+          // 八度奏法超過 Hofner 上限 83(算進移調)時改彈低八度;預載跟著同一條件
+          want.add((n + 12 + transposeOn > 83 ? n - 12 : n + 12) + transposeOn);
         }
     }
   }

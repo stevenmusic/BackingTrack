@@ -1,9 +1,9 @@
 {
- "_note": "平衡:平台鋼琴 vs Rhodes,鍵盤單獨 / 全部(orchFix 2 讓配器不輪換)",
+ "_note": "平衡:平台鋼琴 vs Rhodes,鍵盤單獨 / 全部(orchFix 2 讓配器不輪換);基準(bal_acoustic_* / bal_rhodes_*)釘在 6eb5851(平衡前),bal_rhodes2_full 是 HEAD",
  "progressions": {},
  "cases": [
   {
-   "version": "WORKTREE",
+   "version": "6eb5851",
    "feel": "citypop",
    "style": "comp",
    "prog": "Fmaj7 - E7 - Am7 - C7",
@@ -32,7 +32,7 @@
    "batch": "bal"
   },
   {
-   "version": "WORKTREE",
+   "version": "6eb5851",
    "feel": "citypop",
    "style": "comp",
    "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
@@ -61,7 +61,7 @@
    "batch": "bal"
   },
   {
-   "version": "WORKTREE",
+   "version": "6eb5851",
    "feel": "citypop",
    "style": "comp",
    "prog": "Fmaj7 - E7 - Am7 - C7",
@@ -73,7 +73,7 @@
    "batch": "bal"
   },
   {
-   "version": "WORKTREE",
+   "version": "6eb5851",
    "feel": "citypop",
    "style": "comp",
    "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
@@ -85,7 +85,7 @@
    "batch": "bal"
   },
   {
-   "version": "WORKTREE",
+   "version": "6eb5851",
    "feel": "citypop",
    "style": "comp",
    "prog": "Fmaj7 - E7 - Am7 - C7",
@@ -114,7 +114,7 @@
    "batch": "bal"
   },
   {
-   "version": "WORKTREE",
+   "version": "6eb5851",
    "feel": "citypop",
    "style": "comp",
    "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
@@ -143,7 +143,7 @@
    "batch": "bal"
   },
   {
-   "version": "WORKTREE",
+   "version": "6eb5851",
    "feel": "citypop",
    "style": "comp",
    "prog": "Fmaj7 - E7 - Am7 - C7",
@@ -155,7 +155,7 @@
    "batch": "bal"
   },
   {
-   "version": "WORKTREE",
+   "version": "6eb5851",
    "feel": "citypop",
    "style": "comp",
    "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
@@ -167,28 +167,26 @@
    "batch": "bal"
   },
   {
-   "version": "WORKTREE",
+   "version": "HEAD",
    "feel": "citypop",
    "style": "comp",
    "prog": "Fmaj7 - E7 - Am7 - C7",
    "label": "bal_rhodes2_full",
    "ovr": {
     "orchFix": 2,
-    "piano": "rhodes",
-    "_v": 2
+    "piano": "rhodes"
    },
    "batch": "bal"
   },
   {
-   "version": "WORKTREE",
+   "version": "HEAD",
    "feel": "citypop",
    "style": "comp",
    "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
    "label": "bal_rhodes2_full",
    "ovr": {
     "orchFix": 2,
-    "piano": "rhodes",
-    "_v": 2
+    "piano": "rhodes"
    },
    "batch": "bal"
   }

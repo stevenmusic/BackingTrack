@@ -2636,7 +2636,7 @@ let lapBuilt = -1;       // voicings 是照第幾圈建的
 let lapBars = null;      // 這一圈實際在彈的和弦(沒換過就是 null)
 /* 現在畫面上與排程要看的那一份和弦。沒有在換的時候就是使用者打的那一份 */
 function barsNow(){ return lapBars || parsed.bars; }
-function resetLap(){ lapBuilt = -1; lapBars = null; }
+function resetLap(){ lapBuilt = -1; lapBars = null; gtrHand = null; }
 
 /* 這一圈要把哪幾格換掉。第一圈(lap 0)一定照原譜——先聽過原本長怎樣,
    後面才知道變的是什麼。一圈換一到兩格,多了就不像同一首了。
@@ -7285,14 +7285,29 @@ function guitarShape(kind){
 function guitarNotesFor(chord, kind, transpose){
   return fixTop(chord, guitarNotesRaw(chord, kind, transpose));
 }
-function guitarNotesRaw(chord, kind, transpose){
+/* ── 刷弦的左手位置(Steven:「封閉和弦按 5 弦還是 6 弦,以左手移動來安排」)──
+   `gtrHand` = 左手現在在第幾格(0 = 開放和弦那一區,null = 還沒彈)。每顆和弦**第一次刷的時候**
+   決定手型,挑離手最近的那一個,之後同一顆和弦都用它(`gtrPick` 照 span 記)。
+   按播放 / 改和弦 / 關開 `resetLap()` 時歸零,所以同一首每次彈出來都一樣 */
+let gtrHand = null;
+const gtrPick = new WeakMap();
+function strumNotes(sp, transpose){
+  const m = gtrPick.get(sp);
+  if (m && m.t === transpose) return m.notes;
+  const raw = guitarNotesRaw(sp.chord, "strum", transpose, gtrHand);
+  if (raw.fret != null) gtrHand = raw.fret;
+  const notes = fixTop(sp.chord, raw);
+  gtrPick.set(sp, { t: transpose, notes });
+  return notes;
+}
+function guitarNotesRaw(chord, kind, transpose, hand){
   /* 刷弦與 bossa **照真的吉他把位**(`realShape`),不是從低音往上挑和弦音。
      盲聽被寫了「刷和弦的音應該根據真實樂器的 open string 排列」「跟 MIDI 完全一樣」:
      吉他手不是在算音,是在按一個固定的手型——開放和弦的 C、G、Am、E,
      或是 E 型/A 型的封閉和弦。那個手型決定了哪幾條弦是空弦、哪個音重複、
      最高音在哪裡,也就是「吉他的聲音」。性質對不上手型(九和弦、sus、轉位)才退回原本的排法 */
   if (kind === "strum" || kind === "bossa") {
-    const r = realShape(chord, kind === "bossa", transpose || 0);
+    const r = realShape(chord, kind === "bossa", transpose || 0, hand);
     if (r) return r;
   }
   const sh = guitarShape(kind);
@@ -7329,14 +7344,18 @@ function shapeQuality(chord){
   if (M3) return "maj";
   return null;
 }
-function realShape(chord, closed, transpose){
+function realShape(chord, closed, transpose, hand){
   if (!chord || chord.bassPc !== chord.rootPc) return null;   // 轉位交給原本的排法
   const q = shapeQuality(chord);
   if (!q) return null;
   const pc = (((chord.rootPc + transpose) % 12) + 12) % 12;
   const cands = [];
   // bossa 用封閉和弦(空弦會一直響,那是民謠的聲音不是 bossa 的)
-  if (!closed && GTR_OPEN[pc] && GTR_OPEN[pc][q]) cands.push(GTR_OPEN[pc][q].map((f, i) => f == null ? null : GTR_OPEN_STR[i] + f));
+  if (!closed && GTR_OPEN[pc] && GTR_OPEN[pc][q]) {
+    const o = GTR_OPEN[pc][q].map((f, i) => f == null ? null : GTR_OPEN_STR[i] + f);
+    o.fret = 0;
+    cands.push(o);
+  }
   for (const [shape, rootStr] of [[GTR_E_SHAPE, 0], [GTR_A_SHAPE, 1]]) {
     if (!shape[q]) continue;
     let fret = (((pc - GTR_OPEN_STR[rootStr]) % 12) + 12) % 12;
@@ -7354,13 +7373,19 @@ function realShape(chord, closed, transpose){
   /* 有開放和弦就用它(刷弦的聲音就是空弦);沒有就挑**把位(格數)最低**的封閉和弦。
      原本比「最低音誰低」:Bm7 的 E 型(第 7 格)跟 A 型(第 2 格)最低音都是 B2,平手挑到 E 型六弦——
      Steven:「Bm7 通常刷五弦封閉和弦,B-F#-A-D-F#」。吉他手選的是手在哪一格,不是最低音。
+     **知道左手在哪(`hand`)時挑移動最少的**:Bm7 → Em7 → A7 在第 7 格附近就彈 E 型 / A 型輪流,
+     不會 2 格、7 格、5 格跳來跳去。開放和弦只有手在第 4 格以內才算「近」(不然要整隻手滑回琴頭);
+     一樣近時挑開放的,再來挑格數低的。
      bossa(`closed`)維持原本的「最低音最低」:它要的是 7x777x 那種六弦根音的殼型 */
   const low = c => Math.min(...c.filter(x => x != null));
   const hasOpen = !closed && GTR_OPEN[pc] && GTR_OPEN[pc][q];
-  const pick = hasOpen ? cands[0]
-             : cands.slice().sort(closed ? (a, b) => low(a) - low(b) : (a, b) => a.fret - b.fret)[0];
-  const notes = pick.filter(x => x != null);
-  return notes.map(n => n - transpose);
+  const dist = c => c.fret === 0 ? (hand <= 4 ? 0 : hand) : Math.abs(c.fret - hand);
+  const pick = closed ? cands.slice().sort((a, b) => low(a) - low(b))[0]
+             : hand == null ? (hasOpen ? cands[0] : cands.slice().sort((a, b) => a.fret - b.fret)[0])
+             : cands.slice().sort((a, b) => dist(a) - dist(b) || a.fret - b.fret)[0];
+  const notes = pick.filter(x => x != null).map(n => n - transpose);
+  notes.fret = pick.fret;
+  return notes;
 }
 
 /* 刷弦:一顆一顆錯開 9–15 毫秒。**同時響**的話那不是刷弦是鍵盤,
@@ -7820,7 +7845,7 @@ function scheduleGuitar(spans, barStartBeat, b, transpose, absBar, isFill){
   /* 刷弦:流行歌的木吉他。下刷在正拍、上刷在反拍,
      上刷只掃上面幾條弦——那是真的手會做的事 */
   if (kind === "strum") {
-    const notes = guitarNotesFor(here.chord, "strum", transpose);
+    const notes = strumNotes(here, transpose);
     /* 墊底就是一小節刷一下、讓它整個響完;**打點走真的刷法**;
        推進才走滿八分(下上下上)。**墊底不要上刷**——
        上刷是「回來的那一下」,一小節只有一下的時候沒有那個動作。
@@ -7852,7 +7877,7 @@ function scheduleGuitar(spans, barStartBeat, b, transpose, absBar, isFill){
       if (!isDown && !isUp) continue;
       const sp = spanAt(spans, idx);
       if (!sp || !sp.v) continue;
-      const use = sp === here ? notes : guitarNotesFor(sp.chord, "strum", transpose);
+      const use = sp === here ? notes : strumNotes(sp, transpose);
       strum(isUp ? use.slice(-3) : use, slotTime(barStartBeat, idx),
             base * (idx === 0 ? 1.1 : 0.85), tone, isUp, 0.012,
             capRing(sp, idx, isUp ? spb * 0.5 : ring), transpose);
@@ -7950,12 +7975,19 @@ function prewarmGuitar(){
   if (!f.parts || !f.parts.guitar) return Promise.resolve();
   const tone = f.parts.gtone || "nylon";
   const want = new Set();
+  let hand = null;          // 刷弦的左手位置:照播放順序走一遍,跟 `strumNotes` 挑到的一樣
   for (const spans of (voicings || [])) {
     for (const sp of (spans || [])) {
       if (!sp || !sp.v) continue;
       /* 手型是照「移調後真的在響的根音」挑的,所以要把 transposeOn 傳進去,
          不然預先載的那幾顆跟真的彈到的對不上 */
-      for (const n of guitarNotesFor(sp.chord, f.parts.guitar, transposeOn)) {
+      let gn = guitarNotesFor(sp.chord, f.parts.guitar, transposeOn);
+      if (f.parts.guitar === "strum") {
+        const raw = guitarNotesRaw(sp.chord, "strum", transposeOn, hand);
+        if (raw.fret != null) hand = raw.fret;
+        gn = gn.concat(fixTop(sp.chord, raw));
+      }
+      for (const n of gn) {
         want.add(n + transposeOn);
         // bossa 的拇指第二下換到五度(見 scheduleGuitar),那一顆也要先載
         if (f.parts.guitar === "bossa") { const fv = chordFifth(sp.chord); want.add((n + fv > 52 ? n + fv - 12 : n + fv) + transposeOn); }

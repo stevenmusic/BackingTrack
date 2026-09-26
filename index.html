@@ -5851,7 +5851,7 @@ const FEELS = {
              guitar2: { lvl: 0.12, modes: 3, oct: 0 },
              brass: { lvl: 0.115, cells: [[6, 10], [10, 14], [6, 14], [10], [14], [3, 6], [11, 14]] },
              /* 鋪底 −2dB、過 3kHz 低通:盲聽 6 次寫「太尖銳、太突出、要溫暖一點、不夠後面」 */
-             keys: "pad", klevel: 0.019,
+             keys: "pad", klevel: 0.025,
              /* 連奏鋪底(見 `padLegato`):淡入 0.45 秒、收掉的時間常數 0.35 秒 */
              padLegato: { atk: 0.45, rel: 0.35 },
              /* 沙鈴從十六分退回八分、−1.4dB:三首參考曲分軌量到高頻每拍 2.5–3 下,
@@ -5886,15 +5886,15 @@ const FEELS = {
        每一組是**蓋在這個曲風上的覆寫**,寫法跟 render.mjs 的 ovr 一樣 */
     orchs: [
       /* 1 銅管弦樂型(〈SPARKLE〉〈WINDY LADY〉〈Telephone Number〉〈Tokai〉):銅管每小節、鋪底亮 */
-      { name: "brass", parts: { klevel: 0.038, brass: { lvl: 0.15, every: 1 } },
+      { name: "brass", parts: { klevel: 0.05, brass: { lvl: 0.15, every: 1 } },
         mix: { padLp: 5500 }, arrange: { layers: { brass: "01110111", keys: "00110111" } } },
       /* 2 合成器鋪底型(〈Midnight Joke〉〈Midnight Pretenders〉):大片合成器鋪底,銅管很少 */
-      { name: "synth", parts: { klevel: 0.056, glevel: 0.15, brass: { every: 4 } },
+      { name: "synth", parts: { klevel: 0.075, glevel: 0.15, brass: { every: 4 } },
         mix: { padLp: 4500 }, arrange: { layers: { keys: "01111110", brass: "00000001" } } },
       /* 3 鋼琴型(〈Plastic Love〉):鋼琴往前,其他照常 */
-      { name: "piano", mix: { keysLevel: 0.52 } },    // 1.1 → 0.7 → 0.52:跟 keysLevel 同比例
+      { name: "piano", mix: { keysLevel: 0.7 } },     // 1.1 → 0.7:跟 keysLevel 同比例
       /* 4 雙吉他型(〈Fantasy〉〈STAY BY ME〉):兩把吉他一直都在,鋪底淡 */
-      { name: "guitars", parts: { glevel: 0.23, guitar2: { lvl: 0.16 }, klevel: 0.026 },
+      { name: "guitars", parts: { glevel: 0.23, guitar2: { lvl: 0.16 }, klevel: 0.035 },
         arrange: { layers: { guitar2: "11111111", guitar: "11111111" } } },
     ],
     /* ── 像真人的時間與力度(第六輪:對三首參考曲分軌量 + 文獻,見 `humanTime` 與 CLAUDE.md)── */
@@ -6030,7 +6030,7 @@ const FEELS = {
               誤差(63–8k 的 RMS)6.42 → 2.44dB,之後再調幾乎不動了 */
            /* keysLevel 0.55 → 0.35(−4dB)、keysEq 800 → 400Hz:鍵盤換回 Rhodes(Steven 指定)時,鍵盤單獨量比平台鋼琴大 4.1dB、
               250–500Hz 多 1.8dB——放回原本平台鋼琴版的平衡(Steven 聽過、微調很多次的那一版),只換音色不換比例 */
-           keysEq: -3, keysEqHz: 600, keysEqQ: 0.4, keysLevel: 0.26,   // 600Hz、Q 0.4:250–500 與 800–1k 都收到;0.35 → 0.26(−2.6dB)與鋪底 klevel ×0.75:吉他降了之後鍵盤 + 鋪底佔比 −5.8dB,真歌 −8.9 [−10.4, −6.0]
+           keysEq: -3, keysEqHz: 600, keysEqQ: 0.4, keysLevel: 0.35,   // 600Hz、Q 0.4:250–500 與 800–1k 都收到(鍵盤 + 鋪底的佔比拆軌量不準——偏差 +3.9dB、人聲滲漏 +4.9dB,不拿來調)
            padEq: -4, padEqHz: 400,
            drumAir: 1, drumAirHz: 6000,   /* 4 → 1:鼓太亮(同上) */
            gtrAir: 1.5, gtrAirHz: 3500,

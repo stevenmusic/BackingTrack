@@ -49,3 +49,7 @@
   殘響、和聲色彩兩套模板),附 bootstrap 95% 區間。分軌放 `/tmp/sty/sep_<組>/htdemucs_6s/`,結果 `db/style.json`、`db/style_report.json`
 - `leak_melody.py`:人聲滲漏實驗,在我們的伴奏上混一條合成人聲旋律,再拆軌量一次
 - `review_stats.py drums|leak|mix|sub|dup`:`docs/REVIEW.md` 裡數字的重現腳本(只讀;`dup` 要給原始 mp3 的資料夾)
+
+## CLAP 耳朵(`clapfad.py`)
+- 模型:`laion/larger_clap_music`(Hugging Face,**Apache-2.0**),只拿來評測、不進產品;權重只有 `.bin`,需要 torch ≥ 2.6
+- 方法:Gui et al., "Adapting Frechet Audio Distance for Generative Music Evaluation", ICASSP 2024(微軟 fadtk)

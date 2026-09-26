@@ -64,6 +64,23 @@ https://bassmagazine.jp/player/interveiw-itokoki202204/
 - 「16ビートの裏でザクザクとビートを刻んでいく」(村松邦男「針切り男」)
 - 「Aメロとサビでカッティングのトーンを変化させる」(山下達郎「TOWN」);ダブル・ストップ(「斜陽」)
 
+### C1 唱片樂手名單(日文維基百科,2026-09-26 讀到):配器與音色怎麼來的
+- 山下達郎『FOR YOU』(1982)8 首歌:
+  - **完整管樂組**只在 3 首:SPARKLE、MUSIC BOOK、MORNING GLORY
+    (Trumpet 數原晋・小林正弘 / Trombone 2–3 把 / Tenor Sax 村岡建 / Baritone Sax 砂原俊三)
+  - 3 首只有中音薩克斯獨奏(FUTARI、LOVELAND, ISLAND、YOUR EYES);2 首沒有管樂(LOVE TALKIN'、HEY REPORTER!)
+  - 鍵盤:幾乎每首都有 **Electric Piano**(佐藤博、難波弘之、山下達郎);合成器只在個別曲:KORG λ Strings(FUTARI)、KORG PS-3100(LOVE TALKIN')
+  - 弦樂:真的弦樂團(多忠明 concert master:FUTARI、YOUR EYES)
+  - 吉他:SPARKLE 的核心是一把 1970 年代的 **Fender Telecaster**(「SPARKLE」條目)
+- 竹内まりや「プラスティック・ラブ」(1984,山下達郎編曲):Electric Piano 中西康晴、Bass 伊藤広規、Drums 青山純、
+  Trumpet 數原晋・横山均、Trombone 粉川忠範・及川芳雄、Tenor Sax 村岡建、Baritone Sax 砂原俊三、Strings 加藤 JOE グループ
+- **結論**:
+  1. 管樂組是招牌但**不是每首都有**(FOR YOU 3/8),而且是**真人管樂組**(小號 ×2、長號 ×2、次中音 + 上低音薩克斯),不是合成銅管
+  2. 電鋼琴是固定班底(Rhodes 對得上,名單只寫 Electric Piano,沒寫廠牌);DX7 電鋼琴是 1983 年以後的聲音,FOR YOU / Plastic Love 之前沒有
+  3. 鋪底:真弦樂團為主,合成弦樂(KORG λ)也有 → 我們的合成鋪底對應的是「弦樂機」那一種
+  4. 吉他:Telecaster(單線圈、亮);我們切音用的是 Hofner 取樣
+- 可商用的真管樂取樣:VSCO-2-CE(CC0,github.com/sgossner/VSCO-2-CE)有 Trumpet / Tenor Trombone 的 **stac(斷奏)**與 sus;沒有薩克斯
+
 ## 還缺的(權威但沒讀到)
 - ギター・マガジン 2019 年 4 月號本體(62 段切音譜例)、2020 年 1 月號(山下達郎與切音)
 - ドラム・マガジン 1986 年 4 月號(青山純奏法分析)

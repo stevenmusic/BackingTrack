@@ -413,8 +413,20 @@ Steven 聽了之後:「整體聽起來非常機械,比之前開始製作還糟�
 ## 第九輪(2026-09-26):鋪底與合成銅管太吵(Steven 耳朵)
 - Steven:「City pop的pad超級吵」「Synthesizer有一個東一下東一下的,那個也太大聲」「可能是Pad+lead」;附螢幕錄影(City Pop、
   `Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7`、移調 +1、110 BPM,Sustained → Mixed)
-- City Pop 沒有 lead 層;「東一下」是合成銅管 stab(「銅管組」配器 8 小節打 6 小節、lvl 0.15)
+- City Pop 沒有 lead 層。「東一下」原本猜是合成銅管 stab(「銅管組」配器 8 小節打 6 小節、lvl 0.15),
+  **更正**:審查員指出 Sustained 時銅管不吹(`scheduleBrass` 的 `if (st === "pad") return;`),錄影 0–20 秒是 Sustained
+  (截圖 f_02–f_05)。拆錄影音檔:吉他軌每 2.18 秒(一小節)一下、比自己的中位高 20dB,其他軌沒有每小節重複(r 0.04–0.21,吉他 0.79)
+  → 是**切音吉他在 Sustained 時一小節只剩一下**(`cell.slice(0, 1)`),加上第二把一小節一下
 - 改法(照 Steven 的耳朵,CLAUDE.md 判準 ③ 的反面:Steven 主動說不好聽的照他說的退回):
   鋪底 −6dB(klevel 0.025 → 0.0125,配器同比例)、銅管 −6dB(lvl 0.115 → 0.06、銅管組 0.15 → 0.075)
 - 同設定錄音對照(`tools/realism/cases_rec.json`,main e64eac9 對修改後,demucs 拆軌;other = Rhodes + 鋪底 + 銅管):
   Sustained other −9.8 → −14.9dB、最大 2 秒格 −5.9 → −11.7;Mixed other −6.7 → −10.7、最大格 −2.4 → −6.5
+  (第一次那組的 Sustained 數字審查員重跑對不齊;錄影有移調 +1,這組沒移調;錄到的配器是「銅管組」)
+- 追加(0c57a7a):`parts.padLone: 0.5`(Sustained 時兩把吉他零星那一下 −6dB,沒寫的曲風 = 1 零差異)。
+  重錄(`cases_rec.json` 釘 e64eac9 / 0c57a7a,36 秒):Sustained 吉他軌最響 1% −17.7 → −26.4dB、佔比 −14.4 → −21.7dB;
+  RMS pad −14.6 → −15.1、mix −13.0 → −13.3;peak 全部 0.85;L/R 相關 pad 0.933 → 0.968、mix 0.879 → 0.905。
+  吉他絕對音量在 Comping/Mixed 沒變(`glevel` 已在第八輪 −2.5dB)。旋律檢查 83 組全 0、下數 0 的 0 組
+- Steven 追問「銅管在 City Pop 的重要性、音色是不是真的 City Pop 在用的」→ 查唱片名單(`docs/SOURCES.md` C1):
+  管樂組是招牌但不是每首(FOR YOU 3/8),而且是**真人管樂組**;電鋼琴是固定班底;弦樂多是真弦樂團、也有 KORG λ 合成弦樂;
+  吉他是 Telecaster。**【待 Steven 決定】**:① 合成銅管換成真管樂取樣(VSCO-2-CE,CC0,有斷奏)
+  ② 切音吉他 Hofner 換 Telecaster 類的單線圈音色(要先找可商用取樣)。CLAUDE.md:換音色要先問

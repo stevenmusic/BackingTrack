@@ -49,7 +49,7 @@ await pg.evaluate(() => {
 });
 await pg.click('#playBtn');
 await pg.waitForFunction(s => typeof playing !== 'undefined' && playing && currentBeat() > 8 + s / spb, SECS, { timeout: 300000, polling: 500 });
-const H = await pg.evaluate(() => Object.assign(__H, { loopBars: voicings.length, countIn: countInBeats }));
+const H = await pg.evaluate(() => Object.assign(__H, { loopBars: voicings.length, countIn: countInBeats, spb }));
 await b.close(); sv.close();
 const chords = Object.values(H.chords).flat().sort((a, b) => a.from - b.from);
 const at = beat => chords.find(c => beat >= c.from - 1e-6 && beat < c.to - 1e-6);
@@ -116,8 +116,11 @@ Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 25).forEach(([k, n])
     if (pc === c.bass) return true;
     return c.ivCore.includes(rel);
   };
-  /* 同一下的音**不是同時落下的**(和弦攤開 4–12ms、刷弦一條一條錯開),
-     所以照時間排序、間隔小於 0.1 拍的算同一下,不能用四捨五入的格子切 */
+  /* 同一下的音**不是同時落下的**(和弦攤開 4–12ms、刷弦一條一條錯開、
+     鋪底 `padVar` 1 由下往上撥開每顆晚 35–60ms),所以照時間排序、
+     間隔小於 max(0.1 拍, 75ms) 的算同一下,不能用四捨五入的格子切。
+     只用 0.1 拍的話,快歌的撥開會被切成好幾下,底下那顆被誤當頂音 */
+  const gap = Math.max(0.1, 0.075 / (H.spb || 1));
   const groups = [];
   const byInst = {};
   for (const [inst, m, beat] of H.notes) {
@@ -129,7 +132,7 @@ Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 25).forEach(([k, n])
     const single = inst === 'arp' || inst === 'vox';
     let cur = null;
     for (const [beat, m] of arr) {
-      if (single || !cur || beat - cur.last > 0.1) { cur = { inst, beat, last: beat, ms: [] }; groups.push(cur); }
+      if (single || !cur || beat - cur.last > gap) { cur = { inst, beat, last: beat, ms: [] }; groups.push(cur); }
       cur.ms.push(m); cur.last = beat;
     }
   }

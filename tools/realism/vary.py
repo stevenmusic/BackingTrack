@@ -59,6 +59,10 @@ def feats(d):
         if len(prof) < 4:
             continue
         on = [p > 0.35 for p in prof]
+        # 律動輪廓(docs/PLAN.md 的主尺):四種位置的平均強度。小節從哪一拍開始量不出來,但四種位置比得準
+        P = np.mean(prof, 0)
+        for nm, ix in (('正拍', [0, 4, 8, 12]), ('e', [1, 5, 9, 13]), ('&', [2, 6, 10, 14]), ('a', [3, 7, 11, 15])):
+            f[f'{s}.位置.{nm}'] = round(float(P[ix].mean()), 3)
         f[f'{s}.相鄰相似'] = round(float(np.mean([cos(prof[i], prof[i + 1]) for i in range(len(prof) - 1)])), 3)
         f[f'{s}.隔一相似'] = round(float(np.mean([cos(prof[i], prof[i + 2]) for i in range(len(prof) - 2)])), 3)
         f[f'{s}.同型比例'] = round(float(np.mean([np.array_equal(on[i], on[i + 1]) for i in range(len(on) - 1)])), 3)
@@ -103,6 +107,28 @@ def report(groups):
         out.append({'特徵': k, 'z': round(z, 2), 'z95': [round(lo, 2), round(hi, 2)], '分離度上限': round(shi, 2),
                     '穩定': bool(st), '真歌': a, 'Suno': b, '我們': c, 'n': n})
     return out
+
+
+# 總分 D 用的特徵(docs/PLAN.md 第 2 節):滲漏超過差距 30% 的不收(第七輪量:guitar.相鄰相似 47%)
+ADOPT = [f'{s}.位置.{p}' for s in ('drums', 'bass', 'guitar') for p in ('正拍', 'e', '&', 'a')] + ['other.輕重對比']
+
+
+def ref_of(groups):
+    return list(groups.get('real', {}).values()) + list(groups.get('realmix', {}).values()) + list(groups.get('suno', {}).values())
+
+
+def score(ref, clips, keys=ADOPT):
+    """總分 D:每個特徵「我們的平均」到參考組四分位範圍的距離 ÷ 四分位寬度,加總(在範圍內 = 0)"""
+    D, parts = 0.0, {}
+    for k in keys:
+        r = np.array([f[k] for f in ref if k in f]); o = [f[k] for f in clips if k in f]
+        if len(r) < 5 or not o:
+            continue
+        lo, hi = np.percentile(r, [25, 75]); m = float(np.mean(o))
+        d = max(lo - m, m - hi, 0) / (hi - lo + 1e-9)
+        parts[k] = {'我們': round(m, 3), '參考25–75': [round(lo, 3), round(hi, 3)], '距離': round(d, 2)}
+        D += d
+    return round(D, 2), parts
 
 
 def main():

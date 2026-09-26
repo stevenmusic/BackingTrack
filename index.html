@@ -2132,16 +2132,57 @@ function fixTop(chord, notes){
   }
   return out;
 }
+/* ── 內聲部的色彩音(`FEELS[x].color`,沒寫的曲風零差異)──────────────────
+   風格尺(docs/REVIEW.md 第二、三輪):真歌與 Suno 的和聲樂器有 18% 的能量在九、十一、十三度,
+   我們只有 14.5%(z −2.77,不靠合併也穩定)。這裡照和弦性質把指定的色彩音放進**內聲部**:
+   `{ maj7: [14], m7: [14], "7": [21] }` = 大七與小七加九度、屬七加十三度。
+   - 頂音照舊只准和弦骨架音(`melodyOk` 罰 100 + `fixTop`),色彩音不會上頂
+   - 色彩音要在這首歌的調裡才加(`voiceKey`,`buildVoicings` 算一次),E7 的 F♯ 之類不加
+   - 上聲部最多四音:先捨五音;還是太多就不加 */
+let voiceKey = null;
+function colorQual(chord){
+  const iv = chord.intervals.map(x => x % 12);
+  const has = (x) => iv.indexOf(x) >= 0;
+  if (has(3) && has(6)) return null;
+  /* 帶變化音的屬七(♭9 / ♯9 / ♭13 / ♯5;♯9 取 12 的餘數跟小三度同一個音級)不加:
+     不然 ♮9 跟 ♯9、13 跟 ♭13 會擠在一起(第四輪審查建議 1)。要先判,不然 7♯9 會被當成 m7 */
+  if (has(4) && has(10) && chord.intervals.some(x => x === 13 || x === 15 || x === 20 || x === 1 || x === 8)) return null;
+  if (has(4) && has(11)) return "maj7";
+  if (has(3) && has(10)) return "m7";
+  if (has(4) && has(10)) return "7";
+  return null;
+}
+function addColor(chord, pcs){
+  const col = feel().color;
+  const q = col && colorQual(chord);
+  if (!q || !col[q]) return pcs;
+  const out = pcs.slice();
+  const fifth = (chord.rootPc + 7) % 12;
+  for (const a of col[q]) {
+    const pc = (chord.rootPc + a) % 12;
+    if (out.includes(pc) || chord.intervals.some(x => x % 12 === a % 12)) continue;
+    if (voiceKey != null && MAJOR_SCALE.indexOf(((pc - voiceKey) % 12 + 12) % 12) < 0) continue;
+    const next = out.concat([pc]);
+    if (next.length > MAX_UPPER) {
+      const i = next.indexOf(fifth);
+      if (i < 0) continue;
+      next.splice(i, 1);
+    }
+    out.length = 0; out.push(...next);
+  }
+  return out;
+}
 function buildVoicing(chord, prevUpper){
   const bass = BASS_LOW + chord.bassPc;               // 轉位低音也吃同一個八度
   // 上方聲部用的音級:去掉重複的,但九度(14)要保留它「高一個八度」的身分
-  const pcs = [];
+  let pcs = [];
   for (const iv of trimTones(chord.intervals, chord.bassPc === chord.rootPc)) {
     const pc = (chord.rootPc + iv) % 12;
     if (!pcs.includes(pc)) {
       pcs.push(pc);
     }
   }
+  pcs = addColor(chord, pcs);
 
   const target = prevUpper && prevUpper.length ? mean(prevUpper) : UPPER_TARGET;
   let best = null, bestCost = Infinity;
@@ -2650,6 +2691,8 @@ function buildLap(lap){
    下一小節的第一顆要接上一小節的最後一顆 */
 function buildVoicings(bars){
   const out = [];
+  /* 用**原譜**判調,不用這一圈換過代理和弦的 bars:不然色彩音會一圈有一圈沒有(第四輪審查建議 2) */
+  voiceKey = feel().color ? keyOf(parsed && parsed.bars && parsed.bars.length ? parsed.bars : bars) : null;
   let prev = null;
   for (const b of bars) {
     const spans = spansOf(b);
@@ -4597,7 +4640,7 @@ function padLegato(midis, when, dur, gain, spec){
       v.g.gain.cancelScheduledValues(when);
       v.g.gain.setTargetAtTime(gain, when, 0.3);
     } else {
-      v = padVoiceMake(m, when, gain, atk);
+      v = padVoiceMake(m, when, gain, atk, spec && spec.lp);
       padVoices.set(m, v);
     }
     // 沒人接手就在這顆和弦結束後收掉(下一顆和弦接手時會被 cancel)
@@ -4605,11 +4648,12 @@ function padLegato(midis, when, dur, gain, spec){
     v.g.gain.setTargetAtTime(0.0001, v.relAt, rel);
   }
 }
-function padVoiceMake(m, when, gain, atk){
+function padVoiceMake(m, when, gain, atk, lpHz){
   const f0 = 440 * Math.pow(2, (m - 69) / 12);
   const g = ctx.createGain();
   const lp = ctx.createBiquadFilter();
-  lp.type = "lowpass"; lp.frequency.value = 2400; lp.Q.value = 0.7;
+  /* `parts.padLegato.lp`(沒寫就是 2400,零差異):風格尺量到 City Pop 的 other 軌比真歌暗(有聲中位數 1320 vs 2223Hz) */
+  lp.type = "lowpass"; lp.frequency.value = lpHz || 2400; lp.Q.value = 0.7;
   lp.connect(g); g.connect(padBus);
   g.gain.setValueAtTime(0.0001, when);
   g.gain.linearRampToValueAtTime(gain, when + atk);
@@ -7449,7 +7493,9 @@ function playBrass(midis, when, dur, gain){
     /* **衝過頭再掉回來**:35 毫秒衝到穩態的兩倍多,再用 130 毫秒沉下去。
        這條包絡比任何波形的選擇都決定它像不像銅管 */
     const peakHz = Math.min(7000, f * 11);
-    const restHz = Math.min(3200, f * 4.2);
+    /* `parts.brass.rest` / `restMax`(沒寫就是 4.2 倍、上限 3200Hz,零差異) */
+    const bs = (feel().parts && feel().parts.brass) || {};
+    const restHz = Math.min(bs.restMax || 3200, f * (bs.rest || 4.2));
     lp.frequency.setValueAtTime(Math.max(300, f * 1.6), when);
     lp.frequency.linearRampToValueAtTime(peakHz, when + 0.035);
     lp.frequency.setTargetAtTime(restHz, when + 0.035, 0.055);

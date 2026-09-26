@@ -14,6 +14,8 @@ await pg.goto(`http://127.0.0.1:${sv.address().port}/home/user/BackingTrack/inde
 await pg.fill('#chordInput', prog); await pg.dispatchEvent('#chordInput', 'input');
 if (meter) await pg.click(`[data-meter="${meter}"]`);
 await pg.click(`[data-feel="${feel}"]`); await pg.click(`[data-style="${style || 'comp'}"]`);
+/* HOVR='{...}':跟 render.mjs 的 ovr 一樣,深合併進 FEELS[曲風](A/B 用,例如 HOVR='{"color":{"maj7":[14]}}') */
+if (process.env.HOVR) await pg.evaluate(([f, o]) => { const m = (t, x) => { for (const k in x) { if (x[k] && typeof x[k] === 'object' && !Array.isArray(x[k])) { t[k] = t[k] || {}; m(t[k], x[k]); } else t[k] = x[k]; } }; m(FEELS[f], JSON.parse(o)); }, [feel, process.env.HOVR]);
 await pg.evaluate(() => {
   window.__H = { notes: [], chords: {} };
   const tb = t => anchorBeat + (t - anchorTime) / spb;              // 時間 → 拍

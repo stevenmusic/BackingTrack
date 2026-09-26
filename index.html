@@ -4637,7 +4637,7 @@ function padLegato(midis, when, dur, gain, spec){
       v.g.gain.cancelScheduledValues(when);
       v.g.gain.setTargetAtTime(gain, when, 0.3);
     } else {
-      v = padVoiceMake(m, when, gain, atk);
+      v = padVoiceMake(m, when, gain, atk, spec && spec.lp);
       padVoices.set(m, v);
     }
     // 沒人接手就在這顆和弦結束後收掉(下一顆和弦接手時會被 cancel)
@@ -4645,11 +4645,12 @@ function padLegato(midis, when, dur, gain, spec){
     v.g.gain.setTargetAtTime(0.0001, v.relAt, rel);
   }
 }
-function padVoiceMake(m, when, gain, atk){
+function padVoiceMake(m, when, gain, atk, lpHz){
   const f0 = 440 * Math.pow(2, (m - 69) / 12);
   const g = ctx.createGain();
   const lp = ctx.createBiquadFilter();
-  lp.type = "lowpass"; lp.frequency.value = 2400; lp.Q.value = 0.7;
+  /* `parts.padLegato.lp`(沒寫就是 2400,零差異):風格尺量到 City Pop 的 other 軌比真歌暗(有聲中位數 1320 vs 2223Hz) */
+  lp.type = "lowpass"; lp.frequency.value = lpHz || 2400; lp.Q.value = 0.7;
   lp.connect(g); g.connect(padBus);
   g.gain.setValueAtTime(0.0001, when);
   g.gain.linearRampToValueAtTime(gain, when + atk);
@@ -7489,7 +7490,9 @@ function playBrass(midis, when, dur, gain){
     /* **衝過頭再掉回來**:35 毫秒衝到穩態的兩倍多,再用 130 毫秒沉下去。
        這條包絡比任何波形的選擇都決定它像不像銅管 */
     const peakHz = Math.min(7000, f * 11);
-    const restHz = Math.min(3200, f * 4.2);
+    /* `parts.brass.rest` / `restMax`(沒寫就是 4.2 倍、上限 3200Hz,零差異) */
+    const bs = (feel().parts && feel().parts.brass) || {};
+    const restHz = Math.min(bs.restMax || 3200, f * (bs.rest || 4.2));
     lp.frequency.setValueAtTime(Math.max(300, f * 1.6), when);
     lp.frequency.linearRampToValueAtTime(peakHz, when + 0.035);
     lp.frequency.setTargetAtTime(restHz, when + 0.035, 0.055);

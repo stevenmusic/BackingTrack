@@ -5852,7 +5852,7 @@ const FEELS = {
              guitar2: { lvl: 0.14, modes: 3, oct: 0 },
              brass: { lvl: 0.115, cells: [[6, 10], [10, 14], [6, 14], [10], [14], [3, 6], [11, 14]] },
              /* 鋪底 −2dB、過 3kHz 低通:盲聽 6 次寫「太尖銳、太突出、要溫暖一點、不夠後面」 */
-             keys: "pad", klevel: 0.025,
+             keys: "pad", klevel: 0.0125,   /* 0.025 → 0.0125(−6dB):Steven 2026-09-26「City pop的pad超級吵」,配器輪換同比例 */
              /* 連奏鋪底(見 `padLegato`):淡入 0.45 秒、收掉的時間常數 0.35 秒 */
              padLegato: { atk: 0.45, rel: 0.35 },
              /* 沙鈴從十六分退回八分、−1.4dB:三首參考曲分軌量到高頻每拍 2.5–3 下,
@@ -5887,15 +5887,15 @@ const FEELS = {
        每一組是**蓋在這個曲風上的覆寫**,寫法跟 render.mjs 的 ovr 一樣 */
     orchs: [
       /* 1 銅管弦樂型(〈SPARKLE〉〈WINDY LADY〉〈Telephone Number〉〈Tokai〉):銅管每小節、鋪底亮 */
-      { name: "brass", parts: { klevel: 0.05, brass: { lvl: 0.15, every: 1 } },
+      { name: "brass", parts: { klevel: 0.025, brass: { lvl: 0.15, every: 1 } },
         mix: { padLp: 5500 }, arrange: { layers: { brass: "01110111", keys: "00110111" } } },
       /* 2 合成器鋪底型(〈Midnight Joke〉〈Midnight Pretenders〉):大片合成器鋪底,銅管很少 */
-      { name: "synth", parts: { klevel: 0.075, glevel: 0.17, brass: { every: 4 } },
+      { name: "synth", parts: { klevel: 0.0375, glevel: 0.17, brass: { every: 4 } },
         mix: { padLp: 4500 }, arrange: { layers: { keys: "01111110", brass: "00000001" } } },
       /* 3 鋼琴型(〈Plastic Love〉):鋼琴往前,其他照常 */
       { name: "piano", mix: { keysLevel: 0.7 } },     // 1.1 → 0.7:跟 keysLevel 同比例
       /* 4 雙吉他型(〈Fantasy〉〈STAY BY ME〉):兩把吉他一直都在,鋪底淡 */
-      { name: "guitars", parts: { glevel: 0.26, guitar2: { lvl: 0.18 }, klevel: 0.035 },
+      { name: "guitars", parts: { glevel: 0.26, guitar2: { lvl: 0.18 }, klevel: 0.0175 },
         arrange: { layers: { guitar2: "11111111", guitar: "11111111" } } },
     ],
     /* ── 像真人的時間與力度(第六輪:對三首參考曲分軌量 + 文獻,見 `humanTime` 與 CLAUDE.md)── */

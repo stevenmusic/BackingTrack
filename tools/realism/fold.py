@@ -5,7 +5,11 @@
 **注意**:每條 bus 是**分開錄**的,錄音起點各自會差到一個 ScriptProcessor 緩衝(4096 取樣 ≈ 90ms)——
 **不同 bus 之間只能比音量(每小節峰值),不能比「落在第幾格」**。第幾格要看排程(REALISM_PROBE 包 `strum` / `pluck` 記拍點)。
 
+  for k in combBus keysBus padBus drumBus bassBus; do
+    REALISM_PROBE=tools/realism/probe_solo.js REALISM_SOLO=$k REALISM_SECS=24 REALISM_OUT=/tmp/rs/$k \
+      node tools/realism/render.mjs tools/realism/cases_recsolo.json; done
   /tmp/abx/bin/python fold.py <根目錄> <bpm> <id>...     根目錄底下是 <bus>/clips/<id>.wav
+單獨錄的一條 bus **還是會過總線的壓縮與限幅**:頂到 0.85 的那條是低估。拍點另用 probe_strum.js
 """
 import sys, os
 import numpy as np, soundfile as sf

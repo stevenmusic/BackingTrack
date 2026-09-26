@@ -36,7 +36,7 @@
 - **公開網站給其他人用,暫時不做 App**
 - **暫時只專注 City Pop**(2026-09-26):其他曲風先不動,除非是修壞掉的東西
 - **每次生成不能有額外費用**,前置費用可以。不接按次計費的 API
-- **繼續用現在的引擎與音色庫**(使用者:音色庫 OK,問題在**風格特徵不夠像**)。網頁程式已退回 fd8a1ca 的版本(見「真人片段庫」)。
+- **繼續用現在的引擎**;音色照唱片名單可以換(見「音源與音色」,Steven 2026-09-26)。原本使用者說音色庫 OK、問題在**風格特徵不夠像**。網頁程式已退回 fd8a1ca 的版本(見「真人片段庫」)。
   AI 生成音訊(ACE-Step 1.5)實測過:cover / lego / complete 都不照和弦,文字寫和弦只抓到一部分;
   全世界目前沒有「Suno 音質 + 精準照和弦」的做法(見 `tools/acestep/README.md`),這條路先停
 
@@ -166,7 +166,7 @@
 - **新增音源 / 資料集只收 CC0、CC BY、MIT 這一類可商用的**,加進 `docs/LICENSES.md`;非商業授權(jRhodes3c 那種)要上架前換掉
 - 每個檔都走 `fetchDecode()` 多來源(jsDelivr → raw.githubusercontent,鋼琴多 tonejs.github.io)。新增音源照這個模式
 - 取樣表照真的檔案列,不准照公式推(Rhodes 兩層拼、吉他有洞、tonejs 的 G5 指錯檔不收);換撥弦取樣先量音頭音準(`SMP_EXT[x].tune`)與音量(`smpNorm`)
-- 合成的(刻意不換):Hammond(`PeriodicWave`)、K-Pop 的 pluck/supersaw/808 低音、City Pop 鋪底(唱片也有 KORG λ 弦樂機)。
+- 合成的(刻意不換):Hammond(`PeriodicWave`)、K-Pop 的 pluck/supersaw/808 低音、City Pop 鋪底(唱片也有 KORG Λ 弦樂機)。
   **判準是「真的唱片裡那一層怎麼來的」**;弦樂鋪底不准換回取樣(Steven 盲聽退回過)。
   取樣只在兩條都成立時比合成好:(a) 要「一組人」時真的有一組人(不是同一顆取樣疊四次)(b) 取樣撐得住聲部的長度
 - 合成的東西算完要存(`ksBuffer`、`hat808Buf`、`noiseBuf`),`prewarmGuitar` 要在按播放前算好/載好,用到 `pluck` 的新層要把音加進 `want`;

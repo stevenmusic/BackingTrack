@@ -2132,16 +2132,55 @@ function fixTop(chord, notes){
   }
   return out;
 }
+/* ── 內聲部的色彩音(`FEELS[x].color`,沒寫的曲風零差異)──────────────────
+   風格尺(docs/REVIEW.md 第二、三輪):真歌與 Suno 的和聲樂器有 18% 的能量在九、十一、十三度,
+   我們只有 14.5%(z −2.77,不靠合併也穩定)。這裡照和弦性質把指定的色彩音放進**內聲部**:
+   `{ maj7: [14], m7: [14], "7": [21] }` = 大七與小七加九度、屬七加十三度。
+   - 頂音照舊只准和弦骨架音(`melodyOk` 罰 100 + `fixTop`),色彩音不會上頂
+   - 色彩音要在這首歌的調裡才加(`voiceKey`,`buildVoicings` 算一次),E7 的 F♯ 之類不加
+   - 上聲部最多四音:先捨五音;還是太多就不加 */
+let voiceKey = null;
+function colorQual(chord){
+  const iv = chord.intervals.map(x => x % 12);
+  const has = (x) => iv.indexOf(x) >= 0;
+  if (has(3) && has(6)) return null;
+  if (has(4) && has(11)) return "maj7";
+  if (has(3) && has(10)) return "m7";
+  if (has(4) && has(10)) return "7";
+  return null;
+}
+function addColor(chord, pcs){
+  const f = typeof feel === "function" ? feel() : null;
+  const col = f && f.color;
+  const q = col && colorQual(chord);
+  if (!q || !col[q]) return pcs;
+  const out = pcs.slice();
+  const fifth = (chord.rootPc + 7) % 12;
+  for (const a of col[q]) {
+    const pc = (chord.rootPc + a) % 12;
+    if (out.includes(pc) || chord.intervals.some(x => x % 12 === a % 12)) continue;
+    if (voiceKey != null && MAJOR_SCALE.indexOf(((pc - voiceKey) % 12 + 12) % 12) < 0) continue;
+    const next = out.concat([pc]);
+    if (next.length > MAX_UPPER) {
+      const i = next.indexOf(fifth);
+      if (i < 0) continue;
+      next.splice(i, 1);
+    }
+    out.length = 0; out.push(...next);
+  }
+  return out;
+}
 function buildVoicing(chord, prevUpper){
   const bass = BASS_LOW + chord.bassPc;               // 轉位低音也吃同一個八度
   // 上方聲部用的音級:去掉重複的,但九度(14)要保留它「高一個八度」的身分
-  const pcs = [];
+  let pcs = [];
   for (const iv of trimTones(chord.intervals, chord.bassPc === chord.rootPc)) {
     const pc = (chord.rootPc + iv) % 12;
     if (!pcs.includes(pc)) {
       pcs.push(pc);
     }
   }
+  pcs = addColor(chord, pcs);
 
   const target = prevUpper && prevUpper.length ? mean(prevUpper) : UPPER_TARGET;
   let best = null, bestCost = Infinity;
@@ -2650,6 +2689,7 @@ function buildLap(lap){
    下一小節的第一顆要接上一小節的最後一顆 */
 function buildVoicings(bars){
   const out = [];
+  voiceKey = (typeof feel === "function" && feel().color) ? keyOf(bars) : null;
   let prev = null;
   for (const b of bars) {
     const spans = spansOf(b);

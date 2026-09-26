@@ -1,0 +1,194 @@
+{
+ "_note": "City Pop A/B(REVIEW.md 第三輪):base / ext(內聲部色彩音)/ bright(鋪底低通 3000→7000);全部 orchFix 2(鋼琴那一組,沒有自己的 padLp)",
+ "progressions": {},
+ "cases": [
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "ab_base",
+   "ovr": {
+    "orchFix": 2
+   },
+   "batch": "ab"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "ab_base",
+   "ovr": {
+    "orchFix": 2
+   },
+   "batch": "ab"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "ab_base",
+   "ovr": {
+    "orchFix": 2
+   },
+   "batch": "ab"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "ab_base",
+   "ovr": {
+    "orchFix": 2
+   },
+   "batch": "ab"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "ab_ext",
+   "ovr": {
+    "orchFix": 2,
+    "color": {
+     "maj7": [
+      14
+     ],
+     "m7": [
+      14
+     ],
+     "7": [
+      21
+     ]
+    }
+   },
+   "batch": "ab"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "ab_ext",
+   "ovr": {
+    "orchFix": 2,
+    "color": {
+     "maj7": [
+      14
+     ],
+     "m7": [
+      14
+     ],
+     "7": [
+      21
+     ]
+    }
+   },
+   "batch": "ab"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "ab_ext",
+   "ovr": {
+    "orchFix": 2,
+    "color": {
+     "maj7": [
+      14
+     ],
+     "m7": [
+      14
+     ],
+     "7": [
+      21
+     ]
+    }
+   },
+   "batch": "ab"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "ab_ext",
+   "ovr": {
+    "orchFix": 2,
+    "color": {
+     "maj7": [
+      14
+     ],
+     "m7": [
+      14
+     ],
+     "7": [
+      21
+     ]
+    }
+   },
+   "batch": "ab"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "ab_bright",
+   "ovr": {
+    "orchFix": 2,
+    "mix": {
+     "padLp": 7000
+    }
+   },
+   "batch": "ab"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "ab_bright",
+   "ovr": {
+    "orchFix": 2,
+    "mix": {
+     "padLp": 7000
+    }
+   },
+   "batch": "ab"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "ab_bright",
+   "ovr": {
+    "orchFix": 2,
+    "mix": {
+     "padLp": 7000
+    }
+   },
+   "batch": "ab"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "ab_bright",
+   "ovr": {
+    "orchFix": 2,
+    "mix": {
+     "padLp": 7000
+    }
+   },
+   "batch": "ab"
+  }
+ ]
+}

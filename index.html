@@ -7638,22 +7638,25 @@ function scheduleVox(spans, barStartBeat, b, transpose, absBar){
      每一聲是**不同音高的取樣**,兩聲剛好對到同一顆時用不同的 round robin(不同次錄音),不會同一顆疊兩次
    - 撐得住長度(條件 b):stab 只要 0.2–0.3 秒,取樣本身 0.3 秒以上
    - 薩克斯沒有可商用的斷奏取樣,次中音 / 上低音那兩聲省略(長號在名單上本來就有)
-   - 表是照真的檔案量的(`/tmp/vsco` 的 v3 力度層,YIN 量音高):[midi, 檔名的音名, 音分偏差 [rr1, rr2], 前 150ms dB [rr1, rr2]]。
+   - 表是照真的檔案量的(`tools/realism/brass_meas.py`,v3 力度層):[midi, 檔名的音名, 音分偏差 [rr1, rr2], 前 150ms dB [rr1, rr2]]。
+     音分量的是**起音後 50–290ms**(真的聽得到的那段):前 50ms 是嘴唇咬到位之前的上滑,小號量到 −15～−46 音分,拿它來修會整顆偏高
      **檔名的八度比標準低一個**(`A2` = midi 57) */
+/* raw.githubusercontent 放第一個:VSCO-2-CE 整個 repo 很大,jsDelivr 的 gh 通道有套件大小上限,
+   先試它的話很可能每個檔都白白失敗一次(這個容器連不到 jsDelivr,沒辦法實測,所以把確定能用的放前面) */
 const SRC_BRASS = [
-  "https://cdn.jsdelivr.net/gh/sgossner/VSCO-2-CE@master/Brass/",
   "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/master/Brass/",
+  "https://cdn.jsdelivr.net/gh/sgossner/VSCO-2-CE@master/Brass/",
 ];
 const BRASS_SMP = {
   tpt: { dir: "Trumpet/stac/", file: (lab, r) => `Sum_SHTrumpet_stac_${lab}_v3_rr${r}.wav`,
-    notes: [[53, "F2", [-14, -14], [-40.9, -42.0]], [57, "A2", [4, -18], [-34.5, -35.0]], [60, "C3", [-9, -7], [-33.9, -32.8]],
-            [63, "D#3", [-3, -3], [-29.4, -31.0]], [65, "F3", [-2, 1], [-36.8, -37.2]], [67, "G3", [6, 0], [-31.3, -30.2]],
-            [70, "A#3", [-5, -5], [-27.6, -26.1]], [74, "D4", [-4, 2], [-21.7, -24.1]], [77, "F4", [-13, -9], [-21.1, -20.0]],
-            [81, "A4", [-8, -4], [-21.9, -20.8]], [84, "C5", [-1, 3], [-17.9, -22.7]]] },
+    notes: [[53, "F2", [6, 12], [-40.9, -42.0]], [57, "A2", [-19, 1], [-34.5, -35.0]], [60, "C3", [6, 2], [-33.9, -32.8]],
+            [63, "D#3", [2, -1], [-29.4, -31.0]], [65, "F3", [0, -1], [-36.8, -37.2]], [67, "G3", [-1, -1], [-31.3, -30.2]],
+            [70, "A#3", [-1, 11], [-27.6, -26.1]], [74, "D4", [2, 2], [-21.7, -24.1]], [77, "F4", [6, 1], [-21.1, -20.0]],
+            [81, "A4", [2, 2], [-21.9, -20.8]], [84, "C5", [1, 1], [-17.9, -22.7]]] },
   tbn: { dir: "Tenor Trombone/stac/", file: (lab, r) => `tenortbn_stac_${lab}_v3_rr${r}.wav`,
-    notes: [[34, "A#0", [5, -7], [-46.3, -45.1]], [41, "F1", [2, -3], [-37.8, -36.6]], [46, "A#1", [-1, 0], [-29.9, -29.3]],
-            [53, "F2", [1, -2], [-36.2, -36.3]], [58, "A#2", [-1, -1], [-30.4, -30.1]], [62, "D3", [1, 1], [-31.1, -30.9]],
-            [65, "F3", [1, 1], [-29.1, -28.8]]] },
+    notes: [[34, "A#0", [-1, -4], [-46.3, -45.1]], [41, "F1", [0, 0], [-37.8, -36.6]], [46, "A#1", [0, 1], [-29.9, -29.3]],
+            [53, "F2", [1, 0], [-36.2, -36.3]], [58, "A#2", [1, 0], [-30.4, -30.1]], [62, "D3", [1, 1], [-31.1, -30.9]],
+            [65, "F3", [-1, 1], [-29.1, -28.8]]] },
 };
 /* 每顆拉到同一個音頭響度(錄音音量差到 25dB,最多放大 6 倍),再乘 `BRASS_GAIN`:
    校到跟合成銅管**每一下的 RMS 一樣**(銅管單獨錄、總線降 20dB 不碰限幅器:
@@ -7676,24 +7679,34 @@ function loadBrassOne(ins, e){
   if (brassLoading[key]) return brassLoading[key];
   const B = BRASS_SMP[ins];
   const path = r => encodeURI(B.dir + B.file(e[1], r)).replace(/#/g, "%23");
-  /* 兩個 round robin 都要:同一顆被兩聲用到時要用不同次錄音 */
+  /* **只有 rr1 擋播放**;rr2(同一顆被兩聲用到、或輪流用)等真的開始播了才補(跟鼓同一個 `drumFillGate`),
+     一顆一顆排在 `brassQueue` 後面,不跟排程器搶解碼 */
   brassLoading[key] = fetchDecode(SRC_BRASS, path(1))
-    .then(b1 => fetchDecode(SRC_BRASS, path(2)).then(b2 => [b1, b2], () => [b1]))
-    .then(bufs => { brassBufs[ins].set(e[0], bufs); })
+    .then(b1 => {
+      const bufs = [b1];
+      brassBufs[ins].set(e[0], bufs);
+      brassQueue = brassQueue.then(() => drumFillGate())
+        .then(() => fetchDecode(SRC_BRASS, path(2))).then(b2 => { bufs[1] = b2; }).catch(() => {});
+    })
     .catch(() => { brassFailed.add(key); });
   return brassLoading[key];
+}
+let brassQueue = Promise.resolve();
+/* 最高聲超出小號取樣能拉到的範圍(84 + 3)時**整組降八度**:一下 stab 裡不會混到一聲合成 */
+function brassFold(midis){
+  return Math.max.apply(null, midis) > 87 ? midis.map(m => m - 12) : midis;
 }
 /* 這次會吹到的音才抓(一顆一顆排隊,跟吉他取樣同一個理由:解碼在主執行緒上) */
 function ensureBrass(midiSets){
   const want = new Map();
-  for (const ms of midiSets) for (const p of brassParts(ms)) {
+  for (const ms of midiSets) for (const p of brassParts(brassFold(ms))) {
     const e = brassEntry(p.ins, p.m);
     if (e) want.set(p.ins + ":" + e[0], [p.ins, e]);
   }
   return [...want.values()].reduce((c, [ins, e]) => c.then(() => loadBrassOne(ins, e)), Promise.resolve());
 }
 /* 吹得到的聲部用取樣吹,回傳沒有取樣的那幾聲(交給合成銅管,備援) */
-function playBrassSmp(midis, when, dur, gain){
+function playBrassSmp(midis, when, dur, gain, pos){
   const rest = [];
   const SPREAD = [-0.42, 0.06, 0.4];
   const used = new Map();
@@ -7701,12 +7714,15 @@ function playBrassSmp(midis, when, dur, gain){
     const e = brassEntry(p.ins, p.m);
     const bufs = e && brassBufs[p.ins].get(e[0]);
     if (!bufs) {
-      if (e && !brassFailed.has(p.ins + ":" + e[0])) ensureBrass([[p.m]]);   // 背景補,不等
+      // 播放中才出現的音(和弦變化換出來的):排在 `brassQueue` 後面背景補,這一下先用合成
+      if (e && !brassFailed.has(p.ins + ":" + e[0])) brassQueue = brassQueue.then(() => drumFillGate()).then(() => ensureBrass([[p.m]]));
       rest.push(p.m);
       return;
     }
+    /* round robin 照絕對位置挑(`hash01`,不准亂數);同一下兩聲撞到同一顆就換另一次錄音 */
     const uk = p.ins + ":" + e[0];
-    const r = (used.get(uk) || 0) % bufs.length;
+    const nb = bufs[1] ? 2 : 1;
+    const r = ((hash01(pos || 0, 190 + i) < 0.5 ? 0 : 1) + (used.get(uk) || 0)) % nb;
     used.set(uk, (used.get(uk) || 0) + 1);
     const src = ctx.createBufferSource();
     src.buffer = bufs[r];
@@ -7728,11 +7744,11 @@ function playBrassSmp(midis, when, dur, gain){
   return rest;
 }
 
-function playBrass(midis, when, dur, gain){
+function playBrass(midis, when, dur, gain, pos){
   if (!midis.length || !combBus) return;
   const bsp = (feel().parts && feel().parts.brass) || {};
   if (bsp.smp) {
-    midis = playBrassSmp(midis, when, dur, gain * (bsp.smpGain || 1));
+    midis = playBrassSmp(brassFold(midis), when, dur, gain * (bsp.smpGain || 1), pos);
     if (!midis.length) return;
   }
   const bus = ctx.createGain();
@@ -7817,7 +7833,7 @@ function scheduleBrass(spans, barStartBeat, b, transpose, absBar){
     if (!sp || !sp.v) continue;
     const notes = padNotes(sp.v).slice(-3).map(n => n + transpose);
     if (!notes.length) continue;
-    playBrass(notes, slotTime(barStartBeat, idx), spb * 0.3, lvl);
+    playBrass(notes, slotTime(barStartBeat, idx), spb * 0.3, lvl, absBar * 64 + idx);
   }
 }
 

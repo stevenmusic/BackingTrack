@@ -1,0 +1,20 @@
+{
+ "_note": "效能:probe_perf.js + REALISM_CPU=6,City Pop drive、配器 0;perf0 = 同一版關掉真管樂",
+ "progressions": {},
+ "cases": [
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "ovr": {
+    "orchFix": 0,
+    "parts": {
+     "brass": {
+      "smp": true
+     }
+    }
+   }
+  }
+ ]
+}

@@ -299,3 +299,30 @@ n:真歌 26、Suno 16、我們 12;吉他類 24 / 11 / 12;piano 亮度 15 / 11 / 
     citypop mix「Fmaj7 - Em7 - E7 - Am7」「Dm7 - Dm7 - G7 - G7」40 秒:違規 0,下數 keys 67
   - 建議 4:`allharm.sh` 自己從 `index.html` 的 `SECTIONS` 產生 `/tmp/allprog.json`(83 組,跟先前手動產生的逐位元組相同)
   - 建議 5:`effort:` 是 Claude Code 子代理定義的有效欄位(CLI 的 schema:low / medium / high / xhigh / max)
+
+## 第七輪(2026-09-26):照權威文獻的 City Pop 編曲(PR 待開)
+依據與原文:`docs/SOURCES.md`;判準:`CLAUDE.md`「審查流程」(編曲規則有出處、規則全過、不推翻 Steven 退回過的方向;**量尺分數不當依據**)。
+
+| 改動 | 預設 | 依據 |
+| --- | --- | --- |
+| 大鼓整段固定(`kickHold`)+ 貝斯跟大鼓(`bassFollowKick`) | 開 | D2 青山純、B2 伊藤広規;Steven 盲聽 kb_marusa 選改後(B,「整體平衡比較舒服」),kb_iivi 聽不出來 |
+| 切音 ギター・マガジン指型(`chopForms`)+ 右手一直刷(`chopBrush`) | 開 | G1 / G2;盲聽 gtr_marusa 改後「刻意停頓」→ d314363 洞裡悶音照刷 |
+| 內聲部色彩音(`color`,ext2) | 開 | G1:City Pop 招牌和弦是 m9 / △7 / 9 / 6(9) |
+| 鍵盤 Rhodes | 開 | Steven 指定:「Rhodes要用,因為city pop應該不用平台鋼琴」;Plastic Love 名單 electric piano;jRhodes3c 非商用(A4 未結案) |
+| 鋪底 / 銅管變亮(bright2) | 不開 | Steven 以前盲聽說鋪底「太尖銳、太突出」 |
+| Pop 刷弦照左手位置挑 5 / 6 弦 | 開 | Steven 指定的規則(Bm7 = A 型五弦) |
+
+盲聽檔:`/tmp/sty/lit/`(`_key.json`:kb_marusa = B、kb_iivi = A、gtr_marusa = B、gtr_iivi = A、rhodes_marusa = B、rhodes_iivi = A)、
+scratchpad `blind2/`(分開的 A、B)、`blind3/`(單聲道先 A 後 B)。kb 片段是 d48880a 的 worktree 加 `ovr` 錄的,`ovr` 與 365fbb8 的預設逐字相同。
+Steven 之後表示「不要給我盲測了,交給你分析」,改用上面的判準。
+
+### 第七輪審查第 1 輪的處理
+- 阻擋 A(prewarm 只走一圈):【同意】bcc72e5,多圈走到「一圈開始的手位」重複或 4 圈
+- 建議 1 / 3:【同意】bcc72e5;列舉 QUALITY × 12 根音 × 4 調,10104 個音全部是和弦音或調內九度
+- 建議 2:【同意】bcc72e5,harmony.mjs 九度豁免加調內與 ♭9 / ♯9 / ♭13;第二把吉他仍跟切音同記 `gtr`(單音先過 melodyOk,不會出九度)
+- 建議 4:【同意】新預設 × pad / comp / drive / mix 錄音量響度(`cases_def.json`,結果見下)
+- 建議 5 / 6:【同意】bcc72e5,vary 數字標未驗證;B2 / G1 引用寫明原文語境
+- 建議 7 / 8:【同意】CLAUDE.md、本節
+- 建議 9:【同意】bcc72e5,八度奏法超過 83 改低八度,預載同步
+- 建議 10:【同意】見上方盲聽檔說明
+- 需 Steven 聽過:Steven 已改成「交給你分析」;Rhodes 由 Steven 指定

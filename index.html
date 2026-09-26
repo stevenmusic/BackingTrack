@@ -7923,7 +7923,8 @@ function scheduleGuitar(spans, barStartBeat, b, transpose, absBar, isFill){
     if (brush && st !== "pad" && div === 4) {
       for (let k = 0; k < div; k++) {
         const idx = b * div + k;
-        if (cell.indexOf(idx) >= 0 || inHole(gHole, idx)) continue;
+        // 樂句的洞只停「按響的和弦」,右手照刷(Steven 盲聽:整個停掉「有特別停頓,感覺有點刻意」)
+        if (cell.indexOf(idx) >= 0 && !inHole(gHole, idx)) continue;
         const sp = spanAt(spans, idx);
         if (!sp || !sp.v) continue;
         strum(guitarNotesFor(sp.chord, "chop"), slotTime(barStartBeat, idx),

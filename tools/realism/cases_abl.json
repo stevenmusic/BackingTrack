@@ -1,0 +1,1062 @@
+{
+ "_note": "CLAP 逐層拿掉 / 逐項加上(orchFix 2 讓配器不輪換);每組 8 段",
+ "progressions": {},
+ "cases": [
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "abl_base",
+   "ovr": {
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "abl_base",
+   "ovr": {
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "abl_base",
+   "ovr": {
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "abl_base",
+   "ovr": {
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "abl_base",
+   "ovr": {
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "abl_base",
+   "ovr": {
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "abl_base",
+   "ovr": {
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "abl_base",
+   "ovr": {
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "abl_no_gtr2",
+   "ovr": {
+    "parts": {
+     "guitar2": {
+      "lvl": 1e-06
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "abl_no_gtr2",
+   "ovr": {
+    "parts": {
+     "guitar2": {
+      "lvl": 1e-06
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "abl_no_gtr2",
+   "ovr": {
+    "parts": {
+     "guitar2": {
+      "lvl": 1e-06
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "abl_no_gtr2",
+   "ovr": {
+    "parts": {
+     "guitar2": {
+      "lvl": 1e-06
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "abl_no_gtr2",
+   "ovr": {
+    "parts": {
+     "guitar2": {
+      "lvl": 1e-06
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "abl_no_gtr2",
+   "ovr": {
+    "parts": {
+     "guitar2": {
+      "lvl": 1e-06
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "abl_no_gtr2",
+   "ovr": {
+    "parts": {
+     "guitar2": {
+      "lvl": 1e-06
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "abl_no_gtr2",
+   "ovr": {
+    "parts": {
+     "guitar2": {
+      "lvl": 1e-06
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "abl_no_brass",
+   "ovr": {
+    "parts": {
+     "brass": {
+      "lvl": 1e-06
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "abl_no_brass",
+   "ovr": {
+    "parts": {
+     "brass": {
+      "lvl": 1e-06
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "abl_no_brass",
+   "ovr": {
+    "parts": {
+     "brass": {
+      "lvl": 1e-06
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "abl_no_brass",
+   "ovr": {
+    "parts": {
+     "brass": {
+      "lvl": 1e-06
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "abl_no_brass",
+   "ovr": {
+    "parts": {
+     "brass": {
+      "lvl": 1e-06
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "abl_no_brass",
+   "ovr": {
+    "parts": {
+     "brass": {
+      "lvl": 1e-06
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "abl_no_brass",
+   "ovr": {
+    "parts": {
+     "brass": {
+      "lvl": 1e-06
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "abl_no_brass",
+   "ovr": {
+    "parts": {
+     "brass": {
+      "lvl": 1e-06
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "abl_no_pad",
+   "ovr": {
+    "parts": {
+     "klevel": 1e-06
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "abl_no_pad",
+   "ovr": {
+    "parts": {
+     "klevel": 1e-06
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "abl_no_pad",
+   "ovr": {
+    "parts": {
+     "klevel": 1e-06
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "abl_no_pad",
+   "ovr": {
+    "parts": {
+     "klevel": 1e-06
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "abl_no_pad",
+   "ovr": {
+    "parts": {
+     "klevel": 1e-06
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "abl_no_pad",
+   "ovr": {
+    "parts": {
+     "klevel": 1e-06
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "abl_no_pad",
+   "ovr": {
+    "parts": {
+     "klevel": 1e-06
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "abl_no_pad",
+   "ovr": {
+    "parts": {
+     "klevel": 1e-06
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "abl_no_perc",
+   "ovr": {
+    "parts": {
+     "perc": {
+      "lvl": 1e-06
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "abl_no_perc",
+   "ovr": {
+    "parts": {
+     "perc": {
+      "lvl": 1e-06
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "abl_no_perc",
+   "ovr": {
+    "parts": {
+     "perc": {
+      "lvl": 1e-06
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "abl_no_perc",
+   "ovr": {
+    "parts": {
+     "perc": {
+      "lvl": 1e-06
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "abl_no_perc",
+   "ovr": {
+    "parts": {
+     "perc": {
+      "lvl": 1e-06
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "abl_no_perc",
+   "ovr": {
+    "parts": {
+     "perc": {
+      "lvl": 1e-06
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "abl_no_perc",
+   "ovr": {
+    "parts": {
+     "perc": {
+      "lvl": 1e-06
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "abl_no_perc",
+   "ovr": {
+    "parts": {
+     "perc": {
+      "lvl": 1e-06
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "abl_color",
+   "ovr": {
+    "color": {
+     "maj7": [
+      14
+     ],
+     "m7": [
+      14
+     ],
+     "7": [
+      14
+     ]
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "abl_color",
+   "ovr": {
+    "color": {
+     "maj7": [
+      14
+     ],
+     "m7": [
+      14
+     ],
+     "7": [
+      14
+     ]
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "abl_color",
+   "ovr": {
+    "color": {
+     "maj7": [
+      14
+     ],
+     "m7": [
+      14
+     ],
+     "7": [
+      14
+     ]
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "abl_color",
+   "ovr": {
+    "color": {
+     "maj7": [
+      14
+     ],
+     "m7": [
+      14
+     ],
+     "7": [
+      14
+     ]
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "abl_color",
+   "ovr": {
+    "color": {
+     "maj7": [
+      14
+     ],
+     "m7": [
+      14
+     ],
+     "7": [
+      14
+     ]
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "abl_color",
+   "ovr": {
+    "color": {
+     "maj7": [
+      14
+     ],
+     "m7": [
+      14
+     ],
+     "7": [
+      14
+     ]
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "abl_color",
+   "ovr": {
+    "color": {
+     "maj7": [
+      14
+     ],
+     "m7": [
+      14
+     ],
+     "7": [
+      14
+     ]
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "abl_color",
+   "ovr": {
+    "color": {
+     "maj7": [
+      14
+     ],
+     "m7": [
+      14
+     ],
+     "7": [
+      14
+     ]
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "abl_chopforms",
+   "ovr": {
+    "parts": {
+     "chopForms": true
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "abl_chopforms",
+   "ovr": {
+    "parts": {
+     "chopForms": true
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "abl_chopforms",
+   "ovr": {
+    "parts": {
+     "chopForms": true
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "abl_chopforms",
+   "ovr": {
+    "parts": {
+     "chopForms": true
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "abl_chopforms",
+   "ovr": {
+    "parts": {
+     "chopForms": true
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "abl_chopforms",
+   "ovr": {
+    "parts": {
+     "chopForms": true
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "abl_chopforms",
+   "ovr": {
+    "parts": {
+     "chopForms": true
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "abl_chopforms",
+   "ovr": {
+    "parts": {
+     "chopForms": true
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "abl_bright2",
+   "ovr": {
+    "mix": {
+     "padLp": 8000
+    },
+    "parts": {
+     "padLegato": {
+      "lp": 5500
+     },
+     "brass": {
+      "rest": 7,
+      "restMax": 6000
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "abl_bright2",
+   "ovr": {
+    "mix": {
+     "padLp": 8000
+    },
+    "parts": {
+     "padLegato": {
+      "lp": 5500
+     },
+     "brass": {
+      "rest": 7,
+      "restMax": 6000
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "abl_bright2",
+   "ovr": {
+    "mix": {
+     "padLp": 8000
+    },
+    "parts": {
+     "padLegato": {
+      "lp": 5500
+     },
+     "brass": {
+      "rest": 7,
+      "restMax": 6000
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "abl_bright2",
+   "ovr": {
+    "mix": {
+     "padLp": 8000
+    },
+    "parts": {
+     "padLegato": {
+      "lp": 5500
+     },
+     "brass": {
+      "rest": 7,
+      "restMax": 6000
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "abl_bright2",
+   "ovr": {
+    "mix": {
+     "padLp": 8000
+    },
+    "parts": {
+     "padLegato": {
+      "lp": 5500
+     },
+     "brass": {
+      "rest": 7,
+      "restMax": 6000
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "abl_bright2",
+   "ovr": {
+    "mix": {
+     "padLp": 8000
+    },
+    "parts": {
+     "padLegato": {
+      "lp": 5500
+     },
+     "brass": {
+      "rest": 7,
+      "restMax": 6000
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "abl_bright2",
+   "ovr": {
+    "mix": {
+     "padLp": 8000
+    },
+    "parts": {
+     "padLegato": {
+      "lp": 5500
+     },
+     "brass": {
+      "rest": 7,
+      "restMax": 6000
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "abl_bright2",
+   "ovr": {
+    "mix": {
+     "padLp": 8000
+    },
+    "parts": {
+     "padLegato": {
+      "lp": 5500
+     },
+     "brass": {
+      "rest": 7,
+      "restMax": 6000
+     }
+    },
+    "orchFix": 2
+   },
+   "batch": "abl"
+  }
+ ]
+}

@@ -88,4 +88,23 @@ def report():
               f'相似度 {cs.mean():.3f} [{np.percentile(cs, 10):.3f}, {np.percentile(cs, 90):.3f}]  窗數 {len(x)}')
 
 
-{'embed': lambda: embed(sys.argv[2], sys.argv[3]), 'report': report}[sys.argv[1]]()
+def ablation():
+    """每個 abl_* 版本跟**全部**真歌比 FAD;對**我們的片段**重抽 300 次給 95% 區間,並列出跟 abl_base 的配對差
+    (同一組抽到的片段編號兩邊一樣——每個版本是同一組進行 × 疏密、同樣順序)"""
+    real, _ = load('real')
+    rng = np.random.default_rng(0)
+    names = sorted(n[:-4] for n in os.listdir(OUT) if n.startswith('abl_') and n.endswith('.npy') and not n.endswith('_owner.npy'))
+    data = {n: load(n) for n in names}
+    ids = np.unique(data['abl_base'][1])
+    draws = [rng.choice(ids, len(ids)) for _ in range(300)]
+    def f(n, pick):
+        e, o = data[n]; return fad(real, np.concatenate([e[o == k] for k in pick]))
+    base = np.array([f('abl_base', d) for d in draws])
+    print(f'全部真歌當參考;片段數 {len(ids)},重抽 300 次')
+    for n in names:
+        v = np.array([f(n, d) for d in draws]); dv = v - base
+        print(f'  {n:16s} FAD {f(n, ids):.4f} [{np.percentile(v, 2.5):.4f}, {np.percentile(v, 97.5):.4f}]  '
+              f'跟原版差 {np.mean(dv):+.4f} [{np.percentile(dv, 2.5):+.4f}, {np.percentile(dv, 97.5):+.4f}]')
+
+
+{'embed': lambda: embed(sys.argv[2], sys.argv[3]), 'report': report, 'ablation': ablation}[sys.argv[1]]()

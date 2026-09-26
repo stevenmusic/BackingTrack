@@ -326,3 +326,6 @@ Steven 之後表示「不要給我盲測了,交給你分析」,改用上面的�
 - 建議 9:【同意】bcc72e5,八度奏法超過 83 改低八度,預載同步
 - 建議 10:【同意】見上方盲聽檔說明
 - 需 Steven 聽過:Steven 已改成「交給你分析」;Rhodes 由 Steven 指定
+- 新預設驗證:`HARM_GTR9=1 allharm.sh` 83 組旋律上的和弦外音全部 0、沒有任何層下數 0;
+  響度(`REALISM_SECS=30 REALISM_OUT=/tmp/sty/def render.mjs tools/realism/cases_def.json`,16 段)peak 全部 0.850、削波 0,
+  RMS pad −14.17～−14.36、comp −12.64～−12.75、drive −12.21～−12.28、mix −12.74～−12.84(pad 略低於 −14,墊底本來就輕,不硬拉)

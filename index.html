@@ -5901,6 +5901,10 @@ const FEELS = {
                  兩個人同一格落下時是同一個時間——「Kick + Bass 要非常緊」 */
               tie: { bass: "kick" } },
     kickAcc: [1, 0.72, 0.68, 0.78],
+    /* 大鼓整段固定、貝斯跟著大鼓(docs/SOURCES.md D2 青山純 / B2 伊藤広規)。
+       Steven 2026-09-26 盲聽 kb marusa 選改後:「整體平衡聽起來比較舒服」 */
+    kickHold: true,
+    bassFollowKick: { add: [[15], [7, 15], [6, 14], [11, 15], [3, 14]] },
     topMove: 0.25,
     ghostGain: 0.13,
     hatCycle: 0.12,

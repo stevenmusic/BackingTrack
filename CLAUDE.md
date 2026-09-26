@@ -101,7 +101,11 @@
   Bossa 是 cross stick 的 clave(兩小節一循環 3+2);Swing 是 hi-hat 踏鈸 2、4 + ride 型 `[0,2,3,4,6,7]`、小鼓 comping 平均抽、大鼓 feathering;
   **K-Pop 是 half-time,拍手只打第 3 拍,不准補 2、4**
 - City Pop:hi-hat 走十六分(強弱 `hatAcc`)、open hat 在反拍且一定被下一顆 closed hat 掐掉(`chokeOhat`)、大鼓與貝斯綁同一條時間(`timing.tie`)。
-  **節奏來自 Groove MIDI 真人片段**(`FEELS.citypop.drumPhr` → `DRUM_PHR` / `schedulePhraseDrums`,只在 `divNow()===4` 時用)
+  **節奏來自 Groove MIDI 真人片段**(`FEELS[x].drumPhr` → `DRUM_PHR` / `schedulePhraseDrums`)
+- **Pop / City Pop / Funk / Blues / Swing 在 4/4 都用 Groove MIDI 真人鼓**(不量化、力度照原樣,一個八小節樂句用同一串);
+  3/4、6/8(資料集沒有)與 Bossa(clave 是身分)、K-Pop(刻意量化)走 `GROOVES` 的格子。
+  片段庫用 `tools/realism/drumphr.py`(City Pop)與 `drumphr_all.py`(其餘,`--embed` 寫回 index.html)重生;
+  真人鼓會用到的踏鈸 / 框邊 / open hat / ride 要列進該曲風的 `bgPieces`
 - 高密度的鈸靠強弱差不吵(skip note、後半拍輕),**不是把總量壓掉**;兩層平均分布的高頻不准疊(打擊小物要嘛跟 backbeat、要嘛小一個量級)
 - 過門只佔最後一拍、hi-hat 不斷、力度漸強;搖擺的過門走三連音;一格的進行沒有過門
 - 鼓件照曲風載(`FEEL_PIECES`);載入分三段:擋播放的只有中間層一兩個 rr,其餘背景補,背景大包等 `drumFillGate`
@@ -112,13 +116,13 @@
 ## 音源與音色(對照 `FEELS[x].piano / drums / drumSet / kit / parts`)
 | 曲風 | 鍵盤 | 鼓 | 貝斯 | 第四層 |
 | --- | --- | --- | --- | --- |
-| Pop | Salamander | Virtuosity | 電貝斯 | 鋼弦刷弦×2、鈴鼓 backbeat |
+| Pop | Salamander | Virtuosity(Groove MIDI 節奏) | 電貝斯 | 鋼弦刷弦×2、鈴鼓 backbeat |
 | City Pop | Salamander | SM Drums(大小鼓、hi-hat)+ Virtuosity(tom、鈸、open hat),Groove MIDI 節奏 | 電貝斯(片段庫 `bassPhr`) | Hofner 切音 + 第二把吉他、合成銅管、合成鋪底、沙鈴八分;配器輪換 `orchs` |
 | K-Pop | 合成 pluck | 808 取樣 | 808 合成 sub | supersaw、低音鋪底 `klow`、arp、沙鈴+指響、乒乓延遲 |
 | Bossa | Salamander | Virtuosity(cross stick) | 低音提琴 | 尼龍弦 clave、cabasa |
-| Blues | Salamander | Virtuosity | 電貝斯(boogie) | Hammond(很輕),不給吉他 |
-| Swing | Salamander | Virtuosity(ride) | 低音提琴 | archtop Freddie Green |
-| Funk | Rhodes | Virtuosity | 電貝斯 | 悶音切音、鈴鼓 backbeat |
+| Blues | Salamander | Virtuosity(Groove MIDI shuffle) | 電貝斯(boogie) | Hammond(很輕),不給吉他 |
+| Swing | Salamander | Virtuosity(ride,Groove MIDI 爵士) | 低音提琴 | archtop Freddie Green |
+| Funk | Rhodes | Virtuosity(Groove MIDI 節奏) | 電貝斯 | 悶音切音、鈴鼓 backbeat |
 - 使用者**不能單獨選音色**,不要加那個選單。換音色要先問;音色與聲位是兩件事,不要混著改
 - 取樣來源(細節與授權見 README 與 `docs/LICENSES.md`):Salamander(Tonejs/audio)、jRhodes3c、Virtuosity Drums(`Samples/mid/`)、
   SM Drums、Black And Blue Basses(`darkblack` mf)、dsmolken 低音提琴(`pizz/`)、Black And Green Guitars(Gretsch stac / Hofner ord)、
@@ -148,7 +152,9 @@
 1. **資料層**(離線):每件樂器一個真人片段庫,**相對和弦**的寫法,**保留原始微時值與力度**。
    鼓 = Groove MIDI Dataset(CC BY 4.0);鍵盤 = POP909(MIT);貝斯/吉他 = 參考曲分軌經 Basic Pitch 轉譜(要清雜訊)
 2. **套用層**:每一顆換成和弦角色套到使用者的和弦,`"n±d"` 對準下一顆根音,`melodyOk` 照舊守
-3. **挑選層**:看上下文挑(換和弦位置、跟前一段接得順、強弱、不重複),`hash01` 可重現
+3. **挑選層**:看上下文挑(換和弦位置、跟前一段接得順、強弱、不重複),`hash01` 可重現。
+   貝斯已做(`pickBassPhr`):換和弦那一格一定有音、和弦沒換時不准先跑接音、不跟上一個 / 四小節前同型、密度跟疏密走;
+   和弦變化拆出來的那一下(`added`)不算換和弦(律動只換音高)。每半小節只挑一次(`bassPickCache`,`resetLap` 清)
 - 進度寫在 `docs/HISTORY.md` 最後的「第十輪進度」
 - 離線腳本在 `tools/realism/`(`drumphr.py`、`phrasegram.py`);音檔與權重不進 repo
 

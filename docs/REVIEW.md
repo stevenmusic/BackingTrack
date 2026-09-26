@@ -299,3 +299,50 @@ n:真歌 26、Suno 16、我們 12;吉他類 24 / 11 / 12;piano 亮度 15 / 11 / 
     citypop mix「Fmaj7 - Em7 - E7 - Am7」「Dm7 - Dm7 - G7 - G7」40 秒:違規 0,下數 keys 67
   - 建議 4:`allharm.sh` 自己從 `index.html` 的 `SECTIONS` 產生 `/tmp/allprog.json`(83 組,跟先前手動產生的逐位元組相同)
   - 建議 5:`effort:` 是 Claude Code 子代理定義的有效欄位(CLI 的 schema:low / medium / high / xhigh / max)
+
+## 第七輪(2026-09-26):照權威文獻的 City Pop 編曲(PR 待開)
+依據與原文:`docs/SOURCES.md`;判準:`CLAUDE.md`「審查流程」(編曲規則有出處、規則全過、不推翻 Steven 退回過的方向;**量尺分數不當依據**)。
+
+| 改動 | 預設 | 依據 |
+| --- | --- | --- |
+| 大鼓整段固定(`kickHold`)+ 貝斯跟大鼓(`bassFollowKick`) | 開 | D2 青山純、B2 伊藤広規;Steven 盲聽 kb_marusa 選改後(B,「整體平衡比較舒服」),kb_iivi 聽不出來 |
+| 切音 ギター・マガジン指型(`chopForms`)+ 右手一直刷(`chopBrush`) | 開 | G1 / G2;盲聽 gtr_marusa 改後「刻意停頓」→ d314363 洞裡悶音照刷 |
+| 內聲部色彩音(`color`,ext2) | 開 | G1:City Pop 招牌和弦是 m9 / △7 / 9 / 6(9) |
+| 鍵盤 Rhodes | 開 | Steven 指定:「Rhodes要用,因為city pop應該不用平台鋼琴」;Plastic Love 名單 electric piano;jRhodes3c 非商用(A4 未結案) |
+| 鋪底 / 銅管變亮(bright2) | 不開 | Steven 以前盲聽說鋪底「太尖銳、太突出」 |
+| Pop 刷弦照左手位置挑 5 / 6 弦 | 開 | Steven 指定的規則(Bm7 = A 型五弦) |
+
+盲聽檔:`/tmp/sty/lit/`(`_key.json`:kb_marusa = B、kb_iivi = A、gtr_marusa = B、gtr_iivi = A、rhodes_marusa = B、rhodes_iivi = A)、
+scratchpad `blind2/`(分開的 A、B)、`blind3/`(單聲道先 A 後 B)。kb 片段是 d48880a 的 worktree 加 `ovr` 錄的,`ovr` 與 365fbb8 的預設逐字相同。
+Steven 之後表示「不要給我盲測了,交給你分析」,改用上面的判準。
+
+### 第七輪審查第 1 輪的處理
+- 阻擋 A(prewarm 只走一圈):【同意】bcc72e5,多圈走到「一圈開始的手位」重複或 4 圈
+- 建議 1 / 3:【同意】bcc72e5;列舉 QUALITY × 12 根音 × 4 調,10104 個音全部是和弦音或調內九度
+- 建議 2:【同意】bcc72e5,harmony.mjs 九度豁免加調內與 ♭9 / ♯9 / ♭13;第二把吉他仍跟切音同記 `gtr`(單音先過 melodyOk,不會出九度)
+- 建議 4:【同意】新預設 × pad / comp / drive / mix 錄音量響度(`cases_def.json`,結果見下)
+- 建議 5 / 6:【同意】bcc72e5,vary 數字標未驗證;B2 / G1 引用寫明原文語境
+- 建議 7 / 8:【同意】CLAUDE.md、本節
+- 建議 9:【同意】bcc72e5,八度奏法超過 83 改低八度,預載同步
+- 建議 10:【同意】見上方盲聽檔說明
+- 需 Steven 聽過:Steven 已改成「交給你分析」;Rhodes 由 Steven 指定
+- 新預設驗證:`HARM_GTR9=1 allharm.sh` 83 組旋律上的和弦外音全部 0、沒有任何層下數 0;
+  響度(`REALISM_SECS=30 REALISM_OUT=/tmp/sty/def render.mjs tools/realism/cases_def.json`,16 段)peak 全部 0.850、削波 0,
+  RMS pad −14.17～−14.36、comp −12.64～−12.75、drive −12.21～−12.28、mix −12.74～−12.84(pad 略低於 −14,墊底本來就輕,不硬拉)
+
+### 退回(2026-09-26)
+Steven 聽了之後:「整體聽起來非常機械,比之前開始製作還糟」。**不合併**。
+- 關掉:`color`、`kickHold`、`bassFollowKick`、`parts.chopForms`、`parts.chopBrush`(欄位保留、預設不開);**保留 Rhodes**(Steven 指定)
+- 判斷的原因:文獻說的是**編曲的骨架**(大鼓簡單固定、右手不停、固定指型),我們照字面做成「每一下都一樣」——
+  十六分每一格都刷且力度固定、大鼓貝斯 8 小節逐字重複、同一顆和弦永遠同一個指型。真人照同一個骨架演奏,但每一下的輕重、
+  刷到幾條弦、偶爾省略或加一下都在變。文獻給骨架,**變化的方式**還沒有權威來源,不能再用猜的
+
+### 審查第 2、3 輪的處理 / 平衡(更正)
+- 前面寫的「整體八度頻帶跟平台鋼琴版差 ±0.4dB 以內」**不成立**(那是各頻帶佔比,不是絕對電平);審查員用 `features.bands` 算:
+  改前 −0.9～+2.3dB、keysEq 400Hz 那版還有 1kHz +1.1 / +1.4dB
+- 466ea14:keysEq 改 600Hz、Q 0.4。重錄(`cases_bal.json`,基準釘 6eb5851,`REALISM_SECS=20 REALISM_OUT=/tmp/sty/bal2`,讀 clips.jsonl 的 `features.bands`,10 個八度頻帶):
+  Fmaj7 組 −0.4～+0.6dB(1kHz 0.0)、Dm7 組 −1.1～+1.1dB(1kHz +0.9);全曲 RMS −12.84 / −12.84(平台鋼琴版 −12.87 / −13.08)
+- 鍵盤單獨:Rhodes 比平台鋼琴 +4.02 / +4.09dB、250–500Hz 佔比 +1.68 / +1.86dB(審查員重現)
+- 目前預設驗證(466ea14):allharm 83 組全 0、無下數 0;響度 16 段 peak 0.85、pad −14.71～−14.77、comp −12.88～−12.94、drive −12.21～−12.30、mix −13.04～−13.08
+- 對 origin/main 的差異:Pop 刷弦照左手位置挑手型(Steven 指定);City Pop 三項:Rhodes、平衡、第二把吉他八度折回(修取樣越界)。其餘新欄位預設不開
+- 另開:jRhodes3c 網站頁尾署名(介面改動)、prewarm 代理和弦(main 上既有)

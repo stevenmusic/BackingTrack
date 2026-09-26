@@ -1,0 +1,134 @@
+{
+ "_note": "新預設響度檢查(審查第 1 輪建議 4)",
+ "progressions": {},
+ "cases": [
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "pad",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "def_pad",
+   "batch": "def"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "pad",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "def_pad",
+   "batch": "def"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "pad",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "def_pad",
+   "batch": "def"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "pad",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "def_pad",
+   "batch": "def"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "def_comp",
+   "batch": "def"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "def_comp",
+   "batch": "def"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "def_comp",
+   "batch": "def"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "def_comp",
+   "batch": "def"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "def_drive",
+   "batch": "def"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "def_drive",
+   "batch": "def"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "def_drive",
+   "batch": "def"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "def_drive",
+   "batch": "def"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "mix",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "def_mix",
+   "batch": "def"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "mix",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "def_mix",
+   "batch": "def"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "mix",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "def_mix",
+   "batch": "def"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "mix",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "def_mix",
+   "batch": "def"
+  }
+ ]
+}

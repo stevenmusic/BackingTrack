@@ -24,8 +24,13 @@
 - 議題與會議紀錄在 `docs/REVIEW.md`;每一輪把狀態更新進去
 - **effort 分工**(Steven 2026-09-26 授權):審查員 `reviewer` 是 high;照指令跑量測、整理數字交給 `runner`(low);
   同一個問題審查連續兩輪都卡住,那一件改用 Fable 5.1(Agent 的 `model` 參數)。主對話的 effort 由 Steven 自己設
-- **Steven 已授權(2026-09-26):審查全部開綠燈**。審查員沒有阻擋就可以自己合併 PR;跟審查員討論到雙方都覺得及格,
-  再帶著結果與盲聽檔找 Steven。聽感最後仍由 Steven 決定(盲聽沒過的不改預設)
+- **Steven 已授權(2026-09-26):審查全部開綠燈**。審查員沒有阻擋就可以自己合併 PR
+- **不再給 Steven 盲測(2026-09-26:「不要給我盲測了,交給你分析,選擇A或B」)**。改預設由 Claude 決定,三條都要過:
+  ① **編曲規則有權威出處**(`docs/SOURCES.md`:樂手訪談、樂器雜誌、唱片名單)② 規則全過(旋律 0 違規、下數 ≠ 0、peak ≤ 0.85)
+  ③ 不推翻 Steven 以前親耳退回的方向(`docs/HISTORY.md`)。
+  **所有規則建立在編曲規則之上,不是測量分數**(Steven 2026-09-26):量尺只用來擋壞掉的東西(外音、下數 0、爆音),
+  除非量尺本身被驗證過是對的,否則分數不能當採用或退回的理由。
+  每一項的決定與理由寫進 `docs/REVIEW.md`;Steven 主動說不好聽的,照他說的退回
 
 ## 產品方向(2026-09-26 使用者定的)
 - **公開網站給其他人用,暫時不做 App**
@@ -100,8 +105,10 @@
 - 拆一顆成兩顆(`sus→V`、`拆ii-V`):只拆單獨一顆且沒寫時值的,一圈最多一顆,拆出來的標 `added` 不佔選取序號;律動只換音高不加下數
 - 改規則要跑 scratchpad 式的機器驗證(`tools/realism/mood_check.mjs`、`harmony.mjs`),不要靠讀
 
-## 旋律只准用和弦音(沒有例外)
+## 旋律只准用和弦音(唯一例外見下)
 - 「旋律」= 每一下和聲的頂音(鋼琴、兩把吉他、鋪底、銅管、人聲切片、lead)+ 單音線條(arp、第二把吉他)。貝斯不算
+- **唯一的例外(Steven 2026-09-26)**:City Pop 切音吉他照ギター・マガジン的指型(`parts.chopForms`,`docs/SOURCES.md` G1)時,
+  **吉他和弦的頂音可以是九度**(只在九度在調內、和弦沒有 ♭9/♯9 時);鋼琴、鋪底、銅管、第二把吉他的單音線不放寬。驗證加 `HARM_GTR9=1`
 - 唯一判斷:`melodyOk()`——只准根、三、五(含 ♭5/♯5)、六、七、sus 的二/四度、轉位低音;
   不准九/十一/十三度、調外經過音,**屬七的降七度也不准**
 - 三道守門:`buildVoicing` 頂音罰 100 + `fixTop`;吉他 `guitarNotesFor` → `fixTop`;單音線條先 `filter(melodyOk)`。
@@ -114,6 +121,8 @@
 - 力度改音色不只改音量:鋼琴與貝斯都有力度低通(`velRef`);只有鼓有真的多力度層,**不要給鋼琴做多力度層**(記憶體會爆)
 - 左手讓位:`lhGain()` = `FEELS[x].lh` ?? (boogie 0.38 : 0.55);三種疏密左手都要撐長
 - 吉他:Pop 刷弦用真的手型(`realShape`,照移調後的根音挑,`prewarmGuitar` 也要傳 transpose);
+  封閉和弦 5 弦 / 6 弦照**左手位置**挑移動最少的(`gtrHand` / `strumNotes`,`resetLap` 歸零),`prewarmGuitar` 要照播放順序走多圈;
+  切音的ギター・マガジン指型(`parts.chopForms`)與右手一直刷(`parts.chopBrush`)**預設不開**:一起開時 Steven 說「非常機械」;
   Bossa 拇指低音 + 三弦 clave(跟 cross stick 共用 `g.clave`);切音不彈根音;每條弦差兩三音分
 - 貝斯一律待在 E1–D♯2 附近(`bassMidiFor`),移調不跟著跑;兩把琴 buffer 分開收(`bassBuffers.electric/.upright`),檔名音高寫法不同不准混用
 - 鋪底一顆和弦落一次、不跟節奏打;City Pop 用連奏鋪底(`padLegato`)。失諧至少四顆不等距,兩顆一定是固定晃動
@@ -126,7 +135,8 @@
 - 每個曲風一種打法(`GROOVES`),拍子感來源不能拿掉:Pop/Blues/Funk/City Pop 是小鼓 2、4(`f.snarePiece`);
   Bossa 是 cross stick 的 clave(兩小節一循環 3+2);Swing 是 hi-hat 踏鈸 2、4 + ride 型 `[0,2,3,4,6,7]`、小鼓 comping 平均抽、大鼓 feathering;
   **K-Pop 是 half-time,拍手只打第 3 拍,不准補 2、4**
-- City Pop:hi-hat 走十六分(強弱 `hatAcc`)、open hat 在反拍且一定被下一顆 closed hat 掐掉(`chokeOhat`)、大鼓與貝斯綁同一條時間(`timing.tie`)。
+- `kickHold`(大鼓整段固定)/ `bassFollowKick`(貝斯跟大鼓)**預設不開**:照字面做成「整段一模一樣」聽起來機械(Steven 2026-09-26)。
+  City Pop:hi-hat 走十六分(強弱 `hatAcc`)、open hat 在反拍且一定被下一顆 closed hat 掐掉(`chokeOhat`)、大鼓與貝斯綁同一條時間(`timing.tie`)。
   鼓的節奏是 `GROOVES` / `KICK_CELLS` / `SNARE_CELLS` 的格子加人性化(`timing`、`pocket`)
 - 高密度的鈸靠強弱差不吵(skip note、後半拍輕),**不是把總量壓掉**;兩層平均分布的高頻不准疊(打擊小物要嘛跟 backbeat、要嘛小一個量級)
 - 過門只佔最後一拍、hi-hat 不斷、力度漸強;搖擺的過門走三連音;一格的進行沒有過門
@@ -139,7 +149,7 @@
 | 曲風 | 鍵盤 | 鼓 | 貝斯 | 第四層 |
 | --- | --- | --- | --- | --- |
 | Pop | Salamander | Virtuosity | 電貝斯 | 鋼弦刷弦×2、鈴鼓 backbeat |
-| City Pop | Salamander | SM Drums(大小鼓、hi-hat)+ Virtuosity(tom、鈸、open hat) | 電貝斯 | Hofner 切音 + 第二把吉他、合成銅管、合成鋪底、沙鈴八分;配器輪換 `orchs` |
+| City Pop | Rhodes(jRhodes3c,非商用授權,商用前要換) | SM Drums(大小鼓、hi-hat)+ Virtuosity(tom、鈸、open hat) | 電貝斯 | Hofner 切音 + 第二把吉他、合成銅管、合成鋪底、沙鈴八分;配器輪換 `orchs` |
 | K-Pop | 合成 pluck | 808 取樣 | 808 合成 sub | supersaw、低音鋪底 `klow`、arp、沙鈴+指響、乒乓延遲 |
 | Bossa | Salamander | Virtuosity(cross stick) | 低音提琴 | 尼龍弦 clave、cabasa |
 | Blues | Salamander | Virtuosity | 電貝斯(boogie) | Hammond(很輕),不給吉他 |
@@ -178,7 +188,7 @@
 - 要再做之前先問使用者
 
 ## 驗收與量測
-- 標準答案是**使用者的盲聽**;MERT / VGGish / Audiobox 只能擋明顯壞掉的,不能宣稱「變真實」。百分比超過 100% 只代表進到真歌那一群
+- 標準是**有出處的編曲規則**;Steven 主動說不好聽的照他說的退回。MERT / VGGish / Audiobox 只能擋明顯壞掉的,不能宣稱「變真實」。百分比超過 100% 只代表進到真歌那一群
 - 雲端容器連不到 CDN:取樣用 `git clone --filter=blob:none` 拉到 `/tmp/smp/`,Playwright `page.route` 對到本機;
   不要在 blobless clone 上跑 `git ls-tree -l`。錄音從固定拍點開始(`currentBeat() >= 32`)
 - 量完刪大檔(分軌、wav),磁碟會滿;參考曲換了要刪 `/tmp/simcache.npz`;參考曲音檔一律不進 repo

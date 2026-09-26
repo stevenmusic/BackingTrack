@@ -1,0 +1,1106 @@
+{
+ "_note": "輕重音 A/B(REVIEW.md 第七輪):vary.py 穩定差距 drums / guitar / bass 正拍比;第二輪(drum2 / gtr2 / bass2 / all2)照 16 格輪廓對準方向:鼓減輕 & 與 open hat、吉他正拍重音、貝斯正拍多 a 少",
+ "progressions": {},
+ "cases": [
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "acc_base",
+   "ovr": {},
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "acc_base",
+   "ovr": {},
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "acc_base",
+   "ovr": {},
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "acc_base",
+   "ovr": {},
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "acc_drum",
+   "ovr": {
+    "hatAcc": [
+     1,
+     0.62,
+     0.8,
+     0.62
+    ],
+    "ghostGain": 0.2
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "acc_drum",
+   "ovr": {
+    "hatAcc": [
+     1,
+     0.62,
+     0.8,
+     0.62
+    ],
+    "ghostGain": 0.2
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "acc_drum",
+   "ovr": {
+    "hatAcc": [
+     1,
+     0.62,
+     0.8,
+     0.62
+    ],
+    "ghostGain": 0.2
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "acc_drum",
+   "ovr": {
+    "hatAcc": [
+     1,
+     0.62,
+     0.8,
+     0.62
+    ],
+    "ghostGain": 0.2
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "acc_gtr",
+   "ovr": {
+    "parts": {
+     "chopAcc": 1.4
+    }
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "acc_gtr",
+   "ovr": {
+    "parts": {
+     "chopAcc": 1.4
+    }
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "acc_gtr",
+   "ovr": {
+    "parts": {
+     "chopAcc": 1.4
+    }
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "acc_gtr",
+   "ovr": {
+    "parts": {
+     "chopAcc": 1.4
+    }
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "acc_bass",
+   "ovr": {
+    "bassBeatVel": 0.5
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "acc_bass",
+   "ovr": {
+    "bassBeatVel": 0.5
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "acc_bass",
+   "ovr": {
+    "bassBeatVel": 0.5
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "acc_bass",
+   "ovr": {
+    "bassBeatVel": 0.5
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "acc_all",
+   "ovr": {
+    "hatAcc": [
+     1,
+     0.62,
+     0.8,
+     0.62
+    ],
+    "ghostGain": 0.2,
+    "bassBeatVel": 0.5,
+    "parts": {
+     "chopAcc": 1.4
+    }
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "acc_all",
+   "ovr": {
+    "hatAcc": [
+     1,
+     0.62,
+     0.8,
+     0.62
+    ],
+    "ghostGain": 0.2,
+    "bassBeatVel": 0.5,
+    "parts": {
+     "chopAcc": 1.4
+    }
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "acc_all",
+   "ovr": {
+    "hatAcc": [
+     1,
+     0.62,
+     0.8,
+     0.62
+    ],
+    "ghostGain": 0.2,
+    "bassBeatVel": 0.5,
+    "parts": {
+     "chopAcc": 1.4
+    }
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "acc_all",
+   "ovr": {
+    "hatAcc": [
+     1,
+     0.62,
+     0.8,
+     0.62
+    ],
+    "ghostGain": 0.2,
+    "bassBeatVel": 0.5,
+    "parts": {
+     "chopAcc": 1.4
+    }
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "acc_drum2",
+   "ovr": {
+    "hatAcc": [
+     1,
+     0.42,
+     0.55,
+     0.45
+    ],
+    "ohatP": {
+     "1": 0.1,
+     "3": 0.4
+    }
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "acc_drum2",
+   "ovr": {
+    "hatAcc": [
+     1,
+     0.42,
+     0.55,
+     0.45
+    ],
+    "ohatP": {
+     "1": 0.1,
+     "3": 0.4
+    }
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "acc_drum2",
+   "ovr": {
+    "hatAcc": [
+     1,
+     0.42,
+     0.55,
+     0.45
+    ],
+    "ohatP": {
+     "1": 0.1,
+     "3": 0.4
+    }
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "acc_drum2",
+   "ovr": {
+    "hatAcc": [
+     1,
+     0.42,
+     0.55,
+     0.45
+    ],
+    "ohatP": {
+     "1": 0.1,
+     "3": 0.4
+    }
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "acc_gtr2",
+   "ovr": {
+    "parts": {
+     "chopAcc": 1.7
+    }
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "acc_gtr2",
+   "ovr": {
+    "parts": {
+     "chopAcc": 1.7
+    }
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "acc_gtr2",
+   "ovr": {
+    "parts": {
+     "chopAcc": 1.7
+    }
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "acc_gtr2",
+   "ovr": {
+    "parts": {
+     "chopAcc": 1.7
+    }
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "acc_bass2",
+   "ovr": {
+    "bassCells": [
+     [
+      0,
+      4,
+      8,
+      11,
+      12
+     ],
+     [
+      0,
+      6,
+      8,
+      12,
+      14
+     ],
+     [
+      0,
+      3,
+      4,
+      8,
+      12,
+      14
+     ],
+     [
+      0,
+      4,
+      7,
+      8,
+      12
+     ],
+     [
+      0,
+      4,
+      8,
+      10,
+      12,
+      14
+     ],
+     [
+      0,
+      6,
+      8,
+      12,
+      15
+     ],
+     [
+      0,
+      4,
+      8,
+      12,
+      14
+     ],
+     [
+      0,
+      2,
+      4,
+      8,
+      10,
+      12
+     ],
+     [
+      0,
+      8,
+      10,
+      12,
+      14
+     ]
+    ],
+    "bassBeatVel": 0.5
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "acc_bass2",
+   "ovr": {
+    "bassCells": [
+     [
+      0,
+      4,
+      8,
+      11,
+      12
+     ],
+     [
+      0,
+      6,
+      8,
+      12,
+      14
+     ],
+     [
+      0,
+      3,
+      4,
+      8,
+      12,
+      14
+     ],
+     [
+      0,
+      4,
+      7,
+      8,
+      12
+     ],
+     [
+      0,
+      4,
+      8,
+      10,
+      12,
+      14
+     ],
+     [
+      0,
+      6,
+      8,
+      12,
+      15
+     ],
+     [
+      0,
+      4,
+      8,
+      12,
+      14
+     ],
+     [
+      0,
+      2,
+      4,
+      8,
+      10,
+      12
+     ],
+     [
+      0,
+      8,
+      10,
+      12,
+      14
+     ]
+    ],
+    "bassBeatVel": 0.5
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "acc_bass2",
+   "ovr": {
+    "bassCells": [
+     [
+      0,
+      4,
+      8,
+      11,
+      12
+     ],
+     [
+      0,
+      6,
+      8,
+      12,
+      14
+     ],
+     [
+      0,
+      3,
+      4,
+      8,
+      12,
+      14
+     ],
+     [
+      0,
+      4,
+      7,
+      8,
+      12
+     ],
+     [
+      0,
+      4,
+      8,
+      10,
+      12,
+      14
+     ],
+     [
+      0,
+      6,
+      8,
+      12,
+      15
+     ],
+     [
+      0,
+      4,
+      8,
+      12,
+      14
+     ],
+     [
+      0,
+      2,
+      4,
+      8,
+      10,
+      12
+     ],
+     [
+      0,
+      8,
+      10,
+      12,
+      14
+     ]
+    ],
+    "bassBeatVel": 0.5
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "acc_bass2",
+   "ovr": {
+    "bassCells": [
+     [
+      0,
+      4,
+      8,
+      11,
+      12
+     ],
+     [
+      0,
+      6,
+      8,
+      12,
+      14
+     ],
+     [
+      0,
+      3,
+      4,
+      8,
+      12,
+      14
+     ],
+     [
+      0,
+      4,
+      7,
+      8,
+      12
+     ],
+     [
+      0,
+      4,
+      8,
+      10,
+      12,
+      14
+     ],
+     [
+      0,
+      6,
+      8,
+      12,
+      15
+     ],
+     [
+      0,
+      4,
+      8,
+      12,
+      14
+     ],
+     [
+      0,
+      2,
+      4,
+      8,
+      10,
+      12
+     ],
+     [
+      0,
+      8,
+      10,
+      12,
+      14
+     ]
+    ],
+    "bassBeatVel": 0.5
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "acc_all2",
+   "ovr": {
+    "hatAcc": [
+     1,
+     0.42,
+     0.55,
+     0.45
+    ],
+    "ohatP": {
+     "1": 0.1,
+     "3": 0.4
+    },
+    "bassCells": [
+     [
+      0,
+      4,
+      8,
+      11,
+      12
+     ],
+     [
+      0,
+      6,
+      8,
+      12,
+      14
+     ],
+     [
+      0,
+      3,
+      4,
+      8,
+      12,
+      14
+     ],
+     [
+      0,
+      4,
+      7,
+      8,
+      12
+     ],
+     [
+      0,
+      4,
+      8,
+      10,
+      12,
+      14
+     ],
+     [
+      0,
+      6,
+      8,
+      12,
+      15
+     ],
+     [
+      0,
+      4,
+      8,
+      12,
+      14
+     ],
+     [
+      0,
+      2,
+      4,
+      8,
+      10,
+      12
+     ],
+     [
+      0,
+      8,
+      10,
+      12,
+      14
+     ]
+    ],
+    "bassBeatVel": 0.5,
+    "parts": {
+     "chopAcc": 1.7
+    }
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "acc_all2",
+   "ovr": {
+    "hatAcc": [
+     1,
+     0.42,
+     0.55,
+     0.45
+    ],
+    "ohatP": {
+     "1": 0.1,
+     "3": 0.4
+    },
+    "bassCells": [
+     [
+      0,
+      4,
+      8,
+      11,
+      12
+     ],
+     [
+      0,
+      6,
+      8,
+      12,
+      14
+     ],
+     [
+      0,
+      3,
+      4,
+      8,
+      12,
+      14
+     ],
+     [
+      0,
+      4,
+      7,
+      8,
+      12
+     ],
+     [
+      0,
+      4,
+      8,
+      10,
+      12,
+      14
+     ],
+     [
+      0,
+      6,
+      8,
+      12,
+      15
+     ],
+     [
+      0,
+      4,
+      8,
+      12,
+      14
+     ],
+     [
+      0,
+      2,
+      4,
+      8,
+      10,
+      12
+     ],
+     [
+      0,
+      8,
+      10,
+      12,
+      14
+     ]
+    ],
+    "bassBeatVel": 0.5,
+    "parts": {
+     "chopAcc": 1.7
+    }
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "acc_all2",
+   "ovr": {
+    "hatAcc": [
+     1,
+     0.42,
+     0.55,
+     0.45
+    ],
+    "ohatP": {
+     "1": 0.1,
+     "3": 0.4
+    },
+    "bassCells": [
+     [
+      0,
+      4,
+      8,
+      11,
+      12
+     ],
+     [
+      0,
+      6,
+      8,
+      12,
+      14
+     ],
+     [
+      0,
+      3,
+      4,
+      8,
+      12,
+      14
+     ],
+     [
+      0,
+      4,
+      7,
+      8,
+      12
+     ],
+     [
+      0,
+      4,
+      8,
+      10,
+      12,
+      14
+     ],
+     [
+      0,
+      6,
+      8,
+      12,
+      15
+     ],
+     [
+      0,
+      4,
+      8,
+      12,
+      14
+     ],
+     [
+      0,
+      2,
+      4,
+      8,
+      10,
+      12
+     ],
+     [
+      0,
+      8,
+      10,
+      12,
+      14
+     ]
+    ],
+    "bassBeatVel": 0.5,
+    "parts": {
+     "chopAcc": 1.7
+    }
+   },
+   "batch": "acc"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "acc_all2",
+   "ovr": {
+    "hatAcc": [
+     1,
+     0.42,
+     0.55,
+     0.45
+    ],
+    "ohatP": {
+     "1": 0.1,
+     "3": 0.4
+    },
+    "bassCells": [
+     [
+      0,
+      4,
+      8,
+      11,
+      12
+     ],
+     [
+      0,
+      6,
+      8,
+      12,
+      14
+     ],
+     [
+      0,
+      3,
+      4,
+      8,
+      12,
+      14
+     ],
+     [
+      0,
+      4,
+      7,
+      8,
+      12
+     ],
+     [
+      0,
+      4,
+      8,
+      10,
+      12,
+      14
+     ],
+     [
+      0,
+      6,
+      8,
+      12,
+      15
+     ],
+     [
+      0,
+      4,
+      8,
+      12,
+      14
+     ],
+     [
+      0,
+      2,
+      4,
+      8,
+      10,
+      12
+     ],
+     [
+      0,
+      8,
+      10,
+      12,
+      14
+     ]
+    ],
+    "bassBeatVel": 0.5,
+    "parts": {
+     "chopAcc": 1.7
+    }
+   },
+   "batch": "acc"
+  }
+ ]
+}

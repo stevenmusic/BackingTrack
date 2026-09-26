@@ -2636,7 +2636,7 @@ let lapBuilt = -1;       // voicings 是照第幾圈建的
 let lapBars = null;      // 這一圈實際在彈的和弦(沒換過就是 null)
 /* 現在畫面上與排程要看的那一份和弦。沒有在換的時候就是使用者打的那一份 */
 function barsNow(){ return lapBars || parsed.bars; }
-function resetLap(){ lapBuilt = -1; lapBars = null; }
+function resetLap(){ lapBuilt = -1; lapBars = null; gtrHand = null; }
 
 /* 這一圈要把哪幾格換掉。第一圈(lap 0)一定照原譜——先聽過原本長怎樣,
    後面才知道變的是什麼。一圈換一到兩格,多了就不像同一首了。
@@ -2712,7 +2712,7 @@ function buildLap(lap){
 function buildVoicings(bars){
   const out = [];
   /* 用**原譜**判調,不用這一圈換過代理和弦的 bars:不然色彩音會一圈有一圈沒有(第四輪審查建議 2) */
-  voiceKey = feel().color ? keyOf(parsed && parsed.bars && parsed.bars.length ? parsed.bars : bars) : null;
+  voiceKey = feel().color || (feel().parts && feel().parts.chopForms) ? keyOf(parsed && parsed.bars && parsed.bars.length ? parsed.bars : bars) : null;
   let prev = null;
   for (const b of bars) {
     const spans = spansOf(b);
@@ -2762,7 +2762,7 @@ const SAMPLE_TABLE = (() => {
 })();
 
 /* ══ 電鋼琴(Rhodes)══════════════════════════════════════════
-   Funk 的鍵盤本來就不是平台鋼琴,是 Rhodes 電鋼琴(City Pop 原本也用它,照相似度換回平台鋼琴了,見 FEELS.citypop):
+   Funk 的鍵盤本來就不是平台鋼琴,是 Rhodes 電鋼琴(City Pop 也用它:Steven 2026-09-26 指定,見 FEELS.citypop):
    山下達郎、Stevie Wonder、K-Pop 的 R&B 段落都是這個聲音。
    換的是**音色**,不是聲位或節奏——`buildVoicing` 與 `schedulePiano` 完全不動。
 
@@ -5799,10 +5799,11 @@ const FEELS = {
     snarePiece: "snare", snareGain: 0.6,
     cym: "hihat", cymGain: 0.28,
     bass: "citypop", kit: "electric", meters: ["4/4"],
-    /* **鍵盤從 Rhodes 換成平台鋼琴**(照相似度決定,使用者指定「以分數高的為主」)。
-       12 段(4 組進行 × 3 種疏密)逐段配對比:Rhodes 89.2%、CP80 87.5%(−1.6,5/12 段贏)、
-       **平台鋼琴 95.4%(+6.3 ± 1.2,11/12 段贏)**。三首參考曲的鍵盤層比較接近原聲鋼琴 */
-    piano: "acoustic",
+    /* **鍵盤是 Rhodes**(Steven 2026-09-26:「Rhodes要用,因為city pop應該不用平台鋼琴」;
+       竹內瑪莉亞「Plastic Love」名單:中西康晴 electric piano,docs/SOURCES.md)。
+       以前照相似度分數換成平台鋼琴(HISTORY),那把尺沒驗證過,不再當依據。
+       jRhodes3c 是非商用授權(docs/LICENSES.md),商用前要換成可商用的電鋼琴 */
+    piano: "rhodes",
     /* 這一種的編制是最厚的:乾淨電吉他切十六分、弦樂在後面鋪、沙鈴走八分。
        八〇年代的日本 AOR 就是這樣配的——錄音室樂手一次錄滿 */
     /* **鋪底維持合成的,不要換成弦樂取樣**。試過換成真的大提琴 + 小提琴取樣,
@@ -5854,6 +5855,7 @@ const FEELS = {
                 我們是 5.4 下(hi-hat 八分 + 沙鈴十六分)——太碎 */
              /* hi-hat 已經走十六分,沙鈴退回八分、收小:兩層平均的高頻疊在一起會糊 */
              perc: { kind: "shaker", lvl: 0.16 },
+             /* chopForms / chopBrush 預設不開:見 docs/REVIEW.md 第七輪「退回」 */
              chopGhost: 0.2,     /* 0.35 → 0.2:吉他在十六分「a」上量到 0.57 下每拍(真歌 0.22–0.46),多出來的是這一層 */
              /* 切音的長度 0.09 → 0.2 → 0.42 秒:12 首真歌的吉他一下撐 0.25–2 拍(9/12 首 ≥0.9 拍),
                 0.2 秒時量到只有 0.15 拍——只剩撥片那一聲「喀」,能量全在高頻(音域量到 midi 82,真歌 55–74) */
@@ -5887,7 +5889,7 @@ const FEELS = {
       { name: "synth", parts: { klevel: 0.075, glevel: 0.22, brass: { every: 4 } },
         mix: { padLp: 4500 }, arrange: { layers: { keys: "01111110", brass: "00000001" } } },
       /* 3 鋼琴型(〈Plastic Love〉):鋼琴往前,其他照常 */
-      { name: "piano", mix: { keysLevel: 1.1 } },
+      { name: "piano", mix: { keysLevel: 0.7 } },     // 1.1 → 0.7:跟 keysLevel 同比例(Rhodes 大 4dB)
       /* 4 雙吉他型(〈Fantasy〉〈STAY BY ME〉):兩把吉他一直都在,鋪底淡 */
       { name: "guitars", parts: { glevel: 0.34, guitar2: { lvl: 0.24 }, klevel: 0.035 },
         arrange: { layers: { guitar2: "11111111", guitar: "11111111" } } },
@@ -5901,6 +5903,8 @@ const FEELS = {
                  兩個人同一格落下時是同一個時間——「Kick + Bass 要非常緊」 */
               tie: { bass: "kick" } },
     kickAcc: [1, 0.72, 0.68, 0.78],
+    /* 2026-09-26 退回:color(ext2)、kickHold、bassFollowKick 一起開之後 Steven:「整體聽起來非常機械,比之前開始製作還糟」。
+       欄位留著(預設不開),要再開必須先解決「每一下都一樣」的問題(docs/REVIEW.md 第七輪) */
     topMove: 0.25,
     ghostGain: 0.13,
     hatCycle: 0.12,
@@ -6021,7 +6025,9 @@ const FEELS = {
               每一層在 250Hz 都有份(鼓、貝斯、Rhodes、鋪底都在 −18～−21),
               所以單調一層補不完,主力是母帶的參考比對 EQ(`masterMid` / `masterAir`)。
               誤差(63–8k 的 RMS)6.42 → 2.44dB,之後再調幾乎不動了 */
-           keysEq: -3, keysEqHz: 800, keysEqQ: 0.6, keysLevel: 0.55,   /* 1.3 → 0.55(−7.5dB):真歌的鋼琴是點綴,不是主角(配器輪換那節) */
+           /* keysLevel 0.55 → 0.35(−4dB)、keysEq 800 → 400Hz:鍵盤換回 Rhodes(Steven 指定)時,鍵盤單獨量比平台鋼琴大 4.1dB、
+              250–500Hz 多 1.8dB——放回原本平台鋼琴版的平衡(Steven 聽過、微調很多次的那一版),只換音色不換比例 */
+           keysEq: -3, keysEqHz: 600, keysEqQ: 0.4, keysLevel: 0.35,   // 600Hz、Q 0.4:250–500 與 800–1k 都收到
            padEq: -4, padEqHz: 400,
            drumAir: 4, drumAirHz: 6000,
            gtrAir: 1.5, gtrAirHz: 3500,
@@ -6410,6 +6416,16 @@ function cellsOf(table){
   return byFeel[meterOn] || byFeel["4/4"];
 }
 
+/* 這一小節大鼓打哪幾格。`f.kickHold`(沒寫 = 每小節抽,零差異):**整段固定一個型,只在句尾換**。
+   青山純:「決して乱打して目立つんじゃなくって、ベーシックにやっている中で、いざというときに…」
+   (docs/SOURCES.md D2);貝斯要跟它綁在一起(`bassFollowKick`),所以抽成一個函式兩邊共用 */
+function kickCellAt(absBar){
+  const f = feel();
+  const secLen = (f.arrange && f.arrange.cycle) || 8;
+  return f.kickHold && sectionBar(absBar) !== secLen - 1
+    ? pickCell(cellsOf(KICK_CELLS), Math.floor(absBar / secLen), 101)
+    : pickCell(cellsOf(KICK_CELLS), absBar, 101);
+}
 /* 第一個型 45%,其餘平分 55% */
 function pickCell(cells, absBar, salt){
   const r = hash01(absBar, salt);
@@ -6621,7 +6637,8 @@ function scheduleDrums(barStartBeat, b, absBar, isFill){
 
     /* 大鼓。爵士的底下一直有很輕的四分 feathering,cell 抽到的那顆才是重音;
        其餘感覺就照 cell 打 */
-    const kickCell = pickCell(cellsOf(KICK_CELLS), absBar, 101);
+    /* 大鼓型由 `kickCellAt` 決定(沒寫 `kickHold` = 每小節抽一個型) */
+    const kickCell = kickCellAt(absBar);
     let kick = kickCell.indexOf(idx) >= 0;
     /* 推進的推力要照感覺與拍號換位置:流行搖滾推中間那一拍的後半、
        bossa 與 6/8 推最後一格(那是進下一小節的預備),爵士不推——
@@ -6819,7 +6836,18 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord, span){
        原本的 9 型只有第一拍在拍點上(0.28),每拍 1.21 個。
        新的 9 型平均每小節 拍點 2.3 / e 0.3 / & 1.3 / a 1.6(e 另外由幽靈音補)。
        「a」是往下一拍推的那一下,真的貝斯手最常用的就是它 */
-    const cell = pickCell([[0,3,8,11,14], [0,6,8,11,15], [0,3,6,8,12,14], [0,7,8,10,13], [0,3,4,8,11,14],
+    /* `FEELS[x].bassCells`(沒寫 = 下面這 9 型,零差異)。
+       (vary.py 量到的「正拍 0.41 / a 0.16 vs 我們 0.27 / 0.33」**未驗證、已降級**,見 docs/PLAN.md,不當依據) */
+    /* `FEELS[x].bassFollowKick`(沒寫就照下面的表,零差異):**貝斯的型 = 大鼓的型 + 少量加音**。
+       受伊藤広規的說法啟發:「ドラムのベードラのパターンにそぐって弾いていたら、いい感じになりましたね」
+       (原文語境是把貝斯疊在青山純留下的鼓軌上),以及兩人一起錄的「差し替えが利かない」(docs/SOURCES.md B2)。
+       加音(`add`,八度跳、先到)整段固定一組,跟大鼓一樣句尾才換 */
+    const bfk = feel().bassFollowKick;
+    const secLenB = (feel().arrange && feel().arrange.cycle) || 8;
+    const cell = bfk ? [...new Set(kickCellAt(absBar).concat(
+        pickCell(bfk.add, sectionBar(absBar) === secLenB - 1 ? absBar : Math.floor(absBar / secLenB), 105)))].sort((a, b) => a - b)
+      : pickCell(feel().bassCells ||
+                          [[0,3,8,11,14], [0,6,8,11,15], [0,3,6,8,12,14], [0,7,8,10,13], [0,3,4,8,11,14],
                            [0,6,7,8,14,15], [0,5,8,11,12,14], [0,2,3,8,10,11], [0,8,9,11,14]], absBar, 104);
     /* ── 過門(使用者點名要的)──────────────────────────────────────
        原本過門那一小節只有「最後一格一顆接音」,等於沒有過門。
@@ -6894,7 +6922,7 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord, span){
       const bmax = feel().bassMaxBeat, cap = bmax ? bmax * div : Infinity;
       const len = oct ? Math.min(gap, 1.2) * 0.7 : Math.min(gap * 0.92, cap);
       playBassNote(bassMidiFor(pc) + (oct ? 12 : 0), slotTime(barStartBeat, idx), slotDur() * len,
-                   humanize(absBar, 70 + idx, idx === 0 ? 0.5 : oct ? 0.34 : 0.38));
+                   humanize(absBar, 70 + idx, idx === 0 ? 0.5 : oct ? 0.34 : onBeat && feel().bassBeatVel ? feel().bassBeatVel : 0.38));
       /* **幽靈音**:切分那一顆前面一格偶爾先悶悶地碰一下(左手悶住的「嘟」)。
          力度很低,`playBassNote` 的力度濾波會自己把它壓暗,聽起來是手指不是音 */
       if (!onBeat && idx > 0 && cell.indexOf(idx - 1) < 0 && hash01(absBar * 16 + idx, 192) < 0.35) {
@@ -7272,7 +7300,9 @@ function padNotes(v){
 
 /* 這個曲風的吉他彈幾條弦、從哪一條起 */
 function guitarShape(kind){
-  if (kind === "chop") return { n: 3, from: 57, skipRoot: true };  // 高把位、沒有根音
+  /* 切音:高把位、沒有根音。`parts.chopFrom`(沒寫 = 57,A3):City Pop 的切音主要在 1–3 弦,
+     從 C4(60)起排才會落在那裡;57 起排大約是 2–4 弦 */
+  if (kind === "chop") return { n: 3, from: (feel().parts && feel().parts.chopFrom) || 57, skipRoot: true };
   if (kind === "four") return { n: 3, from: 40 };   // Freddie Green 的三音
   if (kind === "bossa") return { n: 4, from: 40 };  // 拇指加三指
   return { n: 5, from: 40 };                        // 刷弦
@@ -7283,20 +7313,99 @@ function guitarShape(kind){
    三條弦的切音把它移到下面(C7:E G B♭ → B♭ E G),顆數不變;
    三顆全都不合規(G7alt 之類)時不往下搬,在頂上多補一顆骨架音(見 `fixTop`) */
 function guitarNotesFor(chord, kind, transpose){
-  return fixTop(chord, guitarNotesRaw(chord, kind, transpose));
+  const raw = guitarNotesRaw(chord, kind, transpose);
+  // 雜誌指型的頂音本來就挑過(骨架音或九度),不再過 fixTop——fixTop 會把九度搬走
+  if (raw && raw.chopForm) return raw.slice();
+  return fixTop(chord, raw);
 }
-function guitarNotesRaw(chord, kind, transpose){
+/* ── 刷弦的左手位置(Steven:「封閉和弦按 5 弦還是 6 弦,以左手移動來安排」)──
+   `gtrHand` = 左手現在在第幾格(0 = 開放和弦那一區,null = 還沒彈)。每顆和弦**第一次刷的時候**
+   決定手型,挑離手最近的那一個,之後同一顆和弦都用它(`gtrPick` 照 span 記)。
+   按播放 / 改和弦 / 關開 `resetLap()` 時歸零,所以同一首每次彈出來都一樣 */
+let gtrHand = null;
+const gtrPick = new WeakMap();
+function strumNotes(sp, transpose){
+  const m = gtrPick.get(sp);
+  if (m && m.t === transpose) return m.notes;
+  const raw = guitarNotesRaw(sp.chord, "strum", transpose, gtrHand);
+  if (raw.fret != null) gtrHand = raw.fret;
+  const notes = fixTop(sp.chord, raw);
+  gtrPick.set(sp, { t: transpose, notes });
+  return notes;
+}
+function guitarNotesRaw(chord, kind, transpose, hand){
   /* 刷弦與 bossa **照真的吉他把位**(`realShape`),不是從低音往上挑和弦音。
      盲聽被寫了「刷和弦的音應該根據真實樂器的 open string 排列」「跟 MIDI 完全一樣」:
      吉他手不是在算音,是在按一個固定的手型——開放和弦的 C、G、Am、E,
      或是 E 型/A 型的封閉和弦。那個手型決定了哪幾條弦是空弦、哪個音重複、
      最高音在哪裡,也就是「吉他的聲音」。性質對不上手型(九和弦、sus、轉位)才退回原本的排法 */
   if (kind === "strum" || kind === "bossa") {
-    const r = realShape(chord, kind === "bossa", transpose || 0);
+    const r = realShape(chord, kind === "bossa", transpose || 0, hand);
+    if (r) return r;
+  }
+  if (kind === "chop" && feel().parts && feel().parts.chopForms) {
+    const r = chopFormNotes(chord, transpose || 0);
     if (r) return r;
   }
   const sh = guitarShape(kind);
   return guitarVoice(chord, sh.n, sh.from, sh.skipRoot);
+}
+
+/* ── City Pop 切音的指型(`parts.chopForms`,沒寫就照舊)─────────────────────
+   照ギター・マガジン〈シティ・ポップ名盤の頻出ギター・コード・フォーム帳〉(docs/SOURCES.md G1)。
+   陣列是**由低到高、相對根音的半音數**,全部落在 1–3 弦(或 2–4 弦)的高把位:
+   - 大三:3 弦根音 / 2 弦三度 / 1 弦五度(松任谷由実「真珠のピアス」)與它的轉位
+   - △7:3 弦根音 / 2 弦三度 / 1 弦大七度(角松敏生、AB'S);4 弦根音那型只彈 1–3 弦(山下達郎「SPARKLE」開頭)
+   - m7:3 弦小三度 / 2 弦五度 / 1 弦七度(松田聖子);m9:小三和弦加 9 度當頂音(村田和人)、七度 + 九度(芳野藤丸)
+   - 屬七:4 弦三度 / 3 弦七度 / 2 弦九度(9th「THE ファンキー」;原文說 City Pop 多用在「キメで一瞬」,這裡拿來當屬七的主型是延伸用法)
+   - 6(9):3 弦六度 / 2 弦九度 / 1 弦五度(芳野藤丸)
+   **頂音可以是九度**:Steven 2026-09-26 同意「只放寬切音吉他」,鋼琴、鋪底、銅管與第二把吉他的單音線照舊只准和弦音。
+   九度只在和弦沒有 ♭9 / ♯9、而且九度在這首歌的調裡(`voiceKey`)才用;其他情況只用不帶九度的型。
+   手固定在 5–8 格附近(`CHOP_CENTER`),同一顆和弦每次都同一個型——預載的音跟彈到的一樣 */
+const CHOP_FORMS = {
+  maj:  [[0, 4, 7], [4, 7, 12], [7, 12, 16]],
+  maj7: [[0, 4, 11], [4, 7, 11]],
+  m7:   [[3, 7, 10], [3, 7, 14], [3, 10, 14]],
+  min:  [[3, 7, 12], [7, 12, 15], [0, 3, 7]],
+  // 屬七:雜誌的 9th 型(3 / ♭7 / 9);九度不在調裡時用不帶九度的 ♭7 / 3 / 5 與 3 / ♭7 / 3(頂音不准 ♭7)
+  dom7: [[4, 10, 14], [10, 16, 19], [4, 10, 16]],
+  six:  [[9, 14, 19], [4, 9, 14]],
+};
+const CHOP_CENTER = 66;
+function chopFormNotes(chord, transpose){
+  if (!chord || !chord.intervals) return null;
+  const iv = new Set(chord.intervals.map(x => ((x % 12) + 12) % 12));
+  const altered = chord.intervals.some(x => x === 13 || x === 15 || x === 20 || x === 1 || x === 8);
+  let q = null;
+  if (iv.has(4) && iv.has(9) && !iv.has(10) && !iv.has(11)) q = "six";
+  else if (iv.has(4) && iv.has(10)) q = altered ? null : "dom7";
+  else if (iv.has(4) && iv.has(11)) q = "maj7";
+  else if (iv.has(3) && iv.has(10) && iv.has(7)) q = "m7";
+  else if (iv.has(3) && iv.has(7) && !iv.has(6)) q = "min";
+  else if (iv.has(4) && iv.has(7)) q = "maj";
+  if (!q) return null;              // 轉位不用管:切音本來就不彈低音,低音是貝斯的
+  const root = chord.rootPc;
+  // 不知道調(voiceKey == null)就不加九度——保守
+  const ninthOk = !altered && (iv.has(2) || (voiceKey != null &&
+                  MAJOR_SCALE.indexOf((((root + 2 - voiceKey) % 12) + 12) % 12) >= 0));
+  // ♭5 / ♯5 的和弦(沒有本位五度)不准用含本位五度的型,會跟 ♭5 / ♯5 撞半音
+  const no5 = !iv.has(7);
+  let best = null, bd = Infinity;
+  // 雜誌列在前面的是主型:每往後一型多 1.5 半音的距離,位置差不多時用主型
+  for (const [fi, form] of CHOP_FORMS[q].entries()) {
+    if (!ninthOk && form.some(x => x % 12 === 2)) continue;
+    if (no5 && form.some(x => x % 12 === 7)) continue;
+    for (let base = 36; base <= 72; base++) {
+      if ((((base - root) % 12) + 12) % 12) continue;
+      const ns = form.map(x => base + x);
+      if (ns[0] < 55 || ns[ns.length - 1] > 77) continue;
+      const d = Math.abs(ns.reduce((a, b) => a + b, 0) / ns.length - CHOP_CENTER) + fi * 1.5;
+      if (d < bd) { bd = d; best = ns; }
+    }
+  }
+  if (!best) return null;
+  best.chopForm = true;
+  return best;
 }
 
 /* ── 真的吉他手型 ──────────────────────────────────────────────
@@ -7329,14 +7438,18 @@ function shapeQuality(chord){
   if (M3) return "maj";
   return null;
 }
-function realShape(chord, closed, transpose){
+function realShape(chord, closed, transpose, hand){
   if (!chord || chord.bassPc !== chord.rootPc) return null;   // 轉位交給原本的排法
   const q = shapeQuality(chord);
   if (!q) return null;
   const pc = (((chord.rootPc + transpose) % 12) + 12) % 12;
   const cands = [];
   // bossa 用封閉和弦(空弦會一直響,那是民謠的聲音不是 bossa 的)
-  if (!closed && GTR_OPEN[pc] && GTR_OPEN[pc][q]) cands.push(GTR_OPEN[pc][q].map((f, i) => f == null ? null : GTR_OPEN_STR[i] + f));
+  if (!closed && GTR_OPEN[pc] && GTR_OPEN[pc][q]) {
+    const o = GTR_OPEN[pc][q].map((f, i) => f == null ? null : GTR_OPEN_STR[i] + f);
+    o.fret = 0;
+    cands.push(o);
+  }
   for (const [shape, rootStr] of [[GTR_E_SHAPE, 0], [GTR_A_SHAPE, 1]]) {
     if (!shape[q]) continue;
     let fret = (((pc - GTR_OPEN_STR[rootStr]) % 12) + 12) % 12;
@@ -7347,15 +7460,26 @@ function realShape(chord, closed, transpose){
     /* bossa 是**拇指一條 + 三根手指三條**:低音在根音那條弦,手指在 D、G、B 三條弦上。
        六條全撥是刷弦的聲音,不是尼龍弦的 bossa */
     if (closed) fr = fr.map((n, i) => i === rootStr || (i >= 2 && i <= 4) ? n : null);
+    fr.fret = fret;
     cands.push(fr);
   }
   if (!cands.length) return null;
-  // 有開放和弦就用它(刷弦的聲音就是空弦);沒有就挑把位最低的封閉和弦
+  /* 有開放和弦就用它(刷弦的聲音就是空弦);沒有就挑**把位(格數)最低**的封閉和弦。
+     原本比「最低音誰低」:Bm7 的 E 型(第 7 格)跟 A 型(第 2 格)最低音都是 B2,平手挑到 E 型六弦——
+     Steven:「Bm7 通常刷五弦封閉和弦,B-F#-A-D-F#」。吉他手選的是手在哪一格,不是最低音。
+     **知道左手在哪(`hand`)時挑移動最少的**:Bm7 → Em7 → A7 在第 7 格附近就彈 E 型 / A 型輪流,
+     不會 2 格、7 格、5 格跳來跳去。開放和弦只有手在第 4 格以內才算「近」(不然要整隻手滑回琴頭);
+     一樣近時挑開放的,再來挑格數低的。
+     bossa(`closed`)維持原本的「最低音最低」:它要的是 7x777x 那種六弦根音的殼型 */
   const low = c => Math.min(...c.filter(x => x != null));
   const hasOpen = !closed && GTR_OPEN[pc] && GTR_OPEN[pc][q];
-  const pick = hasOpen ? cands[0] : cands.slice().sort((a, b) => low(a) - low(b))[0];
-  const notes = pick.filter(x => x != null);
-  return notes.map(n => n - transpose);
+  const dist = c => c.fret === 0 ? (hand <= 4 ? 0 : hand) : Math.abs(c.fret - hand);
+  const pick = closed ? cands.slice().sort((a, b) => low(a) - low(b))[0]
+             : hand == null ? (hasOpen ? cands[0] : cands.slice().sort((a, b) => a.fret - b.fret)[0])
+             : cands.slice().sort((a, b) => dist(a) - dist(b) || a.fret - b.fret)[0];
+  const notes = pick.filter(x => x != null).map(n => n - transpose);
+  notes.fret = pick.fret;
+  return notes;
 }
 
 /* 刷弦:一顆一顆錯開 9–15 毫秒。**同時響**的話那不是刷弦是鍵盤,
@@ -7626,7 +7750,8 @@ function scheduleGuitar2(spans, barStartBeat, b, transpose, absBar){
     } else if (mode === 2) {
       const top = notes[notes.length - 1];
       pluck(top + transpose, t0, gl * 0.75, tone, ring, 0, 1);
-      pluck(top + 12 + transpose, t0 + 0.004, gl * 0.75, tone, ring, 1, 1);
+      // 高八度超過 83(Hofner 取樣上限)就改低八度:chopForms 的頂音常在 72–77
+      pluck((top + 12 + transpose > 83 ? top - 12 : top + 12) + transpose, t0 + 0.004, gl * 0.75, tone, ring, 1, 1);
     } else {
       pluck(notes[pick] + (spec.oct == null ? 12 : spec.oct) + transpose, t0, gl, tone, ring, pick, 1);
     }
@@ -7789,14 +7914,33 @@ function scheduleGuitar(spans, barStartBeat, b, transpose, absBar, isFill){
       if (inHole(gHole, idx)) continue;
       const sp = spanAt(spans, idx);
       if (!sp || !sp.v) continue;
+      /* `parts.chopAcc`(沒寫 = 1,零差異):拍點上那一下(下刷)的重音倍數。
+         (vary.py 的「正拍 ÷ 反拍」數字未驗證、已降級,不當依據) */
+      const acc = idx % div === 0 ? (f.parts.chopAcc || 1) : 1;
       strum(guitarNotesFor(sp.chord, "chop"), slotTime(barStartBeat, idx),
-            base * (hash01(absBar, 122 + idx) < 0.3 ? 0.72 : 1),
+            base * acc * (hash01(absBar, 122 + idx) < 0.3 ? 0.72 : 1),
             tone, idx % 4 !== 0, 0.006, f.parts.chopLen || 0.09, transpose);
     }
     /* **悶音刮弦**(`parts.chopGhost`,沒寫就沒有):真的切音吉他手的右手一直在走十六分,
        沒按和弦的那幾下是左手鬆開、刷在悶住的弦上的「chk」。參考曲的「其他」軌
        在 e / a 上的出現率 0.27 / 0.36,我們原本只有 0.05 / 0.09——右手是停的。
        同一顆和弦的音、悶到 35ms、力度三成,所以不會多出任何音高,只多了「手在動」 */
+    /* `parts.chopBrush`(沒寫就照舊):**右手一直在走十六分**。教學的說法是「右手只做十六分上下刷,
+       要響的地方抓住弦,其他地方刷悶音(brushing)」——所以不出聲的格子**全部**補一下悶音,
+       不是只有 e / a、也不是看機率。力度就是 `chopBrush`(× base),下刷(拍點、&)比上刷重一點 */
+    const brush = f.parts.chopBrush;
+    if (brush && st !== "pad" && div === 4) {
+      for (let k = 0; k < div; k++) {
+        const idx = b * div + k;
+        // 樂句的洞只停「按響的和弦」,右手照刷(Steven 盲聽:整個停掉「有特別停頓,感覺有點刻意」)
+        if (cell.indexOf(idx) >= 0 && !inHole(gHole, idx)) continue;
+        const sp = spanAt(spans, idx);
+        if (!sp || !sp.v) continue;
+        strum(guitarNotesFor(sp.chord, "chop"), slotTime(barStartBeat, idx),
+              base * brush * (k % 2 === 0 ? 1 : 0.8), tone, k % 2 === 1, 0.004, 0.035, transpose);
+      }
+      return;
+    }
     const gp = f.parts.chopGhost;
     if (gp && st !== "pad" && div === 4) {
       for (let k = 1; k < div; k += 2) {
@@ -7815,7 +7959,7 @@ function scheduleGuitar(spans, barStartBeat, b, transpose, absBar, isFill){
   /* 刷弦:流行歌的木吉他。下刷在正拍、上刷在反拍,
      上刷只掃上面幾條弦——那是真的手會做的事 */
   if (kind === "strum") {
-    const notes = guitarNotesFor(here.chord, "strum", transpose);
+    const notes = strumNotes(here, transpose);
     /* 墊底就是一小節刷一下、讓它整個響完;**打點走真的刷法**;
        推進才走滿八分(下上下上)。**墊底不要上刷**——
        上刷是「回來的那一下」,一小節只有一下的時候沒有那個動作。
@@ -7847,7 +7991,7 @@ function scheduleGuitar(spans, barStartBeat, b, transpose, absBar, isFill){
       if (!isDown && !isUp) continue;
       const sp = spanAt(spans, idx);
       if (!sp || !sp.v) continue;
-      const use = sp === here ? notes : guitarNotesFor(sp.chord, "strum", transpose);
+      const use = sp === here ? notes : strumNotes(sp, transpose);
       strum(isUp ? use.slice(-3) : use, slotTime(barStartBeat, idx),
             base * (idx === 0 ? 1.1 : 0.85), tone, isUp, 0.012,
             capRing(sp, idx, isUp ? spb * 0.5 : ring), transpose);
@@ -7950,7 +8094,8 @@ function prewarmGuitar(){
       if (!sp || !sp.v) continue;
       /* 手型是照「移調後真的在響的根音」挑的,所以要把 transposeOn 傳進去,
          不然預先載的那幾顆跟真的彈到的對不上 */
-      for (const n of guitarNotesFor(sp.chord, f.parts.guitar, transposeOn)) {
+      const gn = guitarNotesFor(sp.chord, f.parts.guitar, transposeOn);
+      for (const n of gn) {
         want.add(n + transposeOn);
         // bossa 的拇指第二下換到五度(見 scheduleGuitar),那一顆也要先載
         if (f.parts.guitar === "bossa") { const fv = chordFifth(sp.chord); want.add((n + fv > 52 ? n + fv - 12 : n + fv) + transposeOn); }
@@ -7961,7 +8106,25 @@ function prewarmGuitar(){
          之下排程一跳從 40ms 衝到 84ms,而它一小節只彈四顆。
          這正是這一節第一條規則說的事,自己又踩了一次 */
       if (f.parts.guitar2)
-        for (const n of guitarNotesFor(sp.chord, "chop")) want.add(n + 12 + transposeOn);
+        for (const n of guitarNotesFor(sp.chord, "chop")) {
+          // 八度奏法超過 Hofner 上限 83(算進移調)時改彈低八度;預載跟著同一條件
+          want.add((n + 12 + transposeOn > 83 ? n - 12 : n + 12) + transposeOn);
+        }
+    }
+  }
+  /* 刷弦的左手位置(`strumNotes`)跨圈會接著走:第二圈第一顆和弦是從上一圈最後一顆的位置挑的,
+     所以**照播放順序走好幾圈**,直到「一圈開始時手的位置」重複出現(最多 4 圈),每一圈挑到的手型都先載 */
+  if (f.parts.guitar === "strum") {
+    let hand = null;
+    const seen = new Set();
+    for (let lap = 0; lap < 4 && !seen.has(hand); lap++) {
+      seen.add(hand);
+      for (const spans of (voicings || [])) for (const sp of (spans || [])) {
+        if (!sp || !sp.v) continue;
+        const raw = guitarNotesRaw(sp.chord, "strum", transposeOn, hand);
+        if (raw.fret != null) hand = raw.fret;
+        for (const n of fixTop(sp.chord, raw)) want.add(n + transposeOn);
+      }
     }
   }
   /* **先把真的取樣抓完,再決定哪幾顆需要 KS**。

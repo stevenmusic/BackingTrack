@@ -7347,13 +7347,18 @@ function realShape(chord, closed, transpose){
     /* bossa 是**拇指一條 + 三根手指三條**:低音在根音那條弦,手指在 D、G、B 三條弦上。
        六條全撥是刷弦的聲音,不是尼龍弦的 bossa */
     if (closed) fr = fr.map((n, i) => i === rootStr || (i >= 2 && i <= 4) ? n : null);
+    fr.fret = fret;
     cands.push(fr);
   }
   if (!cands.length) return null;
-  // 有開放和弦就用它(刷弦的聲音就是空弦);沒有就挑把位最低的封閉和弦
+  /* 有開放和弦就用它(刷弦的聲音就是空弦);沒有就挑**把位(格數)最低**的封閉和弦。
+     原本比「最低音誰低」:Bm7 的 E 型(第 7 格)跟 A 型(第 2 格)最低音都是 B2,平手挑到 E 型六弦——
+     Steven:「Bm7 通常刷五弦封閉和弦,B-F#-A-D-F#」。吉他手選的是手在哪一格,不是最低音。
+     bossa(`closed`)維持原本的「最低音最低」:它要的是 7x777x 那種六弦根音的殼型 */
   const low = c => Math.min(...c.filter(x => x != null));
   const hasOpen = !closed && GTR_OPEN[pc] && GTR_OPEN[pc][q];
-  const pick = hasOpen ? cands[0] : cands.slice().sort((a, b) => low(a) - low(b))[0];
+  const pick = hasOpen ? cands[0]
+             : cands.slice().sort(closed ? (a, b) => low(a) - low(b) : (a, b) => a.fret - b.fret)[0];
   const notes = pick.filter(x => x != null);
   return notes.map(n => n - transpose);
 }

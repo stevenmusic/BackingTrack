@@ -98,7 +98,7 @@ def main():
         dirs = sorted(glob.glob(f'/tmp/sty/sep_{g}/htdemucs_6s/*/'))
         groups[g] = {os.path.basename(d.rstrip('/')): feats(d) for d in dirs}
         print(g, len(dirs), '段', flush=True)
-    json.dump(groups, open(os.path.join(H, 'db', 'style.json'), 'w'), ensure_ascii=False, indent=1)
+    json.dump(groups, open(os.path.join(H, 'db', 'style.json'), 'w'), ensure_ascii=False, indent=1, default=float)
     keys = sorted({k for g in groups.values() for f in g.values() for k in f})
     rows = []
     for k in keys:

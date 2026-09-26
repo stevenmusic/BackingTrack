@@ -2144,14 +2144,16 @@ function colorQual(chord){
   const iv = chord.intervals.map(x => x % 12);
   const has = (x) => iv.indexOf(x) >= 0;
   if (has(3) && has(6)) return null;
+  /* 帶變化音的屬七(♭9 / ♯9 / ♭13;♯9 取 12 的餘數跟小三度同一個音級)不加:
+     不然 ♮9 跟 ♯9、13 跟 ♭13 會擠在一起(第四輪審查建議 1)。要先判,不然 7♯9 會被當成 m7 */
+  if (has(4) && has(10) && chord.intervals.some(x => x === 13 || x === 15 || x === 20 || x === 1 || x === 8)) return null;
   if (has(4) && has(11)) return "maj7";
   if (has(3) && has(10)) return "m7";
   if (has(4) && has(10)) return "7";
   return null;
 }
 function addColor(chord, pcs){
-  const f = typeof feel === "function" ? feel() : null;
-  const col = f && f.color;
+  const col = feel().color;
   const q = col && colorQual(chord);
   if (!q || !col[q]) return pcs;
   const out = pcs.slice();
@@ -2689,7 +2691,8 @@ function buildLap(lap){
    下一小節的第一顆要接上一小節的最後一顆 */
 function buildVoicings(bars){
   const out = [];
-  voiceKey = (typeof feel === "function" && feel().color) ? keyOf(bars) : null;
+  /* 用**原譜**判調,不用這一圈換過代理和弦的 bars:不然色彩音會一圈有一圈沒有(第四輪審查建議 2) */
+  voiceKey = feel().color ? keyOf(parsed && parsed.bars && parsed.bars.length ? parsed.bars : bars) : null;
   let prev = null;
   for (const b of bars) {
     const spans = spansOf(b);

@@ -16,8 +16,11 @@ for g in ('real', 'realmix', 'suno', 'ours'):
             rms = librosa.feature.rms(y=y, hop_length=hop)[0]; thr = rms.max() * 10 ** (-30 / 20)
             allm.append(c.mean()); act.append(np.median(c[rms > thr]))
         out[(g, s)] = (allm, act)
+rng = np.random.default_rng(0)
 for s in ('guitar', 'piano', 'other'):
-    print(s)
+    ref = np.array(out[('real', s)][1] + out[('realmix', s)][1] + out[('suno', s)][1]); ours = np.array(out[('ours', s)][1])
+    bs = [rng.choice(ours, len(ours)).mean() - rng.choice(ref, len(ref)).mean() for _ in range(2000)]
+    print(s, f'我們 − 參考(真歌 26 + Suno)有聲中位 {ours.mean() - ref.mean():+.0f}Hz [95% {np.percentile(bs, 2.5):+.0f}, {np.percentile(bs, 97.5):+.0f}]  n={len(ref)}/{len(ours)}')
     for g in ('real', 'realmix', 'suno', 'ours'):
         a, b = out[(g, s)]
         print(f'  {g:8s} n={len(a):2d}  全部平均 {np.mean(a):6.0f}  有聲中位 {np.mean(b):6.0f}  (有聲中位的四分位 {np.percentile(b,25):.0f}–{np.percentile(b,75):.0f})')

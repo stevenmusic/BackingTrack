@@ -6894,7 +6894,7 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord, span){
       const bmax = feel().bassMaxBeat, cap = bmax ? bmax * div : Infinity;
       const len = oct ? Math.min(gap, 1.2) * 0.7 : Math.min(gap * 0.92, cap);
       playBassNote(bassMidiFor(pc) + (oct ? 12 : 0), slotTime(barStartBeat, idx), slotDur() * len,
-                   humanize(absBar, 70 + idx, idx === 0 ? 0.5 : oct ? 0.34 : 0.38));
+                   humanize(absBar, 70 + idx, idx === 0 ? 0.5 : oct ? 0.34 : onBeat && feel().bassBeatVel ? feel().bassBeatVel : 0.38));
       /* **幽靈音**:切分那一顆前面一格偶爾先悶悶地碰一下(左手悶住的「嘟」)。
          力度很低,`playBassNote` 的力度濾波會自己把它壓暗,聽起來是手指不是音 */
       if (!onBeat && idx > 0 && cell.indexOf(idx - 1) < 0 && hash01(absBar * 16 + idx, 192) < 0.35) {
@@ -7819,8 +7819,11 @@ function scheduleGuitar(spans, barStartBeat, b, transpose, absBar, isFill){
       if (inHole(gHole, idx)) continue;
       const sp = spanAt(spans, idx);
       if (!sp || !sp.v) continue;
+      /* `parts.chopAcc`(沒寫 = 1,零差異):拍點上那一下(下刷)的重音倍數。
+         vary.py 量到我們的吉他「正拍 ÷ 反拍」0.48,真歌 0.78 / Suno 0.70 */
+      const acc = idx % div === 0 ? (f.parts.chopAcc || 1) : 1;
       strum(guitarNotesFor(sp.chord, "chop"), slotTime(barStartBeat, idx),
-            base * (hash01(absBar, 122 + idx) < 0.3 ? 0.72 : 1),
+            base * acc * (hash01(absBar, 122 + idx) < 0.3 ? 0.72 : 1),
             tone, idx % 4 !== 0, 0.006, f.parts.chopLen || 0.09, transpose);
     }
     /* **悶音刮弦**(`parts.chopGhost`,沒寫就沒有):真的切音吉他手的右手一直在走十六分,

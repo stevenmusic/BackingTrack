@@ -8,10 +8,11 @@ import sys, glob, os, numpy as np, soundfile as sf, librosa, scipy.signal as ss
 src, sep, out = sys.argv[1:4]
 os.makedirs(out, exist_ok=True)
 SCALE = [0, 2, 4, 5, 7, 9, 11]   # C 大調 / A 小調:我們的段落庫全部在這個調(CLAUDE.md「段落庫」),測試片段也是
-# 判和弦的正規化(÷ √音數)跟 style.py 一樣
+# 判和弦用「÷ 音數」,跟 style.py 的「÷ √音數」不一樣(第一輪審查建議 6)。刻意不改:REVIEW.md B1 的數字是用這一版產生的,
+# 改了就重現不了。這裡只用來決定旋律落哪個音,不影響量測本身
 TEMPL = {'maj': (0, 4, 7), 'min': (0, 3, 7), 'maj7': (0, 4, 7, 11), 'm7': (0, 3, 7, 10), '7': (0, 4, 7, 10), 'm7b5': (0, 3, 6, 10)}
 def chord_at(c):
-    best = max(((sum(c[(r + i) % 12] for i in iv) / len(iv) ** 0.5, r, iv) for r in range(12) for iv in TEMPL.values()))
+    best = max(((sum(c[(r + i) % 12] for i in iv) / len(iv), r, iv) for r in range(12) for iv in TEMPL.values()))
     return best[1], best[2]
 rng = np.random.default_rng(7)
 for f in sorted(glob.glob(os.path.join(src, '*.wav'))):

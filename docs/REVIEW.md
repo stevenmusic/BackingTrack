@@ -288,4 +288,7 @@ n:真歌 26、Suno 16、我們 12;吉他類 24 / 11 / 12;piano 亮度 15 / 11 / 
   main 上一樣,重現:`node tools/realism/harmony.mjs citypop "<進行>" 40 pad 4/4`)。
   門檻放寬到 max(0.1 拍, 75ms)**只給鋪底疏密的鋼琴**;其他層維持 0.1 拍(審查建議 1:240 BPM 的十六分只有 62ms,放寬會把違規藏起來)
 - 改前 / 改後音檔:`tools/realism/cases_g7alt.json`(`g7alt_before` = f561698、`g7alt_after` = 這次),需 Steven 聽過
+  - 錄音:`REALISM_SECS=30 REALISM_OUT=/tmp/sty/g7 node tools/realism/render.mjs tools/realism/cases_g7alt.json`,兩段 peak 0.85、RMS −13
+  - 盲聽檔 `cp_g7alt_A.mp3` / `cp_g7alt_B.mp3`(RMS 對齊 0.00dB,A / B 由 `sha1("g7alt")` 決定,對照表 `/tmp/sty/g7/_key.json` 不給 Steven 看)
+- 83 組段落 `allharm.sh`(最終版程式):旋律上的和弦外音全部 0,沒有任何層下數 0
 

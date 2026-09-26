@@ -217,3 +217,32 @@ n:真歌 26、Suno 16、我們 12;吉他類 24 / 11 / 12;piano 亮度 15 / 11 / 
 1. **和聲延伸音**:最站得住(z −2.77,不靠合併也穩定)
 2. **other 亮度**(鋪底、銅管):兩種算法都成立,不靠合併也穩定;注意以前被說「太尖銳」
 3. 貝斯密度:趨勢,排最後
+
+---
+
+## 第四輪(2026-09-26):City Pop A/B(B4)
+
+`tools/realism/cases_ab.json`(4 組 City Pop 進行 × comp、30 秒、全部 `orchFix 2`,每個版本只改一件事),
+`render.mjs` → htdemucs_6s → `ab_make.py measure`(結果 `db/ab_citypop.json`,n = 4 段 / 版本)
+
+| 版本 | 改了什麼(`ovr`,預設都沒開) | 和聲7.延伸音 | other 有聲亮度 |
+| --- | --- | --- | --- |
+| base | — | 0.154 | 1315Hz |
+| ext | `color: { maj7:[14], m7:[14], "7":[21] }` | 0.173 | 1388 |
+| **ext2** | `color: { maj7:[14], m7:[14,17], "7":[14,21] }` | **0.183** | 1448 |
+| bright | `mix.padLp` 3000 → 7000 | 0.154 | 1367(幾乎沒動:鋪底自己的音色就暗) |
+| **bright2** | 鋪底自己的低通 `parts.padLegato.lp` 2400 → 5500、銅管穩態 `parts.brass.rest` 4.2 → 7(上限 6000)、`mix.padLp` 8000 | 0.153 | **2033** |
+| 目標 | | 真歌 0.184 / Suno 0.182 | 上傳真歌 2223 / Suno 2306;上限 2367(上傳真歌中位) |
+
+- 兩項各自只動到自己的特徵(ext2 的亮度 +133Hz 是多出來的音,bright2 的延伸音不變)
+- **樣本只有每版 4 段,是方向確認不是結論**;要不要改預設由 Steven 盲聽決定(第 8 條)
+- 響度:20 段全部 peak 0.85、RMS −12.98～−13.18(目標帶內),零削波
+- 旋律:ext2 + bright2 一起開,4 組進行 `harmony.mjs` 的「旋律上的和弦外音」都是 0,下數不是 0
+- 新的程式碼(`index.html`)都是**預設不開**的欄位:`FEELS[x].color`、`parts.padLegato.lp`、`parts.brass.rest / restMax`;
+  沒寫的曲風零差異(Pop 量過 tension 0、下數不變)
+
+### 盲聽檔(`ab_make.py blind`,音檔不進 repo)
+每一對只差一件事,RMS 對齊到 0.00dB,A / B 誰是改後由固定種子決定,對照表在 `/tmp/sty/blind/_key.json`(不給 Steven 看):
+- 和聲延伸音:`cp_ext2_A_marusa.wav` / `cp_ext2_B_marusa.wav`、`…_ohdo8`、`…_fedg`、`…_iivi`
+- other 亮度:`cp_bright2_A_marusa.wav` / `cp_bright2_B_marusa.wav`、`…_ohdo8`、`…_fedg`、`…_iivi`
+- **注意(第三輪建議 6)**:鋪底與銅管以前被 Steven 說過「太尖銳、太突出」,bright2 要特別聽這一點

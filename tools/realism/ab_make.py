@@ -46,7 +46,7 @@ def blind():
     out = '/tmp/sty/blind'; os.makedirs(out, exist_ok=True)
     wav = {lab[r['id']]: os.path.join(AB, 'clips', r['id'] + '.wav') for r in rows if r['id'] in lab}
     key = {}
-    for item in ('ext', 'bright'):
+    for item in ('ext2', 'bright2'):
         for p, s in SHORT.items():
             a, b = wav.get(('base', p)), wav.get((item, p))
             if not a or not b: continue

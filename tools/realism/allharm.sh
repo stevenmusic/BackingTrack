@@ -1,4 +1,13 @@
 cd /home/user/BackingTrack/tools/realism
+# 段落庫全部的進行:照 index.html 的 SECTIONS 產生 /tmp/allprog.json([曲風, 進行, 拍號])
+python3 -c "
+import re, json
+src = open('../../index.html').read()
+body = src[src.index('const SECTIONS = ['):]
+body = body[:body.index('\n];')]
+out = [[m.group(2), m.group(1), m.group(3)] for m in re.finditer(r'text:\s*\"([^\"]+)\",\s*feel:\s*\"(\w+)\",\s*meter:\s*\"([^\"]+)\"', body)]
+json.dump(out, open('/tmp/allprog.json', 'w'), ensure_ascii=False)
+print(len(out), '組')"
 python3 -c "
 import json
 S=['comp','drive','pad']

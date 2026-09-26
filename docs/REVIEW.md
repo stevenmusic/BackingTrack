@@ -291,4 +291,11 @@ n:真歌 26、Suno 16、我們 12;吉他類 24 / 11 / 12;piano 亮度 15 / 11 / 
   - 錄音:`REALISM_SECS=30 REALISM_OUT=/tmp/sty/g7 node tools/realism/render.mjs tools/realism/cases_g7alt.json`,兩段 peak 0.85、RMS −13
   - 盲聽檔 `cp_g7alt_A.mp3` / `cp_g7alt_B.mp3`(RMS 對齊 0.00dB,A / B 由 `sha1("g7alt")` 決定,對照表 `/tmp/sty/g7/_key.json` 不給 Steven 看)
 - 83 組段落 `allharm.sh`(最終版程式):旋律上的和弦外音全部 0,沒有任何層下數 0
-
+- 第 2 輪審查:沒有阻擋。建議的處理:
+  - 建議 1:「頂上放不下」那條只拿掉最上面一顆,夾在中間的不合規音會變成頂音 → 改成比 `down` 高的一起拿掉。
+    人造輸入(每種 QUALITY 的 C 根音、57–80 三顆全不合規,94964 組)修後頂音全部合規;真實 8040 組跟上一版結果相同(這條分支真實輸入走不到,錄音不受影響)
+  - 建議 2:兩處註解改成跟行為一致(補的是全部骨架音、全部不合規時會多一顆)
+  - 建議 3:`harmony.mjs` 的 `mix` 也放寬,但夾在半格以下(`0.5 / divNow()` 拍),十六分不會被併。
+    citypop mix「Fmaj7 - Em7 - E7 - Am7」「Dm7 - Dm7 - G7 - G7」40 秒:違規 0,下數 keys 67
+  - 建議 4:`allharm.sh` 自己從 `index.html` 的 `SECTIONS` 產生 `/tmp/allprog.json`(83 組,跟先前手動產生的逐位元組相同)
+  - 建議 5:`effort:` 是 Claude Code 子代理定義的有效欄位(CLI 的 schema:low / medium / high / xhigh / max)

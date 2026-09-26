@@ -2125,8 +2125,8 @@ function fixTop(chord, notes){
   let out = notes.slice().sort((a, b) => a - b);
   /* 全部都不合規(切音不彈根音、7alt 沒有五音,剩下的全是變化音與七音):
      底下的迴圈只會把音一顆一顆往下搬好幾個八度、掉進貝斯音域,所以**不進迴圈**,
-     在原來的高度補一顆最近的骨架音(根音或三度),只差半音就直接換掉頂音;
-     頂上放不下(> 78)就把頂音換成它下面最近的骨架音 */
+     在原來的高度補一顆最近的骨架音(根、三、五、六、七,屬七的七音除外),只差半音就直接換掉頂音;
+     頂上放不下(> 78)就把頂音換成它下面最近的骨架音,比它高的一起拿掉 */
   if (!out.some(n => melodyOk(chord, n))) {
     const top = out[out.length - 1];
     const pcs = [0].concat(chord.intervals.filter(x => x < 12)).map(x => (chord.rootPc + x) % 12)
@@ -2137,8 +2137,8 @@ function fixTop(chord, notes){
     else if (up <= 78) { out[out.length - 1] = up; }          // 只差半音:換掉頂音,不在最上面疊小二度
     else {
       const down = Math.max(...pcs.map(pc => top - 1 - ((((top - 1 - pc) % 12) + 12) % 12)));
-      out = out.slice(0, -1);
-      if (out.indexOf(down) < 0) out.push(down);
+      out = out.filter(n => n < down);                         // 比它高的(都不合規)一起拿掉
+      out.push(down);
       out.sort((a, b) => a - b);
     }
     return out;
@@ -7280,7 +7280,8 @@ function guitarShape(kind){
 /* 吉他的頂音一樣要守「旋律只准用和弦音」(`fixTop`):量到 City Pop 過門小節的 C7
    有四分之一的切音頂音是 B♭,被指出「聽起來很不和諧」。
    四條弦以上就不彈最上面那條(少刷一條弦是真的吉他手會做的事);
-   三條弦的切音把它移到下面(C7:E G B♭ → B♭ E G),顆數不變 */
+   三條弦的切音把它移到下面(C7:E G B♭ → B♭ E G),顆數不變;
+   三顆全都不合規(G7alt 之類)時不往下搬,在頂上多補一顆骨架音(見 `fixTop`) */
 function guitarNotesFor(chord, kind, transpose){
   return fixTop(chord, guitarNotesRaw(chord, kind, transpose));
 }

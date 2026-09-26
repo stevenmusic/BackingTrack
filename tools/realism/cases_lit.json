@@ -1,0 +1,278 @@
+{
+ "_note": "照文獻(docs/SOURCES.md)的三項盲聽:kb = 大鼓整段固定 + 貝斯跟大鼓(D2 / B2);gtr = ギター・マガジン指型 + 右手一直刷(G1 / G2);rhodes = 鍵盤換 Rhodes(只盲聽,jRhodes3c 非商用)",
+ "progressions": {},
+ "cases": [
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "lit_base",
+   "ovr": {},
+   "batch": "lit"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "lit_base",
+   "ovr": {},
+   "batch": "lit"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "lit_base",
+   "ovr": {},
+   "batch": "lit"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "lit_base",
+   "ovr": {},
+   "batch": "lit"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "lit_kb",
+   "ovr": {
+    "kickHold": true,
+    "bassFollowKick": {
+     "add": [
+      [
+       15
+      ],
+      [
+       7,
+       15
+      ],
+      [
+       6,
+       14
+      ],
+      [
+       11,
+       15
+      ],
+      [
+       3,
+       14
+      ]
+     ]
+    }
+   },
+   "batch": "lit"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "lit_kb",
+   "ovr": {
+    "kickHold": true,
+    "bassFollowKick": {
+     "add": [
+      [
+       15
+      ],
+      [
+       7,
+       15
+      ],
+      [
+       6,
+       14
+      ],
+      [
+       11,
+       15
+      ],
+      [
+       3,
+       14
+      ]
+     ]
+    }
+   },
+   "batch": "lit"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "lit_kb",
+   "ovr": {
+    "kickHold": true,
+    "bassFollowKick": {
+     "add": [
+      [
+       15
+      ],
+      [
+       7,
+       15
+      ],
+      [
+       6,
+       14
+      ],
+      [
+       11,
+       15
+      ],
+      [
+       3,
+       14
+      ]
+     ]
+    }
+   },
+   "batch": "lit"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "lit_kb",
+   "ovr": {
+    "kickHold": true,
+    "bassFollowKick": {
+     "add": [
+      [
+       15
+      ],
+      [
+       7,
+       15
+      ],
+      [
+       6,
+       14
+      ],
+      [
+       11,
+       15
+      ],
+      [
+       3,
+       14
+      ]
+     ]
+    }
+   },
+   "batch": "lit"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "lit_gtr",
+   "ovr": {
+    "parts": {
+     "chopForms": true,
+     "chopBrush": 0.3
+    }
+   },
+   "batch": "lit"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "lit_gtr",
+   "ovr": {
+    "parts": {
+     "chopForms": true,
+     "chopBrush": 0.3
+    }
+   },
+   "batch": "lit"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "lit_gtr",
+   "ovr": {
+    "parts": {
+     "chopForms": true,
+     "chopBrush": 0.3
+    }
+   },
+   "batch": "lit"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "lit_gtr",
+   "ovr": {
+    "parts": {
+     "chopForms": true,
+     "chopBrush": 0.3
+    }
+   },
+   "batch": "lit"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "lit_rhodes",
+   "ovr": {
+    "piano": "rhodes"
+   },
+   "batch": "lit"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "lit_rhodes",
+   "ovr": {
+    "piano": "rhodes"
+   },
+   "batch": "lit"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "lit_rhodes",
+   "ovr": {
+    "piano": "rhodes"
+   },
+   "batch": "lit"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "lit_rhodes",
+   "ovr": {
+    "piano": "rhodes"
+   },
+   "batch": "lit"
+  }
+ ]
+}

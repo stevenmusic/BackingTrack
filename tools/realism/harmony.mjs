@@ -146,7 +146,10 @@ Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 25).forEach(([k, n])
     const top = Math.max(...g.ms), pc = ((top % 12) + 12) % 12;
     const S = T[g.inst] || (T[g.inst] = { 下數: 0, 違規: 0 });
     S.下數++;
-    if (!core(c, pc)) { S.違規++; const k = `${g.inst} ${['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'][pc]} over ${c.name}`; ex[k] = (ex[k] || 0) + 1; }
+    /* HARM_GTR9=1:切音吉他照雜誌指型(`parts.chopForms`)時,**吉他的和弦**頂音可以是九度
+       (Steven 2026-09-26 同意,只放寬切音吉他;單音 = 第二把吉他照舊) */
+    const gtr9 = process.env.HARM_GTR9 && g.inst === 'gtr' && g.ms.length >= 2 && ((pc - c.root) % 12 + 12) % 12 === 2 && !c.iv.some(x => x % 12 === 1 || x % 12 === 3 && c.iv.includes(4));
+    if (!core(c, pc) && !gtr9) { S.違規++; const k = `${g.inst} ${['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'][pc]} over ${c.name}`; ex[k] = (ex[k] || 0) + 1; }
   }
   /* HARM_TOPS=1:鋼琴頂音線有多「活」——用了幾種音、多常換音、色彩音佔幾成 */
   if (process.env.HARM_TOPS) {

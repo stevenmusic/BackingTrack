@@ -49,7 +49,7 @@ await pg.evaluate(() => {
 });
 await pg.click('#playBtn');
 await pg.waitForFunction(s => typeof playing !== 'undefined' && playing && currentBeat() > 8 + s / spb, SECS, { timeout: 300000, polling: 500 });
-const H = await pg.evaluate(() => Object.assign(__H, { loopBars: voicings.length, countIn: countInBeats }));
+const H = await pg.evaluate(() => Object.assign(__H, { loopBars: voicings.length, countIn: countInBeats, spb, div: divNow() }));
 await b.close(); sv.close();
 const chords = Object.values(H.chords).flat().sort((a, b) => a.from - b.from);
 const at = beat => chords.find(c => beat >= c.from - 1e-6 && beat < c.to - 1e-6);
@@ -116,8 +116,15 @@ Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 25).forEach(([k, n])
     if (pc === c.bass) return true;
     return c.ivCore.includes(rel);
   };
-  /* 同一下的音**不是同時落下的**(和弦攤開 4–12ms、刷弦一條一條錯開),
-     所以照時間排序、間隔小於 0.1 拍的算同一下,不能用四捨五入的格子切 */
+  /* 同一下的音**不是同時落下的**(和弦攤開 4–12ms、刷弦一條一條錯開、
+     鋪底 `padVar` 1 由下往上撥開每顆晚 35–60ms),所以照時間排序、
+     間隔小於 0.1 拍的算同一下,不能用四捨五入的格子切。
+     **例外只有鋪底疏密(與含鋪底的 mix)的鋼琴**:撥開的那一下放寬到 max(0.1 拍, 75ms),不然快一點的歌會被切成好幾下、
+     底下那顆被誤當頂音。其他層不放寬——快歌的十六分(240 BPM = 62ms)會被併成一下、把違規藏起來 */
+  /* `mix` 也有鋪底小節,但同一圈裡還有 comp / drive 的十六分,所以放寬的量夾在半格以下 */
+  const gapOf = inst => inst !== 'keys' ? 0.1
+    : (style || 'comp') === 'pad' ? Math.max(0.1, 0.075 / (H.spb || 1))
+    : style === 'mix' ? Math.max(0.1, Math.min(0.075 / (H.spb || 1), 0.5 / (H.div || 2))) : 0.1;
   const groups = [];
   const byInst = {};
   for (const [inst, m, beat] of H.notes) {
@@ -129,7 +136,7 @@ Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 25).forEach(([k, n])
     const single = inst === 'arp' || inst === 'vox';
     let cur = null;
     for (const [beat, m] of arr) {
-      if (single || !cur || beat - cur.last > 0.1) { cur = { inst, beat, last: beat, ms: [] }; groups.push(cur); }
+      if (single || !cur || beat - cur.last > gapOf(inst)) { cur = { inst, beat, last: beat, ms: [] }; groups.push(cur); }
       cur.ms.push(m); cur.last = beat;
     }
   }

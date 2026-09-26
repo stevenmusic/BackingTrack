@@ -1,0 +1,8 @@
+{
+ "_note": "fixTop 修正的改前 / 改後(REVIEW.md 第六輪):City Pop comp,G7alt / 7#9 / 7b9 的進行。main(f561698)= 改前,WORKTREE = 改後",
+ "progressions": {},
+ "cases": [
+  { "version": "f561698", "feel": "citypop", "style": "comp", "prog": "Dm7 G7#9 | Cmaj7 A7b9 | Dm7 G7alt | Cmaj7", "label": "g7alt_before", "batch": "g7alt" },
+  { "version": "WORKTREE", "feel": "citypop", "style": "comp", "prog": "Dm7 G7#9 | Cmaj7 A7b9 | Dm7 G7alt | Cmaj7", "label": "g7alt_after", "batch": "g7alt" }
+ ]
+}

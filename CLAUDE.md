@@ -128,6 +128,7 @@
   SM Drums、Black And Blue Basses(`darkblack` mf)、dsmolken 低音提琴(`pizz/`)、Black And Green Guitars(Gretsch stac / Hofner ord)、
   nbrosowsky tonejs-instruments(鋼弦/尼龍/電吉他 mp3)、tidalcycles Dirt-Samples 808(WAV)。
   VCSL 是管弦打擊樂,不准拿來當爵士鼓
+- **新增音源 / 資料集只收 CC0、CC BY、MIT 這一類可商用的**,加進 `docs/LICENSES.md`;非商業授權(jRhodes3c 那種)要上架前換掉
 - 每個檔都走 `fetchDecode()` 多來源(jsDelivr → raw.githubusercontent,鋼琴多 tonejs.github.io)。新增音源照這個模式
 - 取樣表照真的檔案列,不准照公式推(Rhodes 兩層拼、吉他有洞、tonejs 的 G5 指錯檔不收);換撥弦取樣先量音頭音準(`SMP_EXT[x].tune`)與音量(`smpNorm`)
 - 合成的(刻意不換):Hammond(`PeriodicWave`)、K-Pop 的 pluck/supersaw/808 低音、City Pop 鋪底、銅管(Tone.js 管樂量過不能當 stab)。

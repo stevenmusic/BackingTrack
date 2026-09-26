@@ -7659,8 +7659,9 @@ const BRASS_SMP = {
             [65, "F3", [-1, 1], [-29.1, -28.8]]] },
 };
 /* 每顆拉到同一個音頭響度(錄音音量差到 25dB,最多放大 6 倍),再乘 `BRASS_GAIN`:
-   校到跟合成銅管**每一下的 RMS 一樣**(銅管單獨錄、總線降 20dB 不碰限幅器:
-   合成 −33.2 / −31.6、取樣未乘時 −45.9 / −45.5,差 13.3dB)——保留 Steven 調過的銅管音量(`lvl`),只換音色 */
+   校到跟合成銅管**每一下的 RMS 一樣**(`probe_brassonly.js` + `cases_bcal.json` → `hits.py`:
+   合成 −32.6 / −31.6、取樣 −33.2 / −32.4;4.6 是從第一版未乘時差約 13dB 來的,那組沒有留 case,未驗證)
+   ——保留 Steven 調過的銅管音量(`lvl`),只換音色 */
 const BRASS_TARGET = -24, BRASS_MAXNORM = 6, BRASS_GAIN = 4.6;
 const brassBufs = { tpt: new Map(), tbn: new Map() }, brassLoading = {}, brassFailed = new Set();
 /* 這一聲給誰吹:由上往下數,前兩聲小號;第三聲起在長號音域(≤ 67)就給長號 */
@@ -7719,10 +7720,11 @@ function playBrassSmp(midis, when, dur, gain, pos){
       rest.push(p.m);
       return;
     }
-    /* round robin 照絕對位置挑(`hash01`,不准亂數);同一下兩聲撞到同一顆就換另一次錄音 */
+    /* round robin 照絕對位置挑(`hash01`,不准亂數);salt 綁在**取樣**上(不是聲部序號),
+       同一下兩聲撞到同一顆時起點一樣,`used` 加 1 就一定換另一次錄音 */
     const uk = p.ins + ":" + e[0];
     const nb = bufs[1] ? 2 : 1;
-    const r = ((hash01(pos || 0, 190 + i) < 0.5 ? 0 : 1) + (used.get(uk) || 0)) % nb;
+    const r = ((hash01(pos || 0, 190 + e[0] + (p.ins === "tbn" ? 100 : 0)) < 0.5 ? 0 : 1) + (used.get(uk) || 0)) % nb;
     used.set(uk, (used.get(uk) || 0) + 1);
     const src = ctx.createBufferSource();
     src.buffer = bufs[r];

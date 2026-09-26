@@ -5850,6 +5850,10 @@ const FEELS = {
              /* `oct: 0`:第二把在切音那把的**同一個八度**彈(原本 +12)。量到吉他整軌的音域 midi 77、
                 真歌 56–68——高出來的就是這一把(midi 65–80)。八度奏法那一種本來就是八度,照舊 */
              guitar2: { lvl: 0.14, modes: 3, oct: 0 },
+             /* Sustained 時兩把吉他一小節只剩一下(切音一下、第二把一下),前後沒東西,整段最突出的就是它。
+                −6dB:Steven 2026-09-26「Synthesizer有一個東一下東一下的,那個也太大聲」
+                (錄影那段是 Sustained,銅管不吹;拆軌量到吉他軌每小節一下、比自己的中位高約 20dB) */
+             padLone: 0.5,
              brass: { lvl: 0.06, cells: [[6, 10], [10, 14], [6, 14], [10], [14], [3, 6], [11, 14]] },
              /* 鋪底 −2dB、過 3kHz 低通:盲聽 6 次寫「太尖銳、太突出、要溫暖一點、不夠後面」 */
              keys: "pad", klevel: 0.0125,   /* 0.025 → 0.0125(−6dB):Steven 2026-09-26「City pop的pad超級吵」,配器輪換同比例 */
@@ -5887,7 +5891,7 @@ const FEELS = {
        每一組是**蓋在這個曲風上的覆寫**,寫法跟 render.mjs 的 ovr 一樣 */
     orchs: [
       /* 1 銅管弦樂型(〈SPARKLE〉〈WINDY LADY〉〈Telephone Number〉〈Tokai〉):銅管每小節、鋪底亮 */
-      { name: "brass", parts: { klevel: 0.025, brass: { lvl: 0.075, every: 1 } },   // 銅管 −6dB(0.115 → 0.06、這組 0.15 → 0.075):Steven「Synthesizer有一個東一下東一下的,那個也太大聲」
+      { name: "brass", parts: { klevel: 0.025, brass: { lvl: 0.075, every: 1 } },   // 銅管約 −6dB(0.115 → 0.06 是 −5.7dB、這組 0.15 → 0.075 是 −6.0dB):Steven「Synthesizer有一個東一下東一下的,那個也太大聲」
         mix: { padLp: 5500 }, arrange: { layers: { brass: "01110111", keys: "00110111" } } },
       /* 2 合成器鋪底型(〈Midnight Joke〉〈Midnight Pretenders〉):大片合成器鋪底,銅管很少 */
       { name: "synth", parts: { klevel: 0.0375, glevel: 0.17, brass: { every: 4 } },
@@ -7720,7 +7724,8 @@ function scheduleBrass(spans, barStartBeat, b, transpose, absBar){
 function scheduleGuitar2(spans, barStartBeat, b, transpose, absBar){
   const f = feel(), p = pat(absBar), st = styleAt(absBar);
   const div = divNow(), spec = f.parts.guitar2;
-  const lvl = (spec.lvl || 0.09) * p.energy * arcGain(absBar);
+  // `parts.padLone`(沒寫 = 1):墊底時一小節只剩一下,前後沒東西擋,同樣音量會跳出來
+  const lvl = (spec.lvl || 0.09) * p.energy * arcGain(absBar) * (st === "pad" ? (f.parts.padLone || 1) : 1);
   /* **對位線條不是刷滿**:第二把吉他走八分的話一小節八顆,加上切音那把的四到六顆
      就是十四顆撥弦,CPU 降速 6× 時排程一跳從 35ms 衝到 82ms(量過)。
      真的 City Pop 的第二把是彈「線」不是「刷」——推進四顆、打點兩顆、墊底一顆,
@@ -7920,7 +7925,7 @@ function scheduleGuitar(spans, barStartBeat, b, transpose, absBar, isFill){
       if (!sp || !sp.v) continue;
       /* `parts.chopAcc`(沒寫 = 1,零差異):拍點上那一下(下刷)的重音倍數。
          (vary.py 的「正拍 ÷ 反拍」數字未驗證、已降級,不當依據) */
-      const acc = idx % div === 0 ? (f.parts.chopAcc || 1) : 1;
+      const acc = (idx % div === 0 ? (f.parts.chopAcc || 1) : 1) * (st === "pad" ? (f.parts.padLone || 1) : 1);
       strum(guitarNotesFor(sp.chord, "chop"), slotTime(barStartBeat, idx),
             base * acc * (hash01(absBar, 122 + idx) < 0.3 ? 0.72 : 1),
             tone, idx % 4 !== 0, 0.006, f.parts.chopLen || 0.09, transpose);

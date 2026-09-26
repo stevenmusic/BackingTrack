@@ -11,6 +11,7 @@ Gui et al., "Adapting Frechet Audio Distance for Generative Music Evaluation", I
 
   HF_HOME=/tmp/hf /tmp/abx/bin/python clapfad.py embed <名字> <wav 或分軌資料夾 glob>   → /tmp/clap/<名字>.npy(每 10 秒一個嵌入)
   HF_HOME=/tmp/hf /tmp/abx/bin/python clapfad.py report                               → 驗證 + 各組到真歌的距離(bootstrap)
+  CLIPS_JSONL=/tmp/abl/clips.jsonl /tmp/abx/bin/python clapfad.py ablation            → 逐層拿掉 / 加上(先 embed abl_<label> 到 /tmp/clap)
 """
 import sys, os, glob
 import numpy as np, soundfile as sf, librosa
@@ -88,22 +89,33 @@ def report():
               f'相似度 {cs.mean():.3f} [{np.percentile(cs, 10):.3f}, {np.percentile(cs, 90):.3f}]  窗數 {len(x)}')
 
 
-def ablation():
-    """每個 abl_* 版本跟**全部**真歌比 FAD;對**我們的片段**重抽 300 次給 95% 區間,並列出跟 abl_base 的配對差
-    (同一組抽到的片段編號兩邊一樣——每個版本是同一組進行 × 疏密、同樣順序)"""
+def ablation(clips_jsonl=os.environ.get('CLIPS_JSONL', '/tmp/abl/clips.jsonl')):
+    """每個 abl_* 版本跟**全部**真歌比 FAD;對**我們的片段**重抽 300 次給 95% 區間,並列出跟 abl_base 的配對差。
+    **配對**:embed 的 owner 是「排序後的檔名(片段 id)」的位置,id 是雜湊,各版本排序不同——
+    所以先用 clips.jsonl 把 owner 換成 (疏密, 進行),每一次重抽的是同一組 (疏密, 進行),各版本各自對到自己的片段。
+    檔案要照 /tmp/abl/by/<label>/<id>.wav 放(render 的 label 就是 abl_*)"""
+    import json
     real, _ = load('real')
     rng = np.random.default_rng(0)
+    rows = [json.loads(l) for l in open(clips_jsonl)]
     names = sorted(n[:-4] for n in os.listdir(OUT) if n.startswith('abl_') and n.endswith('.npy') and not n.endswith('_owner.npy'))
-    data = {n: load(n) for n in names}
-    ids = np.unique(data['abl_base'][1])
-    draws = [rng.choice(ids, len(ids)) for _ in range(300)]
+    data = {}
+    for n in names:
+        e, o = load(n)
+        ids = sorted(r['id'] for r in rows if r['label'] == n)
+        key = {i: (r['style'], r['prog']) for i, cid in enumerate(ids) for r in rows if r['id'] == cid}
+        data[n] = (e, [key[k] for k in o])
+    keys = sorted(set(data['abl_base'][1]))
+    for n in names:
+        assert sorted(set(data[n][1])) == keys, f'{n} 的片段跟 abl_base 對不上'
+    draws = [[keys[k] for k in rng.integers(0, len(keys), len(keys))] for _ in range(300)]
     def f(n, pick):
-        e, o = data[n]; return fad(real, np.concatenate([e[o == k] for k in pick]))
+        e, o = data[n]; return fad(real, np.concatenate([e[[x == k for x in o]] for k in pick]))
     base = np.array([f('abl_base', d) for d in draws])
-    print(f'全部真歌當參考;片段數 {len(ids)},重抽 300 次')
+    print(f'全部真歌當參考;片段數 {len(keys)}(疏密 × 進行),重抽 300 次,每次各版本抽同一組')
     for n in names:
         v = np.array([f(n, d) for d in draws]); dv = v - base
-        print(f'  {n:16s} FAD {f(n, ids):.4f} [{np.percentile(v, 2.5):.4f}, {np.percentile(v, 97.5):.4f}]  '
+        print(f'  {n:16s} FAD {f(n, keys):.4f} [{np.percentile(v, 2.5):.4f}, {np.percentile(v, 97.5):.4f}]  '
               f'跟原版差 {np.mean(dv):+.4f} [{np.percentile(dv, 2.5):+.4f}, {np.percentile(dv, 97.5):+.4f}]')
 
 

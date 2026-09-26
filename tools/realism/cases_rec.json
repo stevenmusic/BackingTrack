@@ -1,5 +1,5 @@
 {
- "_note": "Steven 的螢幕錄影設定(City Pop、移調 +1、110 BPM);main(網站現況)對 修改後",
+ "_note": "Steven 螢幕錄影的進行與速度(City Pop、110 BPM);錄影有移調 +1,這裡沒移調;沒設 orchFix(審查員確認錄到的是 brass 那組配器)。main(網站現況)對 這個分支",
  "progressions": {},
  "cases": [
   {
@@ -19,7 +19,7 @@
    "batch": "rec"
   },
   {
-   "version": "WORKTREE",
+   "version": "HEAD",
    "feel": "citypop",
    "style": "pad",
    "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
@@ -27,7 +27,7 @@
    "batch": "rec"
   },
   {
-   "version": "WORKTREE",
+   "version": "HEAD",
    "feel": "citypop",
    "style": "mix",
    "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",

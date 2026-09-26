@@ -9,7 +9,7 @@
 | 用在 | 來源 | 授權 | 付費 App | 出處要求 |
 | --- | --- | --- | --- | --- |
 | 鋼琴(全曲風,Funk 以外) | Salamander Grand Piano v3(Alexander Holm) | CC BY 3.0 | ✅ 可以 | 要署名 + 附授權連結 |
-| 電鋼琴(Funk) | jRhodes3c(Jeff Learman) | 散布取樣要 **CC BY-NC 4.0**;商用要另外取得授權 | ❌ **不行**(除非作者另外授權) | 署名 |
+| 電鋼琴(Funk、City Pop) | jRhodes3c(Jeff Learman) | 散布取樣要 **CC BY-NC 4.0**;商用要另外取得授權 | ❌ **不行**(除非作者另外授權) | 署名 |
 | 鼓(大部分曲風) | Virtuosity Drums(Versilian Studios × Karoryfer) | CC0 1.0 | ✅ 可以 | 不要求(建議仍署名) |
 | 鼓(City Pop 的大鼓、小鼓、hi-hat) | SM Drums(Scott McLean、Tod Stillwell、Suleiman Ali) | 作者網站聲明免費、免版稅、任何用途;**倉庫裡沒有 LICENSE 檔** | ⚠️ 大概可以,待確認 | 不明 |
 | 鼓(K-Pop 808) | tidalcycles/Dirt-Samples 的 `808*` 資料夾 | **倉庫沒有標授權**,取樣原始出處不明 | ⚠️ **不確定** | 不明 |
@@ -29,9 +29,10 @@
 
 ## 上架付費 App 之前要處理的
 
-1. **jRhodes3c 一定要換或取得授權**。它只有 Funk 用(`FEELS.funk.piano = "rhodes"`)。
-   選項:寫信給作者(LICENSE 裡的信箱)取得商用授權;或 Funk 改回 Salamander;或找 CC0 / CC BY 的電鋼琴。
-   程式本來就有「Rhodes 掛了退回平台鋼琴」的路,改一個欄位就好
+1. **jRhodes3c 一定要換或取得授權**。它是 Funk 與 City Pop 的鍵盤(`FEELS.funk.piano`、`FEELS.citypop.piano`)。
+   City Pop 依 Steven 2026-09-26 指定不回平台鋼琴,所以 City Pop 的選項只有:寫信給作者(LICENSE 裡的信箱,原文寫
+   「please contact me and I will be happy to grant a license」)取得商用授權,或換成 CC0 / CC BY 的電鋼琴;Funk 仍可改回 Salamander。
+   免費公開網站屬非商用,現在可以用(要署名)
 2. **Dirt-Samples 的 808 要換成出處清楚的 808 取樣**(或退回程式裡的 `synth808` 合成版,那是自己寫的,沒有授權問題)
 3. **尼龍弦**:到 Freesound pack 11573 的頁面確認授權(CC0 / CC BY 可以;如果是 CC BY-NC 或 Sampling+ 就要換)
 4. **SM Drums**:把作者網站上的授權聲明截圖存證,或寫信確認

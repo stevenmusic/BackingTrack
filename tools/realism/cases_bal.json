@@ -1,0 +1,196 @@
+{
+ "_note": "平衡:平台鋼琴 vs Rhodes,鍵盤單獨 / 全部(orchFix 2 讓配器不輪換)",
+ "progressions": {},
+ "cases": [
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "bal_acoustic_keys",
+   "ovr": {
+    "mix": {
+     "drumLevel": 1e-06
+    },
+    "bassGain": 1e-06,
+    "parts": {
+     "glevel": 1e-06,
+     "klevel": 1e-06,
+     "guitar2": {
+      "lvl": 1e-06
+     },
+     "brass": {
+      "lvl": 1e-06
+     },
+     "perc": {
+      "lvl": 1e-06
+     }
+    },
+    "orchFix": 2,
+    "piano": "acoustic"
+   },
+   "batch": "bal"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "bal_acoustic_keys",
+   "ovr": {
+    "mix": {
+     "drumLevel": 1e-06
+    },
+    "bassGain": 1e-06,
+    "parts": {
+     "glevel": 1e-06,
+     "klevel": 1e-06,
+     "guitar2": {
+      "lvl": 1e-06
+     },
+     "brass": {
+      "lvl": 1e-06
+     },
+     "perc": {
+      "lvl": 1e-06
+     }
+    },
+    "orchFix": 2,
+    "piano": "acoustic"
+   },
+   "batch": "bal"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "bal_acoustic_full",
+   "ovr": {
+    "orchFix": 2,
+    "piano": "acoustic"
+   },
+   "batch": "bal"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "bal_acoustic_full",
+   "ovr": {
+    "orchFix": 2,
+    "piano": "acoustic"
+   },
+   "batch": "bal"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "bal_rhodes_keys",
+   "ovr": {
+    "mix": {
+     "drumLevel": 1e-06
+    },
+    "bassGain": 1e-06,
+    "parts": {
+     "glevel": 1e-06,
+     "klevel": 1e-06,
+     "guitar2": {
+      "lvl": 1e-06
+     },
+     "brass": {
+      "lvl": 1e-06
+     },
+     "perc": {
+      "lvl": 1e-06
+     }
+    },
+    "orchFix": 2,
+    "piano": "rhodes"
+   },
+   "batch": "bal"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "bal_rhodes_keys",
+   "ovr": {
+    "mix": {
+     "drumLevel": 1e-06
+    },
+    "bassGain": 1e-06,
+    "parts": {
+     "glevel": 1e-06,
+     "klevel": 1e-06,
+     "guitar2": {
+      "lvl": 1e-06
+     },
+     "brass": {
+      "lvl": 1e-06
+     },
+     "perc": {
+      "lvl": 1e-06
+     }
+    },
+    "orchFix": 2,
+    "piano": "rhodes"
+   },
+   "batch": "bal"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "bal_rhodes_full",
+   "ovr": {
+    "orchFix": 2,
+    "piano": "rhodes"
+   },
+   "batch": "bal"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "bal_rhodes_full",
+   "ovr": {
+    "orchFix": 2,
+    "piano": "rhodes"
+   },
+   "batch": "bal"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "bal_rhodes2_full",
+   "ovr": {
+    "orchFix": 2,
+    "piano": "rhodes",
+    "_v": 2
+   },
+   "batch": "bal"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "bal_rhodes2_full",
+   "ovr": {
+    "orchFix": 2,
+    "piano": "rhodes",
+    "_v": 2
+   },
+   "batch": "bal"
+  }
+ ]
+}

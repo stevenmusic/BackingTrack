@@ -111,11 +111,11 @@ core-ms.net「シティポップ楽曲制作の完全ガイド」、tabstock.net
 | 3 | 照編曲教學:大鼓固定、吉他右手不停、吉他 1–3 弦 | 錄盲聽檔中(`cases_src.json`) |
 
 ## 2026-09-26 起:A/B 由 Claude 決定(Steven:「不要給我盲測了,交給你分析,選擇A或B」)
-判準見 `CLAUDE.md`「審查流程」的四條。第一批決定:
+判準見 `CLAUDE.md`「審查流程」的三條。第一批決定:
 | 項目 | 決定 | 理由 |
 | --- | --- | --- |
 | kb 大鼓整段固定 + 貝斯跟大鼓 | 採用 | SOURCES D2 / B2;Steven 盲聽 marusa 選改後 |
 | gtr ギター・マガジン指型 + 右手一直刷 | 採用 | SOURCES G1 / G2;「刻意停頓」已修(d314363) |
 | ext2 內聲部色彩音 | 採用 | 編曲依據:G1 City Pop 指型的招牌就是 m9 / △7 / 9 / 6(9) 這些帶延伸音的和弦(風格尺的分數不當依據,Steven:規則建立在編曲規則上) |
-| bright2 鋪底與銅管變亮 | 不採用 | 違反第 ④ 條:Steven 以前盲聽 6 次說鋪底「太尖銳、太突出」 |
-| rhodes 鍵盤換電鋼琴 | **採用(Steven 指定)**:「Rhodes要用,因為city pop應該不用平台鋼琴」。原本寫的不採用理由如下,已作廢 → | 違反第 ④ 條:City Pop 原本就是 Rhodes,照 Steven「以分數高的為主」換成平台鋼琴(95.4% vs 89.2%,Rhodes 500Hz +2.7dB、2kHz −4.9dB 太厚太悶,見 HISTORY)。Plastic Love 名單有 electric piano,但音色問題沒解決前不換回 |
+| bright2 鋪底與銅管變亮 | 不採用 | 違反第 ③ 條:Steven 以前盲聽 6 次說鋪底「太尖銳、太突出」 |
+| rhodes 鍵盤換電鋼琴 | **採用(Steven 指定)**:「Rhodes要用,因為city pop應該不用平台鋼琴」。原本寫的不採用理由如下,已作廢 → | 違反第 ③ 條:City Pop 原本就是 Rhodes,照 Steven「以分數高的為主」換成平台鋼琴(95.4% vs 89.2%,Rhodes 500Hz +2.7dB、2kHz −4.9dB 太厚太悶,見 HISTORY)。Plastic Love 名單有 electric piano,但音色問題沒解決前不換回 |

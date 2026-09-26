@@ -2762,7 +2762,7 @@ const SAMPLE_TABLE = (() => {
 })();
 
 /* ══ 電鋼琴(Rhodes)══════════════════════════════════════════
-   Funk 的鍵盤本來就不是平台鋼琴,是 Rhodes 電鋼琴(City Pop 原本也用它,照相似度換回平台鋼琴了,見 FEELS.citypop):
+   Funk 的鍵盤本來就不是平台鋼琴,是 Rhodes 電鋼琴(City Pop 也用它:Steven 2026-09-26 指定,見 FEELS.citypop):
    山下達郎、Stevie Wonder、K-Pop 的 R&B 段落都是這個聲音。
    換的是**音色**,不是聲位或節奏——`buildVoicing` 與 `schedulePiano` 完全不動。
 
@@ -5891,7 +5891,7 @@ const FEELS = {
       { name: "synth", parts: { klevel: 0.075, glevel: 0.22, brass: { every: 4 } },
         mix: { padLp: 4500 }, arrange: { layers: { keys: "01111110", brass: "00000001" } } },
       /* 3 鋼琴型(〈Plastic Love〉):鋼琴往前,其他照常 */
-      { name: "piano", mix: { keysLevel: 1.1 } },
+      { name: "piano", mix: { keysLevel: 0.7 } },     // 1.1 → 0.7:跟 keysLevel 同比例(Rhodes 大 4dB)
       /* 4 雙吉他型(〈Fantasy〉〈STAY BY ME〉):兩把吉他一直都在,鋪底淡 */
       { name: "guitars", parts: { glevel: 0.34, guitar2: { lvl: 0.24 }, klevel: 0.035 },
         arrange: { layers: { guitar2: "11111111", guitar: "11111111" } } },
@@ -6031,7 +6031,9 @@ const FEELS = {
               每一層在 250Hz 都有份(鼓、貝斯、Rhodes、鋪底都在 −18～−21),
               所以單調一層補不完,主力是母帶的參考比對 EQ(`masterMid` / `masterAir`)。
               誤差(63–8k 的 RMS)6.42 → 2.44dB,之後再調幾乎不動了 */
-           keysEq: -3, keysEqHz: 800, keysEqQ: 0.6, keysLevel: 0.55,   /* 1.3 → 0.55(−7.5dB):真歌的鋼琴是點綴,不是主角(配器輪換那節) */
+           /* keysLevel 0.55 → 0.35(−4dB)、keysEq 800 → 400Hz:鍵盤換回 Rhodes(Steven 指定)時,鍵盤單獨量比平台鋼琴大 4.1dB、
+              250–500Hz 多 1.8dB——放回原本平台鋼琴版的平衡(Steven 聽過、微調很多次的那一版),只換音色不換比例 */
+           keysEq: -3, keysEqHz: 400, keysEqQ: 0.6, keysLevel: 0.35,
            padEq: -4, padEqHz: 400,
            drumAir: 4, drumAirHz: 6000,
            gtrAir: 1.5, gtrAirHz: 3500,

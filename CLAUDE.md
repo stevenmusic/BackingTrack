@@ -25,7 +25,7 @@
 - **effort 分工**(Steven 2026-09-26 授權):審查員 `reviewer` 是 high;照指令跑量測、整理數字交給 `runner`(low);
   同一個問題審查連續兩輪都卡住,那一件改用 Fable 5.1(Agent 的 `model` 參數)。主對話的 effort 由 Steven 自己設
 - **Steven 已授權(2026-09-26):審查全部開綠燈**。審查員沒有阻擋就可以自己合併 PR
-- **不再給 Steven 盲測(2026-09-26:「不要給我盲測了,交給你分析,選擇A或B」)**。改預設由 Claude 決定,四條都要過:
+- **不再給 Steven 盲測(2026-09-26:「不要給我盲測了,交給你分析,選擇A或B」)**。改預設由 Claude 決定,三條都要過:
   ① **編曲規則有權威出處**(`docs/SOURCES.md`:樂手訪談、樂器雜誌、唱片名單)② 規則全過(旋律 0 違規、下數 ≠ 0、peak ≤ 0.85)
   ③ 不推翻 Steven 以前親耳退回的方向(`docs/HISTORY.md`)。
   **所有規則建立在編曲規則之上,不是測量分數**(Steven 2026-09-26):量尺只用來擋壞掉的東西(外音、下數 0、爆音),
@@ -188,7 +188,7 @@
 - 要再做之前先問使用者
 
 ## 驗收與量測
-- 標準答案是**使用者的盲聽**;MERT / VGGish / Audiobox 只能擋明顯壞掉的,不能宣稱「變真實」。百分比超過 100% 只代表進到真歌那一群
+- 標準是**有出處的編曲規則**;Steven 主動說不好聽的照他說的退回。MERT / VGGish / Audiobox 只能擋明顯壞掉的,不能宣稱「變真實」。百分比超過 100% 只代表進到真歌那一群
 - 雲端容器連不到 CDN:取樣用 `git clone --filter=blob:none` 拉到 `/tmp/smp/`,Playwright `page.route` 對到本機;
   不要在 blobless clone 上跑 `git ls-tree -l`。錄音從固定拍點開始(`currentBeat() >= 32`)
 - 量完刪大檔(分軌、wav),磁碟會滿;參考曲換了要刪 `/tmp/simcache.npz`;參考曲音檔一律不進 repo

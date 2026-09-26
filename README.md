@@ -31,7 +31,7 @@
 | 用在 | 音源 | 作者 | 授權 |
 | --- | --- | --- | --- |
 | 鋼琴 | [Salamander Grand Piano](https://github.com/sfzinstruments/SalamanderGrandPiano)(經 [Tone.js audio](https://github.com/Tonejs/audio) 的 mp3) | Alexander Holm | CC BY 3.0 |
-| 電鋼琴(Funk) | [jRhodes3c](https://github.com/sfzinstruments/jlearman.jRhodes3c) | Jeff Learman | 非商業 CC BY-NC(商用需另外授權) |
+| 電鋼琴(Funk、City Pop) | [jRhodes3c](https://github.com/sfzinstruments/jlearman.jRhodes3c) | Jeff Learman | 非商業 CC BY-NC(商用需另外授權) |
 | 鼓 | [Virtuosity Drums](https://github.com/sfzinstruments/virtuosity_drums) | Versilian Studios × Karoryfer Samples | CC0 |
 | 鼓(City Pop) | [SM Drums](https://github.com/sfzinstruments/SMDrums) | Scott McLean 等 | 作者聲明免費、免版稅、任何用途 |
 | 鼓(K-Pop 808) | [Dirt-Samples](https://github.com/tidalcycles/Dirt-Samples) 的 TR-808 取樣 | TidalCycles 社群 | 倉庫未標示授權 |

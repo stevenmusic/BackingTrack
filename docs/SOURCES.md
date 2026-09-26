@@ -68,3 +68,13 @@ https://bassmagazine.jp/player/interveiw-itokoki202204/
 - ギター・マガジン 2019 年 4 月號本體(62 段切音譜例)、2020 年 1 月號(山下達郎與切音)
 - ドラム・マガジン 1986 年 4 月號(青山純奏法分析)
 - 貝斯:伊藤広規的奏法解析(譜例)
+
+## 查證過、**不採用**的說法(2026-09-26,Steven 提供的整理,沒有附原文)
+| 說法 | 查證 |
+| --- | --- |
+| Phil DeGreg《Jazz Keyboard Harmony》是 Berklee 教科書、主張避開第一拍 | 書存在,出版社是 Jamey Aebersold;「避開第一拍」找不到出處 |
+| 阿姆斯特丹大學研究小鼓晚 10–20ms | 找不到。實際的研究:Danielsen et al. 2015(奧斯陸)laid-back 指示下小鼓平均晚 17.4ms(96 BPM)——一般律動研究,不是 City Pop |
+| 青山純 / 伊藤広規說「貝斯在前、小鼓在後」 | 跟 B2 原文不符(伊藤:「あんまり人の音は聴いてない」);B3 田中章弘是貝斯「あとノリ」 |
+| 數原晋在 Plastic Love「大量用 fall」 | 數原晋確實是 Plastic Love 的小號(維基百科名單,弦樂是加藤グループ);fall 的說法找不到 |
+| 柴那典《J-Pop 的歷史》 | 沒有這本書(著作:ヒットの崩壊、平成のヒット曲、ヒットの復権…) |
+| Charles Keil 1987「Participatory Discrepancies」 | 真的(Cultural Anthropology 2(3)),但沒有給毫秒數字 |

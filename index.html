@@ -2144,7 +2144,7 @@ function colorQual(chord){
   const iv = chord.intervals.map(x => x % 12);
   const has = (x) => iv.indexOf(x) >= 0;
   if (has(3) && has(6)) return null;
-  /* 帶變化音的屬七(♭9 / ♯9 / ♭13;♯9 取 12 的餘數跟小三度同一個音級)不加:
+  /* 帶變化音的屬七(♭9 / ♯9 / ♭13 / ♯5;♯9 取 12 的餘數跟小三度同一個音級)不加:
      不然 ♮9 跟 ♯9、13 跟 ♭13 會擠在一起(第四輪審查建議 1)。要先判,不然 7♯9 會被當成 m7 */
   if (has(4) && has(10) && chord.intervals.some(x => x === 13 || x === 15 || x === 20 || x === 1 || x === 8)) return null;
   if (has(4) && has(11)) return "maj7";

@@ -1,0 +1,38 @@
+{
+ "_note": "Steven 螢幕錄影的進行與速度(City Pop、110 BPM);錄影有移調 +1,這裡沒移調;沒設 orchFix(審查員確認錄到的是 brass 那組配器)。main(網站現況)對 這個分支",
+ "progressions": {},
+ "cases": [
+  {
+   "version": "e64eac9",
+   "feel": "citypop",
+   "style": "pad",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "rec_main_pad",
+   "batch": "rec"
+  },
+  {
+   "version": "e64eac9",
+   "feel": "citypop",
+   "style": "mix",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "rec_main_mix",
+   "batch": "rec"
+  },
+  {
+   "version": "0c57a7a",
+   "feel": "citypop",
+   "style": "pad",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "rec_new_pad",
+   "batch": "rec"
+  },
+  {
+   "version": "0c57a7a",
+   "feel": "citypop",
+   "style": "mix",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "rec_new_mix",
+   "batch": "rec"
+  }
+ ]
+}

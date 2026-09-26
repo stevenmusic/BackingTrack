@@ -1,0 +1,22 @@
+{
+ "_note": "錄影設定 Sustained,各 bus 單獨錄(REALISM_PROBE)",
+ "progressions": {},
+ "cases": [
+  {
+   "version": "e64eac9",
+   "feel": "citypop",
+   "style": "pad",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "rec_main_pad",
+   "batch": "rec"
+  },
+  {
+   "version": "0c57a7a",
+   "feel": "citypop",
+   "style": "pad",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "rec_new_pad",
+   "batch": "rec"
+  }
+ ]
+}

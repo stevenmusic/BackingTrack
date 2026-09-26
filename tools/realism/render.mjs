@@ -105,6 +105,8 @@ for (const cs of cfg.cases) {
   if (ovr) await pg.evaluate(([f, o]) => { const m = (t, x) => { for (const k in x) { if (x[k] && typeof x[k] === 'object' && !Array.isArray(x[k])) { t[k] = t[k] || {}; m(t[k], x[k]); } else t[k] = x[k]; } }; m(FEELS[f], JSON.parse(o)); }, [cs.feel, ovr]);
   await pg.click(`[data-feel="${cs.feel}"]`); await pg.click(`[data-style="${cs.style}"]`);
   /* REALISM_PROBE=<js 檔>:按播放之前在頁面裡跑(包函式記錄用),錄完呼叫 window.__probeReport() 印出來 */
+  // REALISM_SOLO=<bus 名>:給 probe_solo.js 用(只留那條 bus)
+  if (process.env.REALISM_SOLO) await pg.evaluate(b => { window.__soloBus = b; }, process.env.REALISM_SOLO);
   if (process.env.REALISM_PROBE) await pg.evaluate(fs.readFileSync(process.env.REALISM_PROBE, 'utf8'));
   await pg.click('#playBtn');
   await pg.waitForFunction(() => typeof playing !== 'undefined' && playing, null, { timeout: 120000 });

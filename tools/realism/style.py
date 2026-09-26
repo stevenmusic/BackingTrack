@@ -5,7 +5,7 @@
 但使用者聽起來 Suno 是好的 City Pop。風格特徵應該是**真歌與 Suno 共有**的東西。
 
 輸入:htdemucs_6s 的分軌資料夾(drums / bass / guitar / piano / other / vocals.wav)
-  /tmp/abx/bin/python style.py [組…] [--reuse]
+  /tmp/abx/bin/python style.py [組…] [--reuse] [--merge-mix]
     組 = /tmp/sty/sep_<組>/htdemucs_6s/*/,預設 real suno ours;只重算指定的組,其餘保留在 db/style.json
     --reuse:已經在 db/style.json 的組不重算(例如只加 oursmel:`style.py oursmel --reuse`)
     --merge-mix:把 realmix(真歌合集)併進真歌再排名(不改 style.json)
@@ -149,6 +149,7 @@ def main():
         rep.append({'特徵': k, 'z': round(z, 2), 'z95': [round(zlo, 2), round(zhi, 2)], '分離度': round(rs, 2),
                     '分離度95': [round(slo, 2), round(shi, 2)], '穩定': bool(st), '真歌': a, 'Suno': b, '我們': c, 'n': n})
     json.dump({'說明': '穩定 = z 的 95% 區間不跨 0,且真歌 vs Suno 分離度的區間上限 < 0.6;其餘只能算趨勢。bootstrap 2000 次,各組各自重抽',
+               '併了真歌合集': '--merge-mix' in sys.argv,
                '結果': rep}, open(os.path.join(H, 'db', 'style_report.json'), 'w'), ensure_ascii=False, indent=1, default=float)
 
 

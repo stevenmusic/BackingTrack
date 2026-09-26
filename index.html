@@ -5857,7 +5857,7 @@ const FEELS = {
              perc: { kind: "shaker", lvl: 0.16 },
              /* ギター・マガジン指型 + 右手一直刷(docs/SOURCES.md G1 / G2;2026-09-26 依四條判準採用)。
                 chopBrush 開著時 chopGhost 不作用 */
-             chopForms: true, chopBrush: 0.3,
+             /* chopForms / chopBrush 同上退回(預設不開) */
              chopGhost: 0.2,     /* 0.35 → 0.2:吉他在十六分「a」上量到 0.57 下每拍(真歌 0.22–0.46),多出來的是這一層 */
              /* 切音的長度 0.09 → 0.2 → 0.42 秒:12 首真歌的吉他一下撐 0.25–2 拍(9/12 首 ≥0.9 拍),
                 0.2 秒時量到只有 0.15 拍——只剩撥片那一聲「喀」,能量全在高頻(音域量到 midi 82,真歌 55–74) */
@@ -5909,9 +5909,8 @@ const FEELS = {
        Steven 2026-09-26 盲聽 kb marusa 選改後:「整體平衡聽起來比較舒服」 */
     /* 內聲部色彩音(ext2):風格尺延伸音 0.154 → 0.182(真歌 0.184),G1 指型本來就帶九度。
        2026-09-26 由 Claude 依四條判準採用(docs/PLAN.md) */
-    color: { maj7: [14], m7: [14, 17], "7": [14, 21] },
-    kickHold: true,
-    bassFollowKick: { add: [[15], [7, 15], [6, 14], [11, 15], [3, 14]] },
+    /* 2026-09-26 退回:color(ext2)、kickHold、bassFollowKick 一起開之後 Steven:「整體聽起來非常機械,比之前開始製作還糟」。
+       欄位留著(預設不開),要再開必須先解決「每一下都一樣」的問題(docs/REVIEW.md 第七輪) */
     topMove: 0.25,
     ghostGain: 0.13,
     hatCycle: 0.12,

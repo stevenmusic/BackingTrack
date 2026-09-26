@@ -122,7 +122,7 @@
 - 左手讓位:`lhGain()` = `FEELS[x].lh` ?? (boogie 0.38 : 0.55);三種疏密左手都要撐長
 - 吉他:Pop 刷弦用真的手型(`realShape`,照移調後的根音挑,`prewarmGuitar` 也要傳 transpose);
   封閉和弦 5 弦 / 6 弦照**左手位置**挑移動最少的(`gtrHand` / `strumNotes`,`resetLap` 歸零),`prewarmGuitar` 要照播放順序走多圈;
-  City Pop 切音照ギター・マガジン指型(`parts.chopForms`,`CHOP_FORMS`,1–3 弦)、右手一直刷悶音(`parts.chopBrush`,樂句的洞只停按響的和弦);
+  切音的ギター・マガジン指型(`parts.chopForms`)與右手一直刷(`parts.chopBrush`)**預設不開**:一起開時 Steven 說「非常機械」;
   Bossa 拇指低音 + 三弦 clave(跟 cross stick 共用 `g.clave`);切音不彈根音;每條弦差兩三音分
 - 貝斯一律待在 E1–D♯2 附近(`bassMidiFor`),移調不跟著跑;兩把琴 buffer 分開收(`bassBuffers.electric/.upright`),檔名音高寫法不同不准混用
 - 鋪底一顆和弦落一次、不跟節奏打;City Pop 用連奏鋪底(`padLegato`)。失諧至少四顆不等距,兩顆一定是固定晃動
@@ -135,8 +135,8 @@
 - 每個曲風一種打法(`GROOVES`),拍子感來源不能拿掉:Pop/Blues/Funk/City Pop 是小鼓 2、4(`f.snarePiece`);
   Bossa 是 cross stick 的 clave(兩小節一循環 3+2);Swing 是 hi-hat 踏鈸 2、4 + ride 型 `[0,2,3,4,6,7]`、小鼓 comping 平均抽、大鼓 feathering;
   **K-Pop 是 half-time,拍手只打第 3 拍,不准補 2、4**
-- City Pop:大鼓整段固定一個型、句尾才換(`kickHold`,`kickCellAt`);**貝斯的型 = 大鼓的型 + 整段固定的加音**(`bassFollowKick`);
-  hi-hat 走十六分(強弱 `hatAcc`)、open hat 在反拍且一定被下一顆 closed hat 掐掉(`chokeOhat`)、大鼓與貝斯綁同一條時間(`timing.tie`)。
+- `kickHold`(大鼓整段固定)/ `bassFollowKick`(貝斯跟大鼓)**預設不開**:照字面做成「整段一模一樣」聽起來機械(Steven 2026-09-26)。
+  City Pop:hi-hat 走十六分(強弱 `hatAcc`)、open hat 在反拍且一定被下一顆 closed hat 掐掉(`chokeOhat`)、大鼓與貝斯綁同一條時間(`timing.tie`)。
   鼓的節奏是 `GROOVES` / `KICK_CELLS` / `SNARE_CELLS` 的格子加人性化(`timing`、`pocket`)
 - 高密度的鈸靠強弱差不吵(skip note、後半拍輕),**不是把總量壓掉**;兩層平均分布的高頻不准疊(打擊小物要嘛跟 backbeat、要嘛小一個量級)
 - 過門只佔最後一拍、hi-hat 不斷、力度漸強;搖擺的過門走三連音;一格的進行沒有過門

@@ -2130,6 +2130,19 @@ function fixTop(chord, notes){
     if (out.indexOf(t) < 0) out.push(t);
     out.sort((a, b) => a - b);
   }
+  /* 全部都不合規(切音不彈根音、7alt 沒有五音,剩下的全是變化音與七音):
+     在頂上補一顆最近的骨架音(根音或三度),不然 G7alt 的切音頂音會停在 ♯9 */
+  if (out.length && !melodyOk(chord, out[out.length - 1])) {
+    const top = out[out.length - 1];
+    let best = null;
+    for (const iv of [0].concat(chord.intervals.filter(x => x < 12))) {
+      const pc = (chord.rootPc + iv) % 12;
+      if (!melodyOk(chord, pc)) continue;
+      const v = top + 1 + ((((pc - top - 1) % 12) + 12) % 12);
+      if (best == null || v < best) best = v;
+    }
+    if (best != null) out.push(best);
+  }
   return out;
 }
 /* ── 內聲部的色彩音(`FEELS[x].color`,沒寫的曲風零差異)──────────────────

@@ -121,5 +121,5 @@
 - Google Fonts,SIL Open Font License 1.1(https://openfontlicense.org)
 
 ## 工具(不隨 App 散布)
-Demucs(MIT)、Basic Pitch(Apache-2.0)、MERT、VGGish、Audiobox Aesthetics 只在 `tools/realism/` 離線分析時用,
+Demucs(MIT)、Basic Pitch(Apache-2.0)、MERT、VGGish、Audiobox Aesthetics、LAION-CLAP `larger_clap_music`(Apache-2.0)只在 `tools/realism/` 離線分析時用,
 不進 App。參考曲與 AI 曲的音檔從來不進 repo。

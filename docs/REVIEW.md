@@ -392,3 +392,20 @@ Steven 聽了之後:「整體聽起來非常機械,比之前開始製作還糟�
 - 目前版本(b38db0f)驗證:allharm 83 組全 0、無下數 0(d8e07a1 跑;b38db0f 只改 master);
   響度 16 段(`REALISM_OUT=/tmp/def5 render.mjs cases_def.json`)peak 全部 0.85:pad −14.54～−14.61、comp −13.00～−13.07、
   drive −12.34～−12.43、mix −13.07～−13.14。pad 仍略低於 −14(墊底一小節一下,本專案開始前就是 −14.2～−14.4),不硬拉
+
+### 第八輪審查第 2 輪的處理
+- 建議 1(兩組滲漏數字不一致):同樣「旋律 −3dB」,n = 12(sep_ours 對 sep_oursmel,fd8a1ca 含 pad)−1.86 [−2.19, −1.51],
+  n = 4(/tmp/solo3,只有 comp)−1.25 [−1.57, −1.06],區間不重疊——片段組不同,n = 4 的區間低估了不確定度。
+  真歌 26 首吉他佔比中位的 bootstrap 區間 [−14.33, −10.09](審查員算);在各種修正假設下,修正後的真歌中位落在 −10.2～−8.5。
+  **結論:方向(改前 −7.2 太大聲)在所有假設下成立;幅度 1.4–3dB 不確定,取約 −2.4 落在中間**
+- 建議 2 / 3:**實際量了目前版本**(3013765,`REALISM_OUT=/tmp/solo4/full render.mjs cases_solo.json` → demucs → `OURS=/tmp/solo4/sep/htdemucs_6s/*/ timbre.py compare`):
+  吉他 −9.3dB(在 −10.2～−8.5 內)、鼓亮度 603Hz、鼓 −4.2dB、貝斯 −6.0dB、鍵盤 + 鋪底 −5.8dB(不當依據)。上面表格「75ebcf1」那欄已不是現況
+- 建議 4:鼓亮度拆軌偏差 −380Hz [−386, −372](n = 4,固定、兩邊抵消);人聲滲漏讓鼓亮度掉 35–125Hz——都比差距(1439 vs 395)小一個量級
+- 建議 5 / 6:吉他寫成「約 −2.2~−2.5dB」;master 過時註解刪掉
+- 建議 7:pad 要拉回範圍的話從 pad 那一層的演奏法找,不再加 master
+- 建議 8:LICENSES.md 補 LAION-CLAP
+- 建議 9:/tmp/def5 錄音時 HEAD = b38db0f(clips.jsonl 只寫 worktree);cases_def.json 改用 `"version": "HEAD"`
+- 建議 10:【反駁】`CLAUDE.md` 第 28–32 行(「審查流程」)已經有三條判準 ①②③
+- 建議 11:/tmp/leak、/tmp/def4 大檔已刪
+- 鍵盤(Rhodes)與鋪底**沒有動**:量尺判斷不了鍵盤,不代表鍵盤沒問題;Steven 還覺得吵的話,下一個嫌疑就是鍵盤
+

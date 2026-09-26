@@ -6621,7 +6621,13 @@ function scheduleDrums(barStartBeat, b, absBar, isFill){
 
     /* 大鼓。爵士的底下一直有很輕的四分 feathering,cell 抽到的那顆才是重音;
        其餘感覺就照 cell 打 */
-    const kickCell = pickCell(cellsOf(KICK_CELLS), absBar, 101);
+    /* `f.kickHold`(沒寫 = 每小節抽,零差異):**大鼓整段固定一個型,只在句尾換**。
+       編曲教學的共識是「大鼓與小鼓固定成簡單的型,律動的波浪交給 hi-hat」;
+       每小節抽一個型的大鼓,聽起來是鼓手每小節都在換想法 */
+    const secLen = (f.arrange && f.arrange.cycle) || 8;
+    const kickCell = f.kickHold && sectionBar(absBar) !== secLen - 1
+      ? pickCell(cellsOf(KICK_CELLS), Math.floor(absBar / secLen), 101)
+      : pickCell(cellsOf(KICK_CELLS), absBar, 101);
     let kick = kickCell.indexOf(idx) >= 0;
     /* 推進的推力要照感覺與拍號換位置:流行搖滾推中間那一拍的後半、
        bossa 與 6/8 推最後一格(那是進下一小節的預備),爵士不推——
@@ -7275,7 +7281,9 @@ function padNotes(v){
 
 /* 這個曲風的吉他彈幾條弦、從哪一條起 */
 function guitarShape(kind){
-  if (kind === "chop") return { n: 3, from: 57, skipRoot: true };  // 高把位、沒有根音
+  /* 切音:高把位、沒有根音。`parts.chopFrom`(沒寫 = 57,A3):City Pop 的切音主要在 1–3 弦,
+     從 C4(60)起排才會落在那裡;57 起排大約是 2–4 弦 */
+  if (kind === "chop") return { n: 3, from: (feel().parts && feel().parts.chopFrom) || 57, skipRoot: true };
   if (kind === "four") return { n: 3, from: 40 };   // Freddie Green 的三音
   if (kind === "bossa") return { n: 4, from: 40 };  // 拇指加三指
   return { n: 5, from: 40 };                        // 刷弦
@@ -7833,6 +7841,21 @@ function scheduleGuitar(spans, barStartBeat, b, transpose, absBar, isFill){
        沒按和弦的那幾下是左手鬆開、刷在悶住的弦上的「chk」。參考曲的「其他」軌
        在 e / a 上的出現率 0.27 / 0.36,我們原本只有 0.05 / 0.09——右手是停的。
        同一顆和弦的音、悶到 35ms、力度三成,所以不會多出任何音高,只多了「手在動」 */
+    /* `parts.chopBrush`(沒寫就照舊):**右手一直在走十六分**。教學的說法是「右手只做十六分上下刷,
+       要響的地方抓住弦,其他地方刷悶音(brushing)」——所以不出聲的格子**全部**補一下悶音,
+       不是只有 e / a、也不是看機率。力度就是 `chopBrush`(× base),下刷(拍點、&)比上刷重一點 */
+    const brush = f.parts.chopBrush;
+    if (brush && st !== "pad" && div === 4) {
+      for (let k = 0; k < div; k++) {
+        const idx = b * div + k;
+        if (cell.indexOf(idx) >= 0 || inHole(gHole, idx)) continue;
+        const sp = spanAt(spans, idx);
+        if (!sp || !sp.v) continue;
+        strum(guitarNotesFor(sp.chord, "chop"), slotTime(barStartBeat, idx),
+              base * brush * (k % 2 === 0 ? 1 : 0.8), tone, k % 2 === 1, 0.004, 0.035, transpose);
+      }
+      return;
+    }
     const gp = f.parts.chopGhost;
     if (gp && st !== "pad" && div === 4) {
       for (let k = 1; k < div; k += 2) {

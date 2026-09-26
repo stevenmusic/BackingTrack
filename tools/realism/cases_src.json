@@ -1,0 +1,190 @@
+{
+ "_note": "照編曲教學的三條規則(docs/PLAN.md 第 8 節):kickHold 大鼓整段固定、chopBrush 右手一直刷、chopFrom 60 切音在 1–3 弦。每條單獨對 base",
+ "progressions": {},
+ "cases": [
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "src_base",
+   "ovr": {},
+   "batch": "src"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "src_base",
+   "ovr": {},
+   "batch": "src"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "src_base",
+   "ovr": {},
+   "batch": "src"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "src_base",
+   "ovr": {},
+   "batch": "src"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "src_kickhold",
+   "ovr": {
+    "kickHold": true
+   },
+   "batch": "src"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "src_kickhold",
+   "ovr": {
+    "kickHold": true
+   },
+   "batch": "src"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "src_kickhold",
+   "ovr": {
+    "kickHold": true
+   },
+   "batch": "src"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "src_kickhold",
+   "ovr": {
+    "kickHold": true
+   },
+   "batch": "src"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "src_brush",
+   "ovr": {
+    "parts": {
+     "chopBrush": 0.3
+    }
+   },
+   "batch": "src"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "src_brush",
+   "ovr": {
+    "parts": {
+     "chopBrush": 0.3
+    }
+   },
+   "batch": "src"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "src_brush",
+   "ovr": {
+    "parts": {
+     "chopBrush": 0.3
+    }
+   },
+   "batch": "src"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "src_brush",
+   "ovr": {
+    "parts": {
+     "chopBrush": 0.3
+    }
+   },
+   "batch": "src"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "src_high",
+   "ovr": {
+    "parts": {
+     "chopFrom": 60
+    }
+   },
+   "batch": "src"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "src_high",
+   "ovr": {
+    "parts": {
+     "chopFrom": 60
+    }
+   },
+   "batch": "src"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "src_high",
+   "ovr": {
+    "parts": {
+     "chopFrom": 60
+    }
+   },
+   "batch": "src"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Dm7 G7 | Cmaj7 Am7 | Fmaj7 | Em7",
+   "label": "src_high",
+   "ovr": {
+    "parts": {
+     "chopFrom": 60
+    }
+   },
+   "batch": "src"
+  }
+ ]
+}

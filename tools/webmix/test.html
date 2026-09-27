@@ -1,0 +1,24 @@
+<!doctype html><meta charset="utf-8"><title>webmix 自我測試</title>
+<body style="background:#111;color:#eee;font:14px system-ui">
+<p>webmix 自我測試:離線算 16 秒測試訊號,看 worklet 有沒有載到、峰值有沒有超過天花板、響度有沒有收斂到目標。</p>
+<pre id="o">跑…</pre>
+<script type="module">
+import { createWebMix } from "./webmix.js";
+const sr = 48000, secs = 16, ctx = new OfflineAudioContext(2, sr * secs, sr);
+const mix = await createWebMix(ctx, { lufs: -14, truePeak: true, monoBelow: 120,
+  multiband: { lo: [-18, 2, 0.03, 0.2], mid: [-20, 1.5, 0.02, 0.15], hi: [-24, 2, 0.005, 0.1] } });
+const d = mix.bus("drums", { hp: 45, comp: [-18, 3, 0.01, 0.12], par: [1, -30, 8], sat: 0.35, send: 0.05 });
+const buf = ctx.createBuffer(2, sr * secs, sr); let s = 7;
+for (let c = 0; c < 2; c++) { const x = buf.getChannelData(c);
+  for (let i = 0; i < x.length; i++) { const t = (i % (sr / 4)) / sr; s = (s * 1103515245 + 12345) & 0x7fffffff;
+    x[i] = Math.exp(-t * 30) * (0.5 * Math.sin(2 * Math.PI * 60 * t) + 0.3 * (s / 0x7fffffff * 2 - 1)); } }
+const src = ctx.createBufferSource(); src.buffer = buf; src.connect(d.input); src.start();
+const out = await ctx.startRendering();
+const L = out.getChannelData(0), R = out.getChannelData(1);
+let pk = 0, ms = 0; const from = sr * 8;
+for (let i = from; i < L.length; i++) { pk = Math.max(pk, Math.abs(L[i]), Math.abs(R[i])); ms += (L[i] * L[i] + R[i] * R[i]) / 2; }
+const res = { meter: mix.meter(), peak: +pk.toFixed(3), rmsDb: +(10 * Math.log10(ms / (L.length - from))).toFixed(1) };
+res.ok = res.meter.worklet && pk <= 0.851;
+document.getElementById("o").textContent = JSON.stringify(res, null, 2) + (res.ok ? "\n通過" : "\n沒通過");
+window.__res = Object.assign(res, { L: Array.from(L.subarray(from)), R: Array.from(R.subarray(from)), sr });
+</script>

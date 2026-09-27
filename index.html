@@ -2918,6 +2918,8 @@ let keysBus = null, keysEq = null, keysAir = null, keysChorus = null;
 let bassHpN = null, drumHpN = null, drumLowN = null, keysPresN = null;
 let bassEqN = null, bassCompN = null, bassMk = null, bassDry = null, bassWet = null, drumAir = null, drumMidN = null, drumRevSend = null;
 let combAir = null, combChorus = null, masterMid = null, masterAirN = null, revTone = null, drumWidth = null, padLp = null;
+/* 混音 / 母帶的其餘幾站(全部寫在 `FEELS[x].mix`,沒寫 = 透明,見 `applyMix`) */
+let keysComp = null, drumSatN = null, bassSatN = null, drumPar = null, revHpN = null, masterMB = null, masterMono = null;
 let echoBus = null, echoL = null, echoR = null;
 /* 延遲時間跟著速度走:八分與附點八分(那是最常見的一組乒乓)。
    **速度一改就要重算**,不然換速度之後延遲會跟節奏錯開 */
@@ -2993,6 +2995,11 @@ function buildImpulseResponse(seconds, decayPow){
    舊的瀏覽器沒有 AudioWorklet 就維持原本那條鏈(`fetch` 不到、`addModule` 失敗都一樣) */
 const LIMITER_SRC = `
 class LookaheadLimiter extends AudioWorkletProcessor {
+  /* \`tp\` = 1:偵測**取樣與取樣之間的真實峰值**(True Peak,ITU-R BS.1770 的做法:4× 內插)。
+     數位峰值 0.85 的兩個取樣之間,類比重建後可能衝到 0.9 以上(手機喇叭 / 藍牙轉碼時會破)。
+     這裡用 Lanczos-4(視窗 sinc,8 個取樣)在每一對取樣之間內插 3 個點(= 4× 升取樣),取最大值當那一格的峰值。
+     比真正的輸出晚 4 個取樣才看到,限幅器本來就看前 5ms(240 取樣),來得及 */
+  static get parameterDescriptors(){ return [{ name: "tp", defaultValue: 0, minValue: 0, maxValue: 1, automationRate: "k-rate" }]; }
   constructor(o){
     super();
     const p = (o && o.processorOptions) || {};
@@ -3003,15 +3010,27 @@ class LookaheadLimiter extends AudioWorkletProcessor {
     this.box = new Float32Array(this.N).fill(1); this.bi = 0; this.bsum = this.N;
     this.dl = [new Float32Array(this.N), new Float32Array(this.N)]; this.di = 0;
     this.g = 1; this.minG = 1; this.cnt = 0;
+    this.h = [new Float32Array(8), new Float32Array(8)];
+    const L = x => x === 0 ? 1 : Math.abs(x) >= 4 ? 0 : 4 * Math.sin(Math.PI * x) * Math.sin(Math.PI * x / 4) / (Math.PI * Math.PI * x * x);
+    this.w = [0.25, 0.5, 0.75].map(t => Array.from({ length: 8 }, (_, j) => L(t + 3 - j)));
   }
-  process(inputs, outputs){
+  process(inputs, outputs, params){
     const inp = inputs[0], out = outputs[0];
+    const tp = params && params.tp && params.tp[0] > 0.5;
     if (!out || !out.length) return true;
     const L = inp && inp[0], R = inp && (inp[1] || inp[0]);
     const n = out[0].length, N = this.N;
     for (let i = 0; i < n; i++) {
       const xl = L ? L[i] : 0, xr = R ? R[i] : 0;
-      const a = Math.max(Math.abs(xl), Math.abs(xr));
+      let a = Math.max(Math.abs(xl), Math.abs(xr));
+      if (tp) for (let c = 0; c < 2; c++) {
+        const h = this.h[c]; h.copyWithin(0, 1); h[7] = c ? xr : xl;
+        for (let k = 0; k < 3; k++) {
+          const w = this.w[k]; let v = 0;
+          for (let j = 0; j < 8; j++) v += w[j] * h[j];
+          if (Math.abs(v) > a) a = Math.abs(v);
+        }
+      }
       this.r[this.ri] = a > this.ceil ? this.ceil / a : 1;
       this.ri = (this.ri + 1) % (N + 1);
       let m = 1; const rr = this.r;
@@ -3032,8 +3051,224 @@ class LookaheadLimiter extends AudioWorkletProcessor {
     return true;
   }
 }
-registerProcessor("lookahead-limiter", LookaheadLimiter);`;
-let trueLimiter = null, limRed = [];
+registerProcessor("lookahead-limiter", LookaheadLimiter);
+
+/* ── 響度對齊(Loudness Normalization,ITU-R BS.1770-4 / EBU R128)──────────────
+   串流平台(Spotify / YouTube / Apple)的做法:量**整首的整合響度**(LUFS),整首乘一個固定增益到目標。
+   這裡是播放中做,照標準一步一步:
+   1. K 加權:高頻架子(+4dB,1.5k 起)→ 高通 38Hz
+   2. 400ms 一塊、每 100ms 一塊(75% 重疊),每塊算 ΣL,R 均方
+   3. 絕對門檻 −70 LUFS;相對門檻 = 過了絕對門檻的平均 −10 LU(安靜的段落不算,所以 pad 段不會被拉大)
+   4. 整合響度 = −0.691 + 10·log10(剩下那些塊的平均)
+   增益**慢慢**往 目標 − 整合響度 走(每秒最多 \`rate\` dB),量到 2 秒以上才開始動,上下限 \`maxUp\` / \`maxDown\`。
+   量的是**進來的**訊號(不是自己調過的),不會自己追自己。
+   port 收 { reset, gdb }:換歌(按播放)時清掉量過的塊,增益從 gdb 出發 */
+class LoudnessNorm extends AudioWorkletProcessor {
+  static get parameterDescriptors(){ return [
+    { name: "on", defaultValue: 0, automationRate: "k-rate" },
+    { name: "target", defaultValue: -20, automationRate: "k-rate" },
+    { name: "rate", defaultValue: 1, automationRate: "k-rate" },
+    { name: "maxUp", defaultValue: 6, automationRate: "k-rate" },
+    { name: "maxDown", defaultValue: 12, automationRate: "k-rate" }]; }
+  constructor(){
+    super();
+    const fs = sampleRate;
+    const shelf = (() => { const A = Math.pow(10, 4 / 40), w = 2 * Math.PI * 1500 / fs, cs = Math.cos(w), al = Math.sin(w) / (2 * Math.SQRT1_2), sa = 2 * Math.sqrt(A) * al;
+      const a0 = (A + 1) - (A - 1) * cs + sa;
+      return [A * ((A + 1) + (A - 1) * cs + sa) / a0, -2 * A * ((A - 1) + (A + 1) * cs) / a0, A * ((A + 1) + (A - 1) * cs - sa) / a0,
+              2 * ((A - 1) - (A + 1) * cs) / a0, ((A + 1) - (A - 1) * cs - sa) / a0]; })();
+    const hp = (() => { const w = 2 * Math.PI * 38 / fs, cs = Math.cos(w), al = Math.sin(w) / (2 * 0.5), a0 = 1 + al;
+      return [(1 + cs) / 2 / a0, -(1 + cs) / a0, (1 + cs) / 2 / a0, -2 * cs / a0, (1 - al) / a0]; })();
+    this.f = [shelf, hp];
+    this.z = [0, 1].map(() => [new Float64Array(4), new Float64Array(4)]);   // [聲道][級]:x1 x2 y1 y2
+    this.hop = Math.round(fs * 0.1); this.sub = new Float64Array(4); this.si = 0; this.acc = 0; this.n = 0;
+    this.blocks = []; this.gdb = 0; this.cnt = 0;
+    this.port.onmessage = e => { const d = e.data || {};
+      if (d.reset) { this.blocks = []; this.sub.fill(0); this.si = 0; this.acc = 0; this.n = 0; this.gdb = d.gdb || 0; } };
+  }
+  bq(c, s, x){ const b = this.f[s], z = this.z[c][s];
+    const y = b[0] * x + b[1] * z[0] + b[2] * z[1] - b[3] * z[2] - b[4] * z[3];
+    z[1] = z[0]; z[0] = x; z[3] = z[2]; z[2] = y; return y; }
+  integrated(){
+    const B = this.blocks.filter(e => e > 1.17e-7);                 // −70 LUFS
+    if (B.length < 20) return null;                                   // 量不到 2 秒不算
+    const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
+    const rel = mean(B) * 0.1;                                        // −10 LU
+    const G = B.filter(e => e > rel);
+    return G.length ? -0.691 + 10 * Math.log10(mean(G)) : null;
+  }
+  process(inputs, outputs, P){
+    const inp = inputs[0], out = outputs[0];
+    if (!out || !out.length) return true;
+    const L = inp && inp[0], R = inp && (inp[1] || inp[0]), n = out[0].length;
+    const on = P.on[0] > 0.5;
+    let done = false;
+    for (let i = 0; i < n; i++) {
+      const kl = this.bq(0, 1, this.bq(0, 0, L ? L[i] : 0)), kr = this.bq(1, 1, this.bq(1, 0, R ? R[i] : 0));
+      this.acc += kl * kl + kr * kr;
+      if (++this.n >= this.hop) {
+        this.sub[this.si++ % 4] = this.acc / this.hop; this.acc = 0; this.n = 0;
+        if (this.si >= 4) { this.blocks.push((this.sub[0] + this.sub[1] + this.sub[2] + this.sub[3]) / 4); done = true; }
+        if (this.blocks.length > 6000) this.blocks.shift();          // 最多記 10 分鐘
+      }
+    }
+    const g0 = Math.pow(10, this.gdb / 20);
+    if (on && done) {
+      const lufs = this.integrated();
+      if (lufs != null) {
+        const want = Math.max(-P.maxDown[0], Math.min(P.maxUp[0], P.target[0] - lufs));
+        const step = P.rate[0] * 0.1;
+        this.gdb += Math.max(-step, Math.min(step, want - this.gdb));
+      }
+    } else if (!on) this.gdb = 0;
+    const g1 = Math.pow(10, this.gdb / 20);
+    for (let i = 0; i < n; i++) {
+      const g = g0 + (g1 - g0) * (i + 1) / n;
+      out[0][i] = (L ? L[i] : 0) * g;
+      if (out[1]) out[1][i] = (R ? R[i] : 0) * g;
+    }
+    if ((this.cnt += n) >= sampleRate / 2) { this.port.postMessage(this.gdb); this.cnt = 0; }
+    return true;
+  }
+}
+registerProcessor("loudness-norm", LoudnessNorm);`;
+let trueLimiter = null, limRed = [], loudNorm = null, agcGainDb = 0;
+
+/* ══ 混音 / 母帶的積木(每一顆都是 { input, output, set(…) },沒開 = 一條線直接過)══════════
+   這幾顆沒有用到這個 app 的任何東西,整段可以直接搬到別的 Web Audio 專案(`docs/WEB_MIXING.md`)。
+   **瀏覽器的 DynamicsCompressor 自帶 6ms 的 lookahead 延遲**:
+   - 「串聯」(整條換成壓過的)→ 用開關切,不開就繞過;開了的那一條在 `pocket` 扣回來
+   - 「並聯」(乾的 + 壓過的混在一起)→ 乾的那一路**一定要補同樣的 6ms**,不然兩路差 6ms 會梳狀濾波 / 變兩下 */
+const COMP_LATENCY = 0.006;
+/* **瀏覽器的 DynamicsCompressor 會自己偷補增益**(WebKit / Chromium / Firefox 同一份程式碼:
+   補 (1 / 0dBFS 過壓縮曲線後的增益)^0.6)。−30dB、2:1 會自己大 8dB——門檻越低、比例越高,
+   沒被壓到的小聲音反而越大聲。三段壓縮的高頻段因此被推亮 3–4dB(踩過)。
+   這裡照原始碼(DynamicsCompressorKernel 的 kneeCurve / kAtSlope / saturate)算出那個 dB,積木裡扣掉,
+   讓 makeup 只剩自己寫的那個數字。在 OfflineAudioContext 量過 8 組(門檻、比例、knee),誤差 < 0.01dB */
+function compAutoMakeupDb(T, R, knee){
+  if (!(R > 1) || T >= 0) return 0;
+  const db2 = d => Math.pow(10, d / 20), l2d = x => 20 * Math.log10(x);
+  const lt = db2(T);
+  const curve = (x, k) => x < lt ? x : lt + (1 - Math.exp(-k * (x - lt))) / k;
+  const slopeAt = (x, k) => { if (x < lt) return 1; const x2 = x * 1.001;
+    return (l2d(curve(x2, k)) - l2d(curve(x, k))) / (l2d(x2) - l2d(x)); };
+  const kx = db2(T + knee);
+  let lo = 0.1, hi = 10000, k = 5;
+  for (let i = 0; i < 15; i++) { if (slopeAt(kx, k) < 1 / R) hi = k; else lo = k; k = Math.sqrt(lo * hi); }
+  const yk = l2d(curve(kx, k));
+  const sat = x => x < kx ? curve(x, k) : db2(yk + (l2d(x) - (T + knee)) / R);
+  return -0.6 * l2d(sat(1));
+}
+const unMakeup = (T, R, knee) => Math.pow(10, -compAutoMakeupDb(T, R, knee) / 20);
+function mkSwitch(ctx){                     // 乾 / 處理過 二選一(交叉淡化 20ms,不會爆音)
+  const input = ctx.createGain(), output = ctx.createGain(), dry = ctx.createGain(), wet = ctx.createGain();
+  wet.gain.value = 0; input.connect(dry); dry.connect(output); wet.connect(output);
+  const set = (on) => { const t = ctx.currentTime;
+    dry.gain.setTargetAtTime(on ? 0 : 1, t, 0.02); wet.gain.setTargetAtTime(on ? 1 : 0, t, 0.02); };
+  return { input, output, wet, set };
+}
+/* 串聯壓縮(補償增益自己補):set(門檻 dB, 比例, 起音秒, 放開秒, 補償倍數);門檻 undefined = 繞過 */
+function mkComp(ctx, knee){
+  const sw = mkSwitch(ctx), c = ctx.createDynamicsCompressor(), mk = ctx.createGain();
+  c.knee.value = knee == null ? 6 : knee;
+  sw.input.connect(c); c.connect(mk); mk.connect(sw.wet);
+  return { input: sw.input, output: sw.output, node: c,
+    set(thr, ratio, att, rel, makeup){
+      const on = thr != null; sw.set(on);
+      c.threshold.value = on ? thr : 0; c.ratio.value = ratio || 3;
+      c.attack.value = att || 0.01; c.release.value = rel || 0.15;
+      mk.gain.value = on ? (makeup || 1) * unMakeup(thr, ratio || 3, c.knee.value) : 1; } };
+}
+/* 飽和(類比磁帶 / 變壓器的那種圓):y = tanh(k·x)/k,原點斜率 = 1(小聲的地方音量不變,大聲的地方才被磨圓)。
+   WaveShaper 的曲線只管 −1～1,超出去會被硬削——所以前面先 ÷R、後面再 ×R,讓它撐到 ±R(R = 4 → +12dBFS)。
+   **不開超取樣**:WaveShaper 的 2× 超取樣自帶 128 個取樣(2.7ms)延遲,鼓與貝斯會比別人晚;
+   k 這麼小的時候泛音很低,折疊失真聽不到。k = 0 → 曲線設 null(WaveShaper 沒曲線 = 原封不動) */
+function mkSat(ctx, R){
+  R = R || 4;
+  const input = ctx.createGain(), sh = ctx.createWaveShaper(), output = ctx.createGain();
+  input.gain.value = 1 / R; output.gain.value = R; sh.oversample = "none";
+  input.connect(sh); sh.connect(output);
+  let last = -1;
+  return { input, output, set(k){
+    k = k || 0; if (k === last) return; last = k;
+    if (!k) { sh.curve = null; return; }
+    const n = 4096, c = new Float32Array(n);
+    for (let i = 0; i < n; i++) { const x = (i / (n - 1) * 2 - 1) * R; c[i] = Math.tanh(k * x) / k / R; }
+    sh.curve = c; } };
+}
+/* 並聯壓縮(紐約壓縮):乾的原樣 + 壓得很重的那一份墊在下面 → 音頭不變、尾巴與房間變厚。
+   set(量, 門檻, 比例);量 0 = 關(乾的也不延遲) */
+function mkParallel(ctx){
+  const input = ctx.createGain(), output = ctx.createGain();
+  const direct = ctx.createGain(), dly = ctx.createDelay(0.05), dlyG = ctx.createGain();
+  const c = ctx.createDynamicsCompressor(), send = ctx.createGain();
+  dly.delayTime.value = COMP_LATENCY; dlyG.gain.value = 0; send.gain.value = 0;
+  c.knee.value = 0; c.attack.value = 0.003; c.release.value = 0.08;
+  input.connect(direct); direct.connect(output);
+  input.connect(dly); dly.connect(dlyG); dlyG.connect(output);
+  input.connect(c); c.connect(send); send.connect(output);
+  return { input, output, set(amt, thr, ratio){
+    const on = amt > 0;
+    thr = thr == null ? -30 : thr; ratio = ratio || 8;
+    direct.gain.value = on ? 0 : 1; dlyG.gain.value = on ? 1 : 0; send.gain.value = on ? amt * unMakeup(thr, ratio, 0) : 0;
+    c.threshold.value = thr; c.ratio.value = ratio; } };
+}
+/* Linkwitz-Riley 四階(兩顆二階 Butterworth 串起來):低 + 高 加起來相位平的,切點不會凹也不會凸。
+   **Web Audio 的 lowpass / highpass 的 Q 單位是 dB**(不是線性):Butterworth 的 0.707 要寫 −3.01dB,
+   寫成 0.707 會變成線性 1.085,兩段加回來在切點凸 6dB(踩過:三段壓縮 250Hz、4kHz 各多 6dB) */
+const BUTTER_Q_DB = 20 * Math.log10(Math.SQRT1_2);
+function lr4(ctx, type, hz){
+  const a = ctx.createBiquadFilter(), b = ctx.createBiquadFilter();
+  [a, b].forEach(f => { f.type = type; f.frequency.value = hz; f.Q.value = BUTTER_Q_DB; });
+  a.connect(b); return { input: a, output: b };
+}
+/* 母帶三段壓縮(200Hz / 3kHz 切,LR4):低頻、中頻、高頻各自一顆壓縮器,
+   一段太滿時只壓那一段(大鼓一下不會把 hi-hat 一起壓下去)。
+   低頻那一段要多過一顆 3k 的全通(LR4 的低 + 高 = 同頻的二階全通,Q 0.707),三段加回來相位才對得上。
+   三段都經過壓縮器 → 延遲一樣,整條晚 6ms(整首一起晚,聽不出來)。
+   set(null) = 繞過;set({ lo: [門檻, 比例, 起音, 放開], mid: …, hi: … }) */
+function mkMultiband(ctx, f1, f2){
+  f1 = f1 || 200; f2 = f2 || 3000;
+  const sw = mkSwitch(ctx), sum = ctx.createGain();
+  const lo = lr4(ctx, "lowpass", f1), rest = lr4(ctx, "highpass", f1);
+  const mid = lr4(ctx, "lowpass", f2), hi = lr4(ctx, "highpass", f2);
+  const ap = ctx.createBiquadFilter(); ap.type = "allpass"; ap.frequency.value = f2; ap.Q.value = Math.SQRT1_2;
+  const comps = [0, 1, 2].map(() => { const c = ctx.createDynamicsCompressor(); c.knee.value = 6; c.threshold.value = 0; return c; });
+  const trims = comps.map(c => { const g = ctx.createGain(); c.connect(g); g.connect(sum); return g; });
+  sw.input.connect(lo.input); lo.output.connect(ap); ap.connect(comps[0]);
+  sw.input.connect(rest.input); rest.output.connect(mid.input); rest.output.connect(hi.input);
+  mid.output.connect(comps[1]); hi.output.connect(comps[2]);
+  sum.connect(sw.wet);
+  return { input: sw.input, output: sw.output, set(cfg){
+    sw.set(!!cfg);
+    ["lo", "mid", "hi"].forEach((k, i) => { const v = (cfg && cfg[k]) || [0, 1, 0.01, 0.15], c = comps[i];
+      c.threshold.value = v[0]; c.ratio.value = v[1]; c.attack.value = v[2]; c.release.value = v[3];
+      trims[i].gain.value = unMakeup(v[0], v[1], 6); });
+    sum.gain.value = cfg && cfg.makeup || 1; } };
+}
+/* 低頻收成單聲道(M/S):Side 只留 hz 以上(LR4 高通),Mid 過同頻的全通讓相位跟 Side 對齊。
+   超低頻左右不一樣 = 喇叭互相抵、黑膠刻不出來、手機單聲道一加就少一截 */
+function mkMonoLow(ctx){
+  const sw = mkSwitch(ctx);
+  const sp = ctx.createChannelSplitter(2), mg = ctx.createChannelMerger(2);
+  const mono = () => { const g = ctx.createGain(); g.channelCount = 1; g.channelCountMode = "explicit"; g.channelInterpretation = "discrete"; return g; };
+  const M = mono(), S = mono(), lM = mono(), rM = mono(), lS = mono(), rS = mono(), Sneg = mono();
+  lM.gain.value = rM.gain.value = lS.gain.value = 0.5; rS.gain.value = -0.5; Sneg.gain.value = -1;
+  const inp = ctx.createGain(); inp.channelCount = 2; inp.channelCountMode = "explicit";
+  sw.input.connect(inp); inp.connect(sp);
+  sp.connect(lM, 0); sp.connect(rM, 1); lM.connect(M); rM.connect(M);
+  sp.connect(lS, 0); sp.connect(rS, 1); lS.connect(S); rS.connect(S);
+  const ap = ctx.createBiquadFilter(); ap.type = "allpass"; ap.Q.value = Math.SQRT1_2; ap.channelCount = 1; ap.channelCountMode = "explicit";
+  const hp = lr4(ctx, "highpass", 120);
+  [hp.input, hp.output].forEach(f => { f.channelCount = 1; f.channelCountMode = "explicit"; });
+  M.connect(ap); S.connect(hp.input);
+  ap.connect(mg, 0, 0); ap.connect(mg, 0, 1);           // L = M + S、R = M − S
+  hp.output.connect(mg, 0, 0); hp.output.connect(Sneg); Sneg.connect(mg, 0, 1);
+  mg.connect(sw.wet);
+  return { input: sw.input, output: sw.output, set(hz){
+    sw.set(hz > 0);
+    if (hz > 0) { ap.frequency.value = hz; hp.input.frequency.value = hp.output.frequency.value = hz; } } };
+}
 function installTrueLimiter(){
   if (!ctx.audioWorklet || !window.Blob || !window.URL) return;
   const url = URL.createObjectURL(new Blob([LIMITER_SRC], { type: "application/javascript" }));
@@ -3046,7 +3281,12 @@ function installTrueLimiter(){
        **masterGain 1.9 → 0.75**:進飽和的尖峰落在 0.8 以下,不再硬削波;
        舊的 DynamicsCompressor 不在路上了,響度改由 outGain 決定 */
     masterSat.disconnect(); limiter.disconnect(); outGain.disconnect();
-    masterSat.connect(outGain); outGain.connect(node); node.connect(softClip);
+    /* 響度對齊放在限幅器前面:推到目標之後再由限幅器守天花板 */
+    const agc = new AudioWorkletNode(ctx, "loudness-norm", { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2] });
+    agc.port.onmessage = e => { agcGainDb = e.data; };
+    masterSat.connect(agc); agc.connect(outGain); outGain.connect(node); node.connect(softClip);
+    loudNorm = agc;
+    trueLimiter = node;
     masterGain.gain.value = TL_IN; outGain.gain.value = TL_OUT; masterBase = TL_IN; applyMix();
     /* 有了真的限幅器,最後那一關軟削波**永遠碰不到**(輸出被保證在 TL_CEIL 以下),
        所以它的起彎點從 0.72 挪到 0.9:舊的鏈要它在 0.72 就開始彎,是因為那時候
@@ -3163,8 +3403,13 @@ function ensureAudio(){
     masterMid = ctx.createBiquadFilter();
     masterMid.type = "peaking"; masterMid.Q.value = 0.6; masterMid.frequency.value = 400; masterMid.gain.value = 0;
     masterAirN = shelf(ctx, "highshelf", 5000);
+    /* 母帶的順序(照母帶工程的慣例):高通 → EQ → **三段壓縮** → **低頻單聲道** → 黏著壓縮 → 飽和
+       → **響度對齊** → outGain → **True Peak 限幅** → 軟削波(保險) */
+    masterMB = mkMultiband(ctx, 200, 3000);
+    masterMono = mkMonoLow(ctx);
     masterGain.connect(masterHp);
-    masterHp.connect(masterMid); masterMid.connect(masterAirN); masterAirN.connect(masterGlue);
+    masterHp.connect(masterMid); masterMid.connect(masterAirN); masterAirN.connect(masterMB.input);
+    masterMB.output.connect(masterMono.input); masterMono.output.connect(masterGlue);
     masterGlue.connect(masterSat);
     masterSat.connect(limiter);
     limiter.connect(outGain);
@@ -3209,7 +3454,11 @@ function ensureAudio(){
        不收的話 8k 以上整片變成空氣,hi-hat 就不在正中間了 */
     revTone = ctx.createBiquadFilter();
     revTone.type = "lowpass"; revTone.frequency.value = 20000; revTone.Q.value = 0.5;
-    reverbBus.connect(pre); pre.connect(conv); conv.connect(revTone); revTone.connect(wet);
+    /* 殘響回來的低頻要切(`mix.revHp`,預設 20Hz = 透明):低頻的殘響是糊掉大鼓與貝斯的第一名,
+       錄音室的回送一定先掛一顆高通(200–400Hz) */
+    revHpN = ctx.createBiquadFilter();
+    revHpN.type = "highpass"; revHpN.frequency.value = 20; revHpN.Q.value = 0.7;
+    reverbBus.connect(pre); pre.connect(conv); conv.connect(revTone); revTone.connect(revHpN); revHpN.connect(wet);
     wet.connect(masterGain);   // 接在 masterGain 之前,殘響一樣受限幅器保護
 
     /* 鼓與貝斯各走自己的匯流排:鼓只沾一點殘響(太濕會糊掉拍點),
@@ -3261,7 +3510,12 @@ function ensureAudio(){
        不是踢在胸口的那一下。預設 20Hz / 0dB = 透明 */
     drumHpN = ctx.createBiquadFilter(); drumHpN.type = "highpass"; drumHpN.frequency.value = 20; drumHpN.Q.value = 0.7;
     drumLowN = ctx.createBiquadFilter(); drumLowN.type = "peaking"; drumLowN.frequency.value = 90; drumLowN.Q.value = 0.9; drumLowN.gain.value = 0;
-    drumGlue.connect(drumHpN); drumHpN.connect(drumLowN); drumLowN.connect(drumMidN); drumMidN.connect(drumAir); drumAir.connect(drumWidth.input); drumWidth.output.connect(masterGain);
+    /* 黏著之後:並聯壓縮(`mix.drumPar`)→ EQ → 飽和(`mix.drumSat`)→ 寬度 */
+    drumPar = mkParallel(ctx);
+    drumSatN = mkSat(ctx, 4);
+    drumGlue.connect(drumPar.input); drumPar.output.connect(drumHpN);
+    drumHpN.connect(drumLowN); drumLowN.connect(drumMidN); drumMidN.connect(drumAir); drumAir.connect(drumSatN.input);
+    drumSatN.output.connect(drumWidth.input); drumWidth.output.connect(masterGain);
     const dSend = drumRevSend = ctx.createGain();
     dSend.gain.value = 0.1;
     drumGlue.connect(dSend); dSend.connect(reverbBus);
@@ -3286,7 +3540,10 @@ function ensureAudio(){
     bassBus.connect(bassHpN); bassHpN.connect(bassEqN);
     bassEqN.connect(bassDry); bassDry.connect(bassMk);
     bassEqN.connect(bassCompN); bassCompN.connect(bassWet); bassWet.connect(bassMk);
-    bassMk.connect(masterGain);
+    /* 壓完之後過一點飽和(`mix.bassSat`):錄音室的貝斯是 DI + 管的 / 變壓器的前級,
+       磨圓之後泛音多出來,小喇叭上才聽得到音高(不是靠推 900Hz) */
+    bassSatN = mkSat(ctx, 4);
+    bassMk.connect(bassSatN.input); bassSatN.output.connect(masterGain);
 
     /* 節奏組以外的三條:吉他、鍵盤鋪底(風琴/弦樂)、打擊小物。
        各自一條的理由跟鼓、貝斯一樣——殘響量不一樣:
@@ -3357,7 +3614,10 @@ function ensureAudio(){
     /* 鍵盤的 presence(`mix.keysPres`,預設 0dB)。Rhodes 在混音裡 500Hz 多 2.7dB、2kHz 少 4.9dB:
        太厚又太悶,那是它輸給平台鋼琴的原因——不是音色本身(單獨比 Rhodes 還略勝) */
     keysPresN = ctx.createBiquadFilter(); keysPresN.type = "peaking"; keysPresN.frequency.value = 2000; keysPresN.Q.value = 0.7; keysPresN.gain.value = 0;
-    keysBus.connect(keysEq); keysEq.connect(keysPresN); keysPresN.connect(keysAir); keysAir.connect(keysChorus.input);
+    /* 鍵盤的壓縮(`mix.keysComp`,門檻 dB;沒寫 = 繞過)。Rhodes 的動態很大(強奏的「咬」比弱奏大 20dB 以上),
+       錄音室一定壓一點,和弦才一直站在同一個位置;開了的曲風 `pocket.keys` 扣 6ms */
+    keysComp = mkComp(ctx, 6);
+    keysBus.connect(keysEq); keysEq.connect(keysPresN); keysPresN.connect(keysComp.input); keysComp.output.connect(keysAir); keysAir.connect(keysChorus.input);
     keysChorus.output.connect(masterGain);
     applyMix();
 
@@ -4229,6 +4489,8 @@ function playDrum(piece, when, gain, vel){
   const gv = gvShape(piece, when);
   if (gv) gain *= gv[1];
   when += gv && feel().drumsGV !== "vel" ? gv[0] : humanTime(pk, when, 303 + piece.length);
+  /* 鼓的並聯壓縮開著時,乾的那一路補了壓縮器的 6ms(`mkParallel`),整組鼓在這裡扣回來 */
+  if ((feel().mix || {}).drumPar > 0) when -= COMP_LATENCY;
   // 實錄鼓組的大鼓也要能觸發側鏈(原本只有 808 的大鼓會);給不給看 FEELS[x].duck
   if (piece === "kick") duckBass(when);
   // closed hat / 踩鈸落下時,上一顆還在響的 open hat 要停(808 的 open hat 另外有 D808_CUT)
@@ -5778,6 +6040,30 @@ function applyMix(){
   if (drumRevSend) drumRevSend.gain.value = m.drumRev != null ? m.drumRev : 0.1;
   if (combAir) { combAir.frequency.value = m.gtrAirHz || 6500; combAir.gain.value = m.gtrAir || 0; }
   if (combChorus) combChorus.wet.gain.value = m.gtrChorus || 0;
+  /* ── 其餘的混音 / 母帶站(沒寫 = 透明)── */
+  if (keysComp) keysComp.set(m.keysComp, m.keysRatio || 2.5, 0.012, 0.18, m.keysMakeup || 1);
+  if (drumSatN) drumSatN.set(m.drumSat || 0);
+  if (bassSatN) bassSatN.set(m.bassSat || 0);
+  if (drumPar) drumPar.set(m.drumPar || 0, m.drumParThr, m.drumParRatio);
+  if (revHpN) revHpN.frequency.value = m.revHp || 20;
+  if (masterMB) masterMB.set(m.masterMB || null);
+  if (masterMono) masterMono.set(m.monoBelow || 0);
+  if (trueLimiter) trueLimiter.parameters.get("tp").value = m.truePeak ? 1 : 0;
+  if (loudNorm) {
+    const P = loudNorm.parameters, on = m.lufs != null;
+    P.get("on").value = on ? 1 : 0;
+    /* 目標是**最後輸出**的響度;AGC 在 outGain 前面,所以扣掉 outGain 的倍數 */
+    if (on) P.get("target").value = m.lufs - 20 * Math.log10(outGain.gain.value || 1);
+  }
+}
+/* 每次按播放:響度重新量(換歌了),增益從這個曲風上次收斂的值出發,不會一開頭先大聲再掉下去 */
+const agcMemo = {};
+function agcReset(){
+  if (!loudNorm) return;
+  const k = feelNow + "/" + styleOn;
+  if (agcReset.key) agcMemo[agcReset.key] = agcGainDb;
+  agcReset.key = k;
+  loudNorm.port.postMessage({ reset: true, gdb: agcMemo[k] != null ? agcMemo[k] : (feel().mix || {}).lufsInit || 0 });
 }
 
 /* 音長的句法(`FEELS[x].artic`):同一個節奏型每一下放開的時間不一樣,
@@ -6154,7 +6440,8 @@ const FEELS = {
        只有 hi-hat 跟切音吉他在往前推——前後拉開那幾毫秒就是「律動」 */
     /* 貝斯寫 −2 不是 +4:它的壓縮器自己帶 6ms 的 lookahead,實際還是落後 4ms */
     /* 貝斯 −6:貝斯 bus 的壓縮器自帶 6ms lookahead,**整個扣回來**,大鼓與貝斯才會真的緊 */
-    pocket: { bass: -6, gtr: -2, snare: 3, hat: -1 },
+    /* 鍵盤 −6:`mix.keysComp` 的壓縮器一樣自帶 6ms lookahead,整個扣回來 */
+    pocket: { bass: -6, gtr: -2, snare: 3, hat: -1, keys: -6 },
     // Rhodes 的音長每一下差 ±12%:同一個型每一下放開的時間都一樣就是在「按鍵」
     artic: { keys: 0.24 },
     /* 微時值、和弦不同時落下、樂句換氣、力度範圍——**這四項只有 City Pop 開著**,
@@ -6262,6 +6549,20 @@ const FEELS = {
            /* 八〇年代的 gated room(Phil Collins / Hugh Padgham):只送小鼓,
               一段很密的房間聲撐 0.15 秒就被硬切掉。「一點」= 送 0.14 */
            snareGate: 0.15,          // ≈ 比乾的小鼓小 16dB;0.3 時鼓那一軌掉到 87%,0.15 是 101%
+           /* ── 其餘的混音 / 母帶站(Steven 2026-09-27:「所有混音跟母帶的步驟都要加上」)──────
+              鍵盤壓縮:Rhodes 強奏的「咬」與弱奏差很大,和弦一直站在同一個位置才撐得住主旋律(2.5:1、12ms 讓音頭過去) */
+           keysComp: -22, keysRatio: 2.5, keysMakeup: 1,
+           /* 鼓與貝斯的 bus 飽和:磁帶 / 前級那種圓,尖峰被磨掉一點、泛音多一點(k 小 = 輕) */
+           drumSat: 0.35, bassSat: 0.5,
+           /* 鼓的並聯壓縮(紐約壓縮):8:1 壓扁的那份(扣掉瀏覽器自動補的增益之後)跟乾的一樣大墊在下面,
+              音頭不變、鼓身與尾巴變厚;鼓單獨量 RMS +0.5dB、亮度 1116 → 1073Hz */
+           drumPar: 1, drumParThr: -30, drumParRatio: 8,
+           /* 殘響回送切 250Hz 以下:低頻殘響糊掉大鼓與貝斯 */
+           revHp: 250,
+           /* 母帶三段壓縮:每段 1.5–2:1、只碰最大聲的那幾下(門檻 −18～−24) */
+           masterMB: { lo: [-18, 2, 0.03, 0.2], mid: [-20, 1.5, 0.02, 0.15], hi: [-24, 2, 0.005, 0.1] },
+           /* 120Hz 以下收成單聲道;True Peak 限幅;整首響度對到 −14 LUFS(串流平台的標準) */
+           monoBelow: 120, truePeak: true, lufs: -14,
            master: 1.0 },   /* 0.95 → 1.0(+0.45dB):吉他與 hi-hat 降了之後 pad 疏密掉到 −14.9,拉回目標帶 */
   },
   /* Blues:shuffle。跟 Pop 同一組鼓件、同一個 backbeat,差別在**八分是三連音的**
@@ -8612,6 +8913,7 @@ function startPlayback(){
   ensureAudio();
   applyOrch();
   applyMix();
+  agcReset();
   resetLap();                       // 每次按播放都從原譜那一圈開始
   last808.midi = -1; last808.at = -99;   // 808 的滑音不要從上一次播放接過來
   voicings = buildVoicings(parsed.bars);

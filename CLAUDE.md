@@ -183,11 +183,18 @@
 ## 混音與母帶
 - **這是 backing track**(Steven 2026-09-27):伴奏是給人在上面唱 / 彈的。**2–5kHz 是主旋律的位置,伴奏要讓出來**,
   不准再照整首唱片(有人聲)的頻譜去補高頻。改聲音的標準是 Steven 聽得出的進步,不是量尺過關
-- 鏈:`masterGain(TL_IN 0.75)→ 高通 24Hz → 黏著壓縮 → 飽和(x−x³/3)→ outGain(TL_OUT 2.35)→ 看前 5ms 的限幅器 worklet(天花板 0.85)→ 軟削波(保險)`。
+- 鏈:`masterGain(TL_IN 0.75)→ 高通 24Hz → 母帶 EQ → 三段壓縮(masterMB)→ 低頻單聲道(monoBelow)→ 黏著壓縮 → 飽和(x−x³/3)
+  → 響度對齊 worklet(lufs)→ outGain(TL_OUT 2.35)→ 看前 5ms 的限幅器 worklet(天花板 0.85,truePeak = 4× 內插)→ 軟削波(保險)`。
   worklet 載不到時退回舊鏈(DynamicsCompressor,outGain 1.08)。**量聲音一定走 http**,`file://` 載不到 worklet
-- 目標:**peak ≤ 0.85、零削波、RMS 約 −11～−14 dBFS**;Swing 偏小聲是本色不硬拉
+- 完整步驟、積木與坑在 `docs/WEB_MIXING.md`;積木(`mkComp` / `mkSat` / `mkParallel` / `mkMultiband` / `mkMonoLow` / `lr4`)
+  改 `index.html`,再跑 `python3 tools/webmix/build.py` 重生 `tools/webmix/webmix.js`(`--check` 要一致)
+- **Web Audio 的 `lowpass` / `highpass` Q 單位是 dB**(Butterworth 寫 `BUTTER_Q_DB` = −3.01);
+  **DynamicsCompressor 會自己補增益**(`compAutoMakeupDb` 扣掉),而且自帶 6ms 延遲:串聯用開關切 + `pocket` 扣回,並聯的乾路補 6ms
+- 目標:**peak ≤ 0.85、零削波**;有 `lufs` 的曲風整合響度 −14 LUFS、True Peak ≤ −1.4 dBTP(`tools/realism/lufs.py` 量);
+  沒寫的曲風維持 RMS 約 −11～−14 dBFS;Swing 偏小聲是本色不硬拉。改完比「響度對齊後的八度頻帶」,2–5k 不准變多
 - City Pop 真管樂走自己的 `brassBus`(收 5.5k 以上、3k −3dB、殘響 0.35),不跟吉他共用 combBus;每聲兩次錄音(`brass.pairs`)
-- 每條 bus 的處理寫在 `FEELS[x].mix`(高通、EQ、壓縮、chorus、`drumLevel`、`master`…),**沒寫就透明**。
+- 每條 bus 的處理寫在 `FEELS[x].mix`(高通、EQ、壓縮、chorus、`drumLevel`、`master`、`keysComp`、`drumSat` / `bassSat`、
+  `drumPar`、`revHp`、`masterMB`、`monoBelow`、`truePeak`、`lufs`…),**沒寫就透明**。
   壓縮器不是拿來加音量的;調變效果先算音高偏移(深度 × 2π × 速率,≤3 音分);頻譜比對只能當方向
 - 側鏈 `FEELS[x].duck`:K-Pop 深、Funk 很淺、Pop 一點點;City Pop 與 acoustic 曲風(Bossa/Swing/Blues)不給
 - 低頻往中間收;相位目標:單聲道 penalty ≤1.5dB、L/R 相關 0.3–0.9

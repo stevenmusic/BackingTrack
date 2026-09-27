@@ -1,0 +1,50 @@
+{
+ "_note": "銅管音色重做前後(0098349 對 WORKTREE),probe_brassonly → hits.py",
+ "progressions": {},
+ "cases": [
+  {
+   "version": "0098349",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "brass_old",
+   "ovr": {
+    "orchFix": 0,
+    "t": 4
+   }
+  },
+  {
+   "version": "0098349",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "brass_old",
+   "ovr": {
+    "orchFix": 0,
+    "t": 4
+   }
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "brass_new",
+   "ovr": {
+    "orchFix": 0,
+    "t": 4
+   }
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - E7 - Am7 - C7",
+   "label": "brass_new",
+   "ovr": {
+    "orchFix": 0,
+    "t": 4
+   }
+  }
+ ]
+}

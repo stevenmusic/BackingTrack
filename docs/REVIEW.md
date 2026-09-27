@@ -515,3 +515,12 @@ Steven 聽了之後:「整體聽起來非常機械,比之前開始製作還糟�
   harmony.mjs City Pop「Fmaj7 - E7 - Am7 - C7」comp / mix / drive 旋律外音 0
 - 需 Steven 聽過:Rhodes 輕彈層(不喜歡就 `keysLayers: 0`)、放弦聲份量(`bassRel`)
 - 審查第 2 輪:無阻擋、可合併。S1【同意】量法進 repo(`onsets.py`、`cases_mono.json`),結果如上;S2 Rhodes drive 變暗(519 → 336Hz,384 / 451 下在 48–72 層)列「需 Steven 聽過」
+
+## 第十二輪(2026-09-27):方向修正——這是 backing track
+Steven:「為什麼改了那麼久,聲音還是沒有明顯進步」「銅管聲音很尖 很扁」「電鋼琴有點吵」「注意你做的是backing track,調整混音」「如果審查員沒有幫助,就乾脆不要」。
+- 檢討:前幾輪在修量得到、耳朵聽不到的細節,並花大量時間讓量尺與審查過關;又一直對著「有人聲的整首唱片」補高頻,伴奏越來越亮
+- 銅管:v2 力度層(比 v3 圓)、每聲兩次錄音(晚 6–14ms、差幾音分、分開擺)、自己的 bus(5.5k 低通、3k −3dB、殘響 0.35)。
+  單獨錄(`cases_bcal2.json` → `hits.py`):每下 RMS −34.0 / −32.6 → −33.8 / −32.6(一樣大)、亮度 1667 / 1507 → 1305 / 1175Hz、2–5k 佔 22% → 18 / 15%
+- 混音:拿掉 masterAir(+2.5)、keysAir(+2)、gtrAir(+1.5);吉他 3.2k −2、Rhodes 2k −2、Rhodes −2dB(配器「piano」同比例)。
+  整首(`cases_bt.json`,0098349 → 5f1d008):RMS 不變,2–5k 佔比 −1.5～−1.9dB、5k+ −3dB,250Hz 以下與 250–1k 不變
+- 審查員改成只在排程邏輯改動時才叫(CLAUDE.md)

@@ -379,6 +379,56 @@ function mkMonoLow(ctx){
     sw.set(hz > 0);
     if (hz > 0) { ap.frequency.value = hz; hp.input.frequency.value = hp.output.frequency.value = hz; } } };
 }
+/* 弦樂機的合奏效果(ensemble):ARP Solina / KORG Λ / Roland 的 string machine 聲音的來源不是振盪器,是這一顆——
+   三條 BBD 類比延遲線,各被「一慢一快」兩顆 LFO 調變,三條的 LFO 相位差 120°,三條加起來 = 一群人在拉,
+   不是一台琴在響(出處見 docs/SOURCES.md P1)。全濕(原機就沒有乾聲),三條擺 左 / 中 / 右。
+   **音高偏移照 CLAUDE.md 的上限**:慢 0.6Hz × 0.25ms 與快 6.2Hz × 0.02ms 各 1.6、1.3 音分,加起來 < 3 音分;
+   晃動的感覺來自三條之間的**相對**延遲一直在變(梳狀的缺口在 2k 以上游走),不是把音高拉走。
+   set(null) = 繞過;set({ slow: [Hz, ms], fast: [Hz, ms], base: ms }) */
+function mkEnsemble(ctx){
+  const sw = mkSwitch(ctx), sum = ctx.createGain(); sum.gain.value = 1 / Math.sqrt(3) * 1.04;   // 三條大多同相,1.04 讓鋪底單獨量的 RMS 跟沒開時一樣(City Pop 量過)
+  const lfo = (hz, phase) => {                          // 帶相位的正弦 LFO:PeriodicWave 的 sin(ωt + φ)
+    const o = ctx.createOscillator();
+    o.setPeriodicWave(ctx.createPeriodicWave(new Float32Array([0, Math.sin(phase)]), new Float32Array([0, Math.cos(phase)]), { disableNormalization: true }));
+    o.frequency.value = hz; return o; };
+  const lines = [0, 1, 2].map(k => {
+    const d = ctx.createDelay(0.05), gs = ctx.createGain(), gf = ctx.createGain();
+    const ls = lfo(0.6, k * 2 * Math.PI / 3), lf = lfo(6.2, k * 2 * Math.PI / 3);
+    ls.connect(gs); gs.connect(d.delayTime); lf.connect(gf); gf.connect(d.delayTime);
+    const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+    sw.input.connect(d);
+    if (pan) { pan.pan.value = [-0.6, 0, 0.6][k]; d.connect(pan); pan.connect(sum); } else d.connect(sum);
+    return { d, gs, gf, ls, lf };
+  });
+  sum.connect(sw.wet);
+  let started = false;
+  return { input: sw.input, output: sw.output, set(cfg){
+    sw.set(!!cfg); if (!cfg) return;
+    if (!started) { const t = ctx.currentTime; lines.forEach(l => { l.ls.start(t); l.lf.start(t); }); started = true; }
+    const sl = cfg.slow || [0.6, 0.25], fa = cfg.fast || [6.2, 0.02], base = (cfg.base || 7) / 1000;
+    lines.forEach(l => { l.ls.frequency.value = sl[0]; l.lf.frequency.value = fa[0];
+      l.gs.gain.value = sl[1] / 1000; l.gf.gain.value = fa[1] / 1000; l.d.delayTime.value = base; }); } };
+}
+/* 音箱 + 喇叭箱(吉他):唱片上的切音是**單線圈的 Tele / Strat → 壓縮效果器 → 音箱 → 喇叭箱 → 麥克風**(docs/SOURCES.md G2)。
+   我們的取樣是 Hofner Club(空心琴)直接錄進來,沒有音箱那一段:
+   - 前級一點點飽和(`drive`,乾淨音箱推一點就圓,尖的刷弦被磨掉)
+   - 喇叭箱:12 吋喇叭的頻寬大約 80Hz–5kHz,5k 以上是陡的斷崖(那就是「DI 聲很刺、上了音箱就好聽」的原因)
+   - 空心琴的箱體共鳴在 200–300Hz(悶、圓),單線圈沒有 → 挖掉;單線圈的咬在 1–2k(不碰 2–5k,那是主旋律的)
+   set(null) = 繞過;set({ drive, hp, body: [Hz, dB], bite: [Hz, dB], lp }) */
+function mkAmp(ctx){
+  const sw = mkSwitch(ctx), sat = mkSat(ctx, 4);
+  const hp = lr4(ctx, "highpass", 90), lp = lr4(ctx, "lowpass", 5000);
+  const body = ctx.createBiquadFilter(), bite = ctx.createBiquadFilter();
+  body.type = "peaking"; body.Q.value = 1.0; bite.type = "peaking"; bite.Q.value = 0.9;
+  sw.input.connect(sat.input); sat.output.connect(hp.input); hp.output.connect(body); body.connect(bite); bite.connect(lp.input); lp.output.connect(sw.wet);
+  return { input: sw.input, output: sw.output, set(cfg){
+    sw.set(!!cfg); if (!cfg) return;
+    sat.set(cfg.drive || 0);
+    hp.input.frequency.value = hp.output.frequency.value = cfg.hp || 90;
+    lp.input.frequency.value = lp.output.frequency.value = cfg.lp || 5000;
+    const b = cfg.body || [250, 0], t = cfg.bite || [1600, 0];
+    body.frequency.value = b[0]; body.gain.value = b[1]; bite.frequency.value = t[0]; bite.gain.value = t[1]; } };
+}
 
 /* ─────────── 抽出來的到這裡 ─────────── */
 

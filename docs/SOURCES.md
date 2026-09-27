@@ -84,6 +84,17 @@ https://bassmagazine.jp/player/interveiw-itokoki202204/
 - 可商用的 Telecaster 取樣(2026-09-26 找過,**沒有**):Karoryfer shinyguitar = 爵士空心琴(archtop)、emilyguitar = Epiphone 雙線圈、
   FreePats「Electric Guitar FSBS」(CC0)照片是 Squier Stratocaster HSS、錄的是琴橋的**雙線圈**。都不比現在的 Hofner Club 更接近 → 切音吉他維持 Hofner
 - 可商用的真管樂取樣:VSCO-2-CE(CC0,github.com/sgossner/VSCO-2-CE)有 Trumpet / Tenor Trombone 的 **stac(斷奏)**與 sus;沒有薩克斯
+- 可商用的薩克斯(2026-09-27 找到):Karoryfer **Weresax**(CC0,中音薩克斯,p / f 兩層 × 兩次錄音 × 兩支麥,長音)。
+  名單上的是次中音 + 上低音;中音是能拿到的最接近的一支,跟管樂組中間那一聲同音(`parts.brass.sax`)
+
+### P1 弦樂機的合奏效果(ARP Solina / Eminent 310 的 Triple Chorus)(2026-09-27 讀到)
+- 三條 BBD 延遲線、兩顆三相 LFO:慢的「Chorus」約 0.6Hz、快的「Vibrato」約 6Hz,**三條的相位各差 120°**,每條吃「慢 + 快」混在一起的控制電壓
+- **沒有乾聲**,聲音全部來自 BBD;深度「很淺」
+- 出處:ModWiggler「Tips for recreating Solina String sound」(https://www.modwiggler.com/forum/viewtopic.php?t=298625)、
+  KVR「solina ensemble effect」(https://www.kvraudio.com/forum/viewtopic.php?t=184869)、
+  J. Haible「String Ensemble / Triple Chorus」電路文件(http://jhaible.com/legacy/triple_chorus/triple_chorus.html,容器擋掉沒讀到原文,摘要來自搜尋結果)、
+  jpcima/ensemble-chorus(BSL-1.0,Solina 與 Eminent 310 的數位模型:3–6 條 BBD、Chorus + Vibrato 兩層 LFO)
+- 對到我們:C1 的 KORG Λ Strings 是弦樂機;City Pop 的合成鋪底 = 弦樂機,聲音的來源是這顆效果,不是振盪器 → `mkEnsemble`
 
 ## 還缺的(權威但沒讀到)
 - ギター・マガジン 2019 年 4 月號本體(62 段切音譜例)、2020 年 1 月號(山下達郎與切音)

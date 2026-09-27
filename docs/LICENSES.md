@@ -17,6 +17,7 @@
 | 低音提琴 | dsmolken.double-bass(D. Smolken) | CC0 1.0 | ✅ 可以 | 不要求 |
 | 電吉他(City Pop) | Black And Green Guitars(Karoryfer,Brian Wood 錄) | CC0 1.0 | ✅ 可以 | 不要求 |
 | 管樂(City Pop:小號、長號斷奏) | VSCO-2-CE(Versilian Studios Chamber Orchestra 2 Community Edition,Sam Gossner) | CC0 1.0 | ✅ 可以 | 不要求 |
+| 管樂(City Pop:中音薩克斯) | Weresax(Karoryfer Samples) | CC0 1.0 | ✅ 可以 | 不要求 |
 | 鋼弦木吉他(Pop) | tonejs-instruments `guitar-acoustic` ← University of Iowa MIS | Iowa:任何用途不受限;整理者標 CC BY 3.0 | ✅ 可以 | 署名 Brosowsky(CC BY 3.0) |
 | 電吉他(Swing、Funk) | tonejs-instruments `guitar-electric` ← Karoryfer | 整理者標 CC BY 3.0(原始是 Karoryfer 的免費取樣) | ✅ 大概可以 | 署名 Brosowsky |
 | 尼龍弦吉他(Bossa) | tonejs-instruments `guitar-nylon` ← Freesound pack 11573(quartertone) | 整理者標 CC BY 3.0;**Freesound 原頁的授權讀不到** | ⚠️ 不確定 | 至少署名 quartertone + Brosowsky |
@@ -96,6 +97,10 @@
 ### GuitarSet(切音吉他的律動比例,`chopAccs` 與 `lag16.gtr`)
 - 來源:https://zenodo.org/records/3371780(Xi et al., ISMIR 2018),CC BY 4.0
 - 只用放克伴奏 36 段算出的**統計數字**(一拍四格的輕重與早晚,`tools/realism/gs_groove.py`),不放錄音或標註本身;上架前在「關於」寫出處
+
+### Weresax
+- 來源:https://github.com/sfzinstruments/karoryfer.weresax(用到 `Samples/alto/*_f_rr{1,2}_cnd.wav`:forte 層、電容麥)
+- 授權:倉庫 LICENSE = CC0 1.0 Universal 全文(2026-09-27 讀到)
 
 ### VSCO-2-CE
 - 來源:https://github.com/sgossner/VSCO-2-CE(用到 `Brass/Trumpet/stac/`、`Brass/Tenor Trombone/stac/` 的 v3 力度層)

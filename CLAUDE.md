@@ -155,13 +155,16 @@
 | 曲風 | 鍵盤 | 鼓 | 貝斯 | 第四層 |
 | --- | --- | --- | --- | --- |
 | Pop | Salamander | Virtuosity | 電貝斯 | 鋼弦刷弦×2、鈴鼓 backbeat |
-| City Pop | Rhodes(jRhodes3c,非商用授權,商用前要換) | SM Drums(大小鼓、hi-hat)+ Virtuosity(tom、鈸、open hat) | 電貝斯 | Hofner 切音 + 第二把吉他、真管樂(VSCO-2-CE 小號/長號斷奏,`brass.smp`)、合成鋪底、沙鈴八分;配器輪換 `orchs` |
+| City Pop | Rhodes(jRhodes3c,非商用授權,商用前要換) | SM Drums(大小鼓、hi-hat)+ Virtuosity(tom、鈸、open hat) | 電貝斯 | Hofner 切音 + 第二把吉他(過音箱模擬 `mix.gtrAmp`)、真管樂(VSCO-2-CE 小號/長號斷奏 + Weresax 中音薩克斯,`brass.smp` / `brass.sax`)、合成鋪底(弦樂機合奏效果 `mix.padEns`)、沙鈴八分;配器輪換 `orchs` |
 | K-Pop | 合成 pluck | 808 取樣 | 808 合成 sub | supersaw、低音鋪底 `klow`、arp、沙鈴+指響、乒乓延遲 |
 | Bossa | Salamander | Virtuosity(cross stick) | 低音提琴 | 尼龍弦 clave、cabasa |
 | Blues | Salamander | Virtuosity | 電貝斯(boogie) | Hammond(很輕),不給吉他 |
 | Swing | Salamander | Virtuosity(ride) | 低音提琴 | archtop Freddie Green |
 | Funk | Rhodes | Virtuosity | 電貝斯 | 悶音切音、鈴鼓 backbeat |
 - 使用者**不能單獨選音色**,不要加那個選單。音色與聲位是兩件事,不要混著改
+- **音色定案(Steven 2026-09-27)**:要「跟唱片一模一樣」只有委託錄音一條路(商用取樣庫放進公開網站 = 散布取樣,多數授權不准),
+  Steven 選**維持免費取樣**。所以 City Pop 的音色這一輪(鋪底合奏效果、吉他音箱、薩克斯)之後**不再反覆調**,
+  只修壞掉的東西;要再動音色,先問 Steven 是不是改走委託錄音
 - **換音色不用先問(Steven 2026-09-26:「換音色時,以真實歌曲使用的音色為基準,之後不要問我」)**:
   基準是唱片樂手名單上那一層真的是什麼(`docs/SOURCES.md` C1)。還是要過下面「取樣比合成好」的兩個條件,
   也不推翻 Steven 親耳退回過的(`docs/HISTORY.md`)

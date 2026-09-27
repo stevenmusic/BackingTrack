@@ -4224,8 +4224,11 @@ function playDrum(piece, when, gain, vel){
      是「放鬆」的來源,hi-hat 往前一點是「往前走」。沒寫就是 0 */
   const pk = piece === "kick" ? "kick"
            : (piece === "snare" || piece === "clap" || piece === "rim" || piece === "xstick") ? "snare" : "hat";
+  /* `drumsGV: "vel"`:只拿範本的**輕重**,早晚照舊用 `humanTime`(量三首 City Pop 參考曲得來的 laid-back;
+     GrooVAE 學的是一般流行 / 放克鼓手,hi-hat 的 a 往前趕、小鼓略早,那不是 City Pop 的味道)。`true` = 早晚也用範本 */
   const gv = gvShape(piece, when);
-  if (gv) { when += gv[0]; gain *= gv[1]; } else when += humanTime(pk, when, 303 + piece.length);
+  if (gv) gain *= gv[1];
+  when += gv && feel().drumsGV !== "vel" ? gv[0] : humanTime(pk, when, 303 + piece.length);
   // 實錄鼓組的大鼓也要能觸發側鏈(原本只有 808 的大鼓會);給不給看 FEELS[x].duck
   if (piece === "kick") duckBass(when);
   // closed hat / 踩鈸落下時,上一顆還在響的 open hat 要停(808 的 open hat 另外有 D808_CUT)
@@ -5388,6 +5391,9 @@ function synth808(piece, when, gain){
 }
 
 function playBassNote(midi, when, dur, peak){
+  /* `bassGV`(沒寫就沒有):貝斯跟大鼓的**輕重**一起呼吸——那一格大鼓在範本裡輕,貝斯也輕一點(開根號,只跟一半)。
+     時間本來就綁大鼓(`timing.tie`)。這是輕重不是型:貝斯照舊彈自己的線(`bassFollowKick` 那種整段跟大鼓的型,Steven 說機械) */
+  if (feel().bassGV) { const kg = gvShape("kick", when); if (kg) peak *= Math.sqrt(kg[1]); }
   when += humanTime("bass", when, 302);
   /* 每個曲風的貝斯份量不一樣,寫在 `FEELS[x].bassGain` 裡,
      跟 `kickGain` / `snareGain` / `cymGain` 同一個做法(沒寫就是 1,零差異)。
@@ -6128,6 +6134,8 @@ const FEELS = {
     bgPieces: ["ohat"],                      // 背景載,載好之前那一下照打 closed hat
     /* hi-hat 走十六分(使用者指定),但 e / a 要輕——強弱差是它跟放克分得開的地方 */
     hatAcc: [1, 0.42, 0.72, 0.45],
+    /* 鼓的輕重用 GrooVAE 範本(真人鼓手資料),早晚保留 City Pop 參考曲量到的 laid-back;貝斯跟大鼓的輕重。見 `GV_TEMPLATES` */
+    drumsGV: "vel", bassGV: true,
     hatChoke: true,                          // hi-hat 同組互掐(SM Drums 原作者 sfz:group=3 off_by=3,見 playSMSample)
     /* 電貝斯:單音(新的一顆掐掉上一顆的尾巴)+ 放弦聲(原作者的「Release」旋鈕轉到一半),見 `BASS_REL` */
     bassMono: true, bassRel: 0.5,

@@ -93,6 +93,10 @@
 - 我們只放**模型算出來的 8 張律動範本**(每一格的偏移毫秒與力度,`tools/realism/gv_templates.mjs` 離線產生),不放模型或資料本身。
   上架前在「關於」寫出處:Magenta GrooVAE / Groove MIDI Dataset(Gillick et al. 2019)
 
+### GuitarSet(切音吉他的律動比例,`chopAccs` 與 `lag16.gtr`)
+- 來源:https://zenodo.org/records/3371780(Xi et al., ISMIR 2018),CC BY 4.0
+- 只用放克伴奏 36 段算出的**統計數字**(一拍四格的輕重與早晚,`tools/realism/gs_groove.py`),不放錄音或標註本身;上架前在「關於」寫出處
+
 ### VSCO-2-CE
 - 來源:https://github.com/sgossner/VSCO-2-CE(用到 `Brass/Trumpet/stac/`、`Brass/Tenor Trombone/stac/` 的 v3 力度層)
 - LICENSE 檔:`CC0 1.0 Universal`

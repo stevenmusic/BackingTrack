@@ -6031,6 +6031,7 @@ const FEELS = {
              /* 第二把:琶音與雙音兩種(拿掉八度奏法:突然跳高,那是間奏的彈法,不是墊在歌後面的)、一句換一次;
                 切音一句用同一個型、隨機變輕的量小一點(Steven 2026-09-27:「吉他聲音有一點突兀」) */
              guitar2: { lvl: 0.14, modes: 2, oct: 0, hold: 4 }, chopHold: 4, chopDip: 0.85,
+             chopAccs: [1, 1.03, 1.21, 1.11],   // ×(上刷 0.62)= 1 / 0.64 / 0.75 / 0.69 = 0 / −3.9 / −2.5 / −3.2dB(GuitarSet 放克伴奏)
              /* Sustained 時兩把吉他一小節只剩一下(切音一下、第二把一下),前後沒東西,整段最突出的就是它。
                 −6dB:Steven 2026-09-26「Synthesizer有一個東一下東一下的,那個也太大聲」
                 (錄影那段是 Sustained,銅管不吹。各 bus 單獨錄音 `fold.py`:每小節峰值 吉他 −5.5dBFS、Rhodes −13.2、鋪底 −8.2
@@ -6089,7 +6090,8 @@ const FEELS = {
     timing: { corr: 0.6, anti: 0.5, ens: 0.4, strong: 0.85, weak: 1.35,
               /* hat 的 e / a 晚 7ms = 輕微的十六分 swing(105 BPM 一格 143ms,約 55:45) */
               lag16: { kick: [0, 7, 6, 5], snare: [0, 7, 7, 6], hat: [0, 7, 2, 7],
-                       bass: [0, 7, 6, 5], keys: [0, 6, 3, 8], gtr: [0, 6, 3, 8] },
+                       /* gtr:GuitarSet 放克伴奏量到(相對正拍)e +2、& −10(往前)、a +2ms(`gs_groove.py`);原本 [0, 6, 3, 8] */
+                       bass: [0, 7, 6, 5], keys: [0, 6, 3, 8], gtr: [0, 2, -10, 2] },
               /* **大鼓與貝斯綁在一起**:貝斯用大鼓的那一條時間偏差(同一個種子、同一個量),
                  兩個人同一格落下時是同一個時間——「Kick + Bass 要非常緊」 */
               tie: { bass: "kick" } },
@@ -8265,7 +8267,9 @@ function scheduleGuitar(spans, barStartBeat, b, transpose, absBar, isFill){
       if (!sp || !sp.v) continue;
       /* `parts.chopAcc`(沒寫 = 1,零差異):拍點上那一下(下刷)的重音倍數。
          (vary.py 的「正拍 ÷ 反拍」數字未驗證、已降級,不當依據) */
-      const acc = (idx % div === 0 ? (f.parts.chopAcc || 1) : 1) * (st === "pad" ? (f.parts.padLone || 1) : 1);
+      /* `parts.chopAccs`(一拍四格各自的倍數,沒寫就照 `chopAcc`):GuitarSet 放克伴奏(36 段、6 位樂手,`gs_groove.py`)
+         量到正拍 0 / e −3.9 / & −2.5 / a −3.2dB;反拍在 `strumTake` 是上刷、本來就 ×0.62(−4.2dB),這裡補成量到的比例 */
+      const acc = (f.parts.chopAccs ? f.parts.chopAccs[idx % div] : idx % div === 0 ? (f.parts.chopAcc || 1) : 1) * (st === "pad" ? (f.parts.padLone || 1) : 1);
       strum(guitarNotesFor(sp.chord, "chop"), slotTime(barStartBeat, idx),
             base * acc * (hash01(absBar, 122 + idx) < 0.3 ? (f.parts.chopDip || 0.72) : 1),
             tone, idx % 4 !== 0, 0.006, f.parts.chopLen || 0.09, transpose);

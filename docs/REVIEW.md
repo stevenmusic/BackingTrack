@@ -545,3 +545,12 @@ Steven:「為什麼改了那麼久,聲音還是沒有明顯進步」「銅管聲
   改成離線算 8 張律動範本寫死(`gv_templates.mjs` → `GV_TEMPLATES`,4.5KB),`drumsGV`(預設關)。
   City Pop comp 30 秒:鼓 680 下裡 524 下套上範本,RMS −13.35 → −13.38(一樣)
 - 給 Steven 聽的三段(不是盲測,標明哪個是哪個):現在網站 / 吉他修正 / 吉他修正 + GrooVAE 鼓
+
+## 第十三輪附錄:律動(Steven:「你幫我決定。其他樂器的律動呢」)
+- 鼓:`drumsGV: "vel"`——GrooVAE 範本只取**輕重**(反拍大鼓 0.3–0.55、hi-hat 每下浮動 ±10–17),**早晚保留** City Pop 參考曲量到的 laid-back
+  (GrooVAE 的 hi-hat a 早 6ms、小鼓早 3ms 是一般流行 / 放克鼓手的味道)
+- 貝斯:`bassGV`——那一格大鼓在範本裡輕,貝斯也輕一點(開根號);型照舊是自己的線
+- 切音吉他:GuitarSet 放克伴奏(36 段、2076 拍,`gs_groove.py`):正拍 0 / e −3.9 / & −2.5 / a −3.2dB、& 比正拍早 10ms、e / a +2ms。
+  原本反拍一律上刷 −4.2dB、& 晚 3ms → `chopAccs` [1, 1.03, 1.21, 1.11]、`lag16.gtr` [0, 2, −10, 2]
+- Rhodes 與鋪底沒有找到可商用的真人伴奏資料,照舊
+- 驗證:旋律外音 0;RMS comp / drive / mix 見 PR,peak 0.85

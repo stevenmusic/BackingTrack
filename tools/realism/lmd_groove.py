@@ -13,18 +13,20 @@ warnings.filterwarnings('ignore')
 
 root = sys.argv[1]; cap = int(sys.argv[2]) if len(sys.argv) > 2 else 40000
 GROUPS = {'rhodes': range(4, 6), 'bass': range(32, 40), 'eguitar': [27]}
-stat = {g: {'dev': [[] for _ in range(4)], 'vel': [[] for _ in range(4)], 'cnt': np.zeros(4), 'beats': 0, 'tracks': 0} for g in GROUPS}
-files = sorted(glob.glob(os.path.join(root, '*', '*.mid')))[:cap]
-for fi, f in enumerate(files):
+
+
+def one(f):
+    """一個檔 → {組: [軌數, 拍數, 四格的偏差, 四格的力度]};不合格回 None"""
     try:
         pm = pretty_midi.PrettyMIDI(f)
     except Exception:
-        continue
+        return None
     tt, tempi = pm.get_tempo_changes()
-    if len(tempi) != 1 or not (85 <= tempi[0] <= 130): continue
+    if len(tempi) != 1 or not (85 <= tempi[0] <= 130): return None
     ts = pm.time_signature_changes
-    if ts and any((t.numerator, t.denominator) != (4, 4) for t in ts): continue
+    if ts and any((t.numerator, t.denominator) != (4, 4) for t in ts): return None
     spb = 60 / tempi[0]; step = spb / 4
+    out = {}
     for inst in pm.instruments:
         if inst.is_drum: continue
         g = next((k for k, r in GROUPS.items() if inst.program in r), None)
@@ -38,17 +40,31 @@ for fi, f in enumerate(files):
         q = np.round(t / step); d = (t - q * step) * 1000
         slot = (q % 4).astype(int)
         if np.std(d) < 6 or len(np.unique(v)) < 10 or np.mean((slot == 1) | (slot == 3)) < 0.15: continue
-        S = stat[g]; S['tracks'] += 1; S['beats'] += int((t[-1] - t[0]) / spb) + 1
+        o = out.setdefault(g, [0, 0, [[] for _ in range(4)], [[] for _ in range(4)]])
+        o[0] += 1; o[1] += int((t[-1] - t[0]) / spb) + 1
         for k in range(4):
-            m = slot == k
-            S['dev'][k] += list(d[m]); S['vel'][k] += list(v[m]); S['cnt'][k] += m.sum()
-    if fi % 5000 == 0: print('…', fi, {g: stat[g]['tracks'] for g in GROUPS}, flush=True)
-names = ['正拍', 'e', '&', 'a']
-for g, S in stat.items():
-    if not S['tracks']: print(g, '沒有'); continue
-    v0 = np.median(S['vel'][0]); d0 = np.median(S['dev'][0])
-    print(f"== {g}  軌數 {S['tracks']}、拍數 {S['beats']}")
-    for k in range(4):
-        vm = np.median(S['vel'][k])
-        print(f"  {names[k]:3s} 出現率 {S['cnt'][k] / S['beats']:.2f}  早晚(相對正拍){np.median(S['dev'][k]) - d0:+5.1f}ms"
-              f"  力度中位 {vm:5.1f}(振幅比 {(vm / v0) ** 2:.2f} = {40 * np.log10(vm / v0):+.1f}dB)")
+            m = slot == k; o[2][k] += list(d[m]); o[3][k] += list(v[m])
+    return out
+
+
+if __name__ == '__main__':
+    from multiprocessing import Pool
+    stat = {g: {'dev': [[] for _ in range(4)], 'vel': [[] for _ in range(4)], 'cnt': np.zeros(4), 'beats': 0, 'tracks': 0} for g in GROUPS}
+    files = sorted(glob.glob(os.path.join(root, '*', '*.mid')))[:cap]
+    with Pool(4) as pool:
+        for fi, r in enumerate(pool.imap_unordered(one, files, chunksize=50)):
+            if fi % 2000 == 0: print('…', fi, '/', len(files), {g: stat[g]['tracks'] for g in GROUPS}, flush=True)
+            if not r: continue
+            for g, (nt, nb, dv, vl) in r.items():
+                S = stat[g]; S['tracks'] += nt; S['beats'] += nb
+                for k in range(4):
+                    S['dev'][k] += dv[k]; S['vel'][k] += vl[k]; S['cnt'][k] += len(dv[k])
+    names = ['正拍', 'e', '&', 'a']
+    for g, S in stat.items():
+        if not S['tracks']: print(g, '沒有'); continue
+        v0 = np.median(S['vel'][0]); d0 = np.median(S['dev'][0])
+        print(f"== {g}  軌數 {S['tracks']}、拍數 {S['beats']}")
+        for k in range(4):
+            vm = np.median(S['vel'][k])
+            print(f"  {names[k]:3s} 出現率 {S['cnt'][k] / S['beats']:.2f}  早晚(相對正拍){np.median(S['dev'][k]) - d0:+5.1f}ms"
+                  f"  力度中位 {vm:5.1f}(振幅比 {(vm / v0) ** 2:.2f} = {40 * np.log10(vm / v0):+.1f}dB)")

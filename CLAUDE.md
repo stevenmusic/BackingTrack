@@ -22,7 +22,8 @@
 6. 審查員會列「下一步」;**照清單自己改完再送審,不要停下來問**。只有【待 Steven 決定】的事才停。
    `CLAUDE.md` 其他寫「先問」的規則(重做真人片段庫、「刻意不做」的項目)一律算【待 Steven 決定】,不因為照清單就跳過
 - 議題與會議紀錄在 `docs/REVIEW.md`;每一輪把狀態更新進去
-- **effort 分工**(Steven 2026-09-26 授權):審查員 `reviewer` 是 high;照指令跑量測、整理數字交給 `runner`(low);
+- **effort 分工**(Steven 2026-09-27:「審查員強度根據需求調低,避免過度消耗 token」):改程式邏輯 / 聲音的用 `reviewer`(medium);
+  只改數值、文件、量測工具的用 `reviewer-lite`(low);照指令跑量測、整理數字交給 `runner`(low);
   同一個問題審查連續兩輪都卡住,那一件改用 Fable 5.1(Agent 的 `model` 參數)。主對話的 effort 由 Steven 自己設
 - **Steven 已授權(2026-09-26):審查全部開綠燈**。審查員沒有阻擋就可以自己合併 PR
 - **不再給 Steven 盲測(2026-09-26:「不要給我盲測了,交給你分析,選擇A或B」)**。改預設由 Claude 決定,三條都要過:
@@ -118,13 +119,17 @@
 ## 聲位與演奏
 - `buildVoicing` 每小節挑離前一個最近的轉位;捨音順序 五音 → 根音(轉位不捨)→ 延伸音,上聲部最多四音(`trimTones`)
 - 鋼琴 comping:重拍落滿、反拍拿掉底下的音(頂音一直在);音長用 `compDur()`(每小節一種觸鍵);強弱 1.35 / 1.0 / 0.62 / 0.45
-- 力度改音色不只改音量:鋼琴與貝斯都有力度低通(`velRef`);只有鼓有真的多力度層,**不要給鋼琴做多力度層**(記憶體會爆)
+- 力度改音色不只改音量:鋼琴與貝斯都有力度低通(`velRef`);**平台鋼琴不做多力度層**(記憶體會爆)。
+  City Pop 的 Rhodes:力度用乘音量修正之前的值(`keysTrueVel`),照 jRhodes3c 原作者 sfz 的分界用 48–72 / 73–95(`keysLayers`)
+  與 112–127(`keysFF`)層;只載用到的音、開始播放後背景補
 - 左手讓位:`lhGain()` = `FEELS[x].lh` ?? (boogie 0.38 : 0.55);三種疏密左手都要撐長
 - 吉他:Pop 刷弦用真的手型(`realShape`,照移調後的根音挑,`prewarmGuitar` 也要傳 transpose);
   封閉和弦 5 弦 / 6 弦照**左手位置**挑移動最少的(`gtrHand` / `strumNotes`,`resetLap` 歸零),`prewarmGuitar` 要照播放順序走多圈;
   切音的ギター・マガジン指型(`parts.chopForms`)與右手一直刷(`parts.chopBrush`)**預設不開**:一起開時 Steven 說「非常機械」;
   Bossa 拇指低音 + 三弦 clave(跟 cross stick 共用 `g.clave`);切音不彈根音;每條弦差兩三音分
 - 貝斯一律待在 E1–D♯2 附近(`bassMidiFor`),移調不跟著跑;兩把琴 buffer 分開收(`bassBuffers.electric/.upright`),檔名音高寫法不同不准混用
+- 電貝斯照 Black And Blue 原作者 sfz:單音(`bassMono`)、放弦聲(`bassRel` = Release 旋鈕比例,`BASS_REL`)。
+  **貝斯不是照時間先後排的**(幽靈音在主音之後排、過門在主音之前排):單音要照時間找前後兩顆(`bassVoices`),不准只記「上一顆」
 - 鋪底一顆和弦落一次、不跟節奏打;City Pop 用連奏鋪底(`padLegato`)。失諧至少四顆不等距,兩顆一定是固定晃動
 - 樂句呼吸:`phraseHole()`(鍵盤與吉他不同 salt);編曲層級 `FEELS[x].arrange` / `layerOn()`,**關卡只在 `scheduleExtras`**,
   只有第四層(吉他、鋪底、銅管、打擊小物)可以進出,鼓/貝斯/鋼琴永遠在
@@ -136,7 +141,7 @@
   Bossa 是 cross stick 的 clave(兩小節一循環 3+2);Swing 是 hi-hat 踏鈸 2、4 + ride 型 `[0,2,3,4,6,7]`、小鼓 comping 平均抽、大鼓 feathering;
   **K-Pop 是 half-time,拍手只打第 3 拍,不准補 2、4**
 - `kickHold`(大鼓整段固定)/ `bassFollowKick`(貝斯跟大鼓)**預設不開**:照字面做成「整段一模一樣」聽起來機械(Steven 2026-09-26)。
-  City Pop:hi-hat 走十六分(強弱 `hatAcc`)、open hat 在反拍且一定被下一顆 closed hat 掐掉(`chokeOhat`)、大鼓與貝斯綁同一條時間(`timing.tie`)。
+  City Pop:hi-hat 走十六分(強弱 `hatAcc`)、open hat 在反拍且一定被下一顆 closed hat 掐掉(`chokeOhat`)、closed hat 之間也互掐(`hatChoke`,SM sfz `off_by`)、大鼓與貝斯綁同一條時間(`timing.tie`)。
   鼓的節奏是 `GROOVES` / `KICK_CELLS` / `SNARE_CELLS` 的格子加人性化(`timing`、`pocket`)
 - 高密度的鈸靠強弱差不吵(skip note、後半拍輕),**不是把總量壓掉**;兩層平均分布的高頻不准疊(打擊小物要嘛跟 backbeat、要嘛小一個量級)
 - 過門只佔最後一拍、hi-hat 不斷、力度漸強;搖擺的過門走三連音;一格的進行沒有過門

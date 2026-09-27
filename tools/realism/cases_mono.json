@@ -1,0 +1,68 @@
+{
+ "_note": "貝斯單音有沒有吃掉音:bug 版(e0a26e7)/ 修好(HEAD)/ 單音關;bassBus 單獨錄 → onsets.py",
+ "progressions": {},
+ "cases": [
+  {
+   "version": "e0a26e7",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "bug_comp",
+   "ovr": {
+    "orchFix": 2
+   }
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "mono_comp",
+   "ovr": {
+    "orchFix": 2
+   }
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "poly_comp",
+   "ovr": {
+    "orchFix": 2,
+    "bassMono": false
+   }
+  },
+  {
+   "version": "e0a26e7",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "bug_drive",
+   "ovr": {
+    "orchFix": 2
+   }
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "mono_drive",
+   "ovr": {
+    "orchFix": 2
+   }
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "poly_drive",
+   "ovr": {
+    "orchFix": 2,
+    "bassMono": false
+   }
+  }
+ ]
+}

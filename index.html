@@ -2789,6 +2789,21 @@ const RHODES_TABLE = [
   [81, "As_081__A5_453"], [86, "As_086__D6_455"], [91, "As_091__G6_457"],
   [96, "As_096__C7_459"],
 ].map(e => ({ midi: e[0], file: e[1] + "-mono.flac" }));
+/* **Rhodes 的力度層**(`PIANO_KITS.rhodes.layers`):jRhodes3c 原作者的 sfz(`_jRhodes-mono-looped.sfz`)每顆音錄了 5 層
+   (力度 1–47 / 48–72 / 73–95 / 96–111 / 112–127)。`RHODES_TABLE` 是 96–111 那一層(高音區 81 以上原本就是 48–95 那層);
+   這裡加 48–72 與 73–95:輕彈的那幾下換成**真的輕彈錄音**(中音域頻譜重心 490–570Hz,強彈層 710–750Hz),
+   不是把同一個檔案調小聲再加低通。[midi, 檔名, 增益]:增益把那一層拉回跟 `RHODES_TABLE` 同一個音頭響度
+   (起音後 300ms RMS;原作者每一層都正規化過,輕彈層反而大 1–5dB),**音量照舊由力度決定,層只換音色**。
+   跟 `RHODES_TABLE` 同一個檔的不列(71 以上多半是) */
+const RHODES_LAYERS = [
+  { top: 72 / 127, table: [[29, "As_029__F1_431", 0.56], [35, "As_035__B1_433", 0.52], [40, "As_040__E2_435", 0.63], [45, "As_045__A2_437", 0.75], [50, "As_050__D3_439", 0.76], [55, "As_055__G3_441", 0.71], [59, "As_059__B3_443", 0.91], [62, "As_062__D4_445", 0.87], [65, "As_065__F4_447", 0.76], [71, "As_071__B4_449", 0.87], [76, "As_076__E5_451", 1.01]] },
+  { top: 95 / 127, table: [[29, "As_029__F1_361", 0.64], [35, "As_035__B1_363", 0.69], [40, "As_040__E2_365", 0.70], [45, "As_045__A2_367", 0.73], [50, "As_050__D3_369", 0.79], [55, "As_055__G3_371", 0.68], [59, "As_059__B3_373", 0.86], [62, "As_062__D4_375", 0.82], [65, "As_065__F4_377", 0.76], [71, "As_071__B4_449", 0.87], [76, "As_076__E5_451", 1.01]] },
+].map(L => ({ top: L.top, table: L.table.map(e => ({ midi: e[0], file: e[1] + "-mono.flac", gain: e[2] })) }));
+/* **重彈層**(`FEELS[x].keysFF`):同一份 sfz 的 112–127 那一層——Rhodes 用力彈才有的「bark」,
+   比 `RHODES_TABLE`(96–111)亮 100–350Hz(頻譜重心)。只給最強的那幾下(力度 × 127 > 111,分界 ±5 用 `hash01`),
+   重音跟一般的音不會是同一個檔。增益同 `RHODES_LAYERS` 的算法(拉回主層的音頭響度,音量照舊由力度決定)。
+   輕彈的兩層(`RHODES_LAYERS`)錄音本身就暗,整台會變悶,沒有開 */
+const RHODES_FF = { from: 111 / 127, table: [[29, "As_029__F1_1109", 1.12], [35, "As_035__B1_1111", 1.07], [40, "As_040__E2_1113", 1.13], [45, "As_045__A2_1115", 1.06], [50, "As_050__D3_1117", 1.12], [55, "As_055__G3_1119", 0.92], [59, "As_059__B3_1121", 0.88], [62, "As_062__D4_1123", 0.93], [65, "As_065__F4_1125", 1.13], [71, "As_071__B4_1127", 1.15], [76, "As_076__E5_1129", 1.13], [81, "As_081__A5_2101", 1.29], [86, "As_086__D6_2103", 1.07], [91, "As_091__G6_2105", 0.93], [96, "As_096__C7_2107", 1.06]].map(e => ({ midi: e[0], file: e[1] + "-mono.flac", gain: e[2] })) };
 
 /* 哪一種曲風用哪一台琴。寫在 `FEELS[x].piano`,跟貝斯的 `kit` 同一個做法——
    不要在排程裡針對某一種曲風寫 if */
@@ -2813,7 +2828,7 @@ const PIANO_KITS = {
      (量過:四個音的和弦 Salamander 1.17、Rhodes 2.37),
      照原樣接進去 City Pop 整段會衝到 0.92。0.62 是把兩台拉到同一個刻度的值,
      動它就要重量一次整組響度 */
-  rhodes:   { src: SRC_RHODES, table: RHODES_TABLE, gain: 0.62, tau: 1.5 },
+  rhodes:   { src: SRC_RHODES, table: RHODES_TABLE, gain: 0.62, tau: 1.5, layers: RHODES_LAYERS, ff: RHODES_FF },
 };
 function pianoKit(){
   if (typeof FEELS === "undefined" || typeof feelNow === "undefined") return "acoustic";
@@ -2857,9 +2872,27 @@ function loadPianoKit(kit, midis){
   }));
 }
 
+/* 力度層(`PIANO_KITS[x].layers`)**不擋播放**:載好之前那幾下照舊用主層 + 低通。
+   等真的開始播了(`drumFillGate`)才一顆一顆排隊抓,解碼不跟排程器搶;兩層共用的檔只抓一次 */
+const layerBufs = new Map(), layerAsked = new Set();
+let layerQueue = Promise.resolve();
+function loadPianoLayers(kit, midis){
+  const K = PIANO_KITS[kit];
+  if (!K) return;
+  const Ls = [...(K.layers && feel().keysLayers ? K.layers : []), ...(K.ff && feel().keysFF ? [K.ff] : [])];
+  for (const L of Ls) for (const m of neededSampleMidis(midis, K.table)) {
+    const e = L.table.find(x => x.midi === m);
+    if (!e || layerAsked.has(e.file)) continue;
+    layerAsked.add(e.file);
+    layerQueue = layerQueue.then(() => drumFillGate()).then(() => fetchDecode(K.src, e.file))
+      .then(buf => { layerBufs.set(e.file, buf); }).catch(() => {});
+  }
+}
+
 function ensureSamples(midis){
   const kit = pianoKit();
   if (PIANO_KITS[kit] && PIANO_KITS[kit].synth) return Promise.resolve();   // 合成的,沒有檔案
+  loadPianoLayers(kit, midis);
   /* Rhodes 是 FLAC,舊的 iOS Safari 可能整組吃不下。整組都掛的時候
      **退回平台鋼琴**(mp3,一定載得到)而不是掉進三角波的保底音色——
      電鋼琴換成鋼琴只是音色不對,換成合成音會整首不能聽 */
@@ -3408,21 +3441,48 @@ function playNote(midi, when, dur, peak){
      四層 × 七顆音是 50MB 下載、解碼後兩百多 MB 記憶體,手機會直接掛。
      一顆低通把高頻按力度收掉,拿到的是同一件事的九成 */
   const velRef = 0.42;                       // 大約是「用力彈」的 peak
-  const vel = Math.max(0.12, Math.min(1, peak / velRef));
+  /* **力度要用乘 `K.gain` 之前的 peak**:`K.gain` 是「這台琴的取樣比較大聲」的音量修正(Rhodes 0.62),不是彈得比較輕。
+     原本乘完才算,Rhodes 每一下的力度都被低估 38%——City Pop 量到 173 下全部落在最輕那一層、強彈層一次都沒用到,
+     低通也一直多壓一截。寫在 `FEELS[x].keysTrueVel`,沒寫的曲風照舊(Funk 也是 Rhodes,先不動);
+     平台鋼琴 gain 1,本來就沒差 */
+  const layered = !!(feel().keysLayers && K.layers);
+  const vel = Math.max(0.12, Math.min(1, (feel().keysTrueVel ? peak / K.gain : peak) / velRef));
+  /* **力度層**(`K.layers`,只有 Rhodes 有):照原作者 sfz 的分界挑層(力度 × 127 ≤ 72 → 48–72 那層、≤ 95 → 73–95 那層、
+     以上是主層)。分界附近 ±5 用 `hash01` 決定落哪一邊——同一個力度連彈時不會每一下都是同一個檔案(「機關槍」)。
+     層有自己的音色,低通只補層內的差(力度 ÷ 這一層的上限) */
+  const bestMidi0 = usable.length ? nearestIn(usable.map(m => ({ midi: m })), midi).midi : -1;
+  let layerBuf = null, layerGain = 1, velTone = vel;
+  const jit = (hash01(tickAt(when), 320 + midi) - 0.5) * 0.08;
+  if (feel().keysFF && K.ff && bestMidi0 >= 0 && vel + jit > K.ff.from) {
+    const e = K.ff.table.find(x => x.midi === bestMidi0);
+    const b = e && layerBufs.get(e.file);
+    if (b) { layerBuf = b; layerGain = e.gain; }
+  }
+  if (layered && bestMidi0 >= 0 && !layerBuf) {
+    /* `keysLayers` 是**用幾層比較輕的**(從上面數):1 = 只用 73–95、2 = 再加 48–72 */
+    for (const L of K.layers.slice(-Math.min(K.layers.length, +feel().keysLayers || 0))) {
+      if (vel + jit > L.top) continue;
+      const e = L.table.find(x => x.midi === bestMidi0);
+      const b = e && layerBufs.get(e.file);
+      if (b) { layerBuf = b; layerGain = e.gain; velTone = Math.min(1, vel / L.top); }
+      break;
+    }
+  }
   let tone = null;
   /* 0.88 以上整顆濾波器是空跑的(截止已經在 14kHz 以上,取樣本身就沒有那麼多高頻),
      而最大聲的那幾下正是同時發聲最多的時候——省下的就是那時候的節點 */
-  if (vel < 0.88) {
+  if (velTone < 0.88) {
     tone = ctx.createBiquadFilter();
     tone.type = "lowpass";
-    tone.frequency.value = 700 + 16000 * Math.pow(vel, 1.45);
+    tone.frequency.value = 700 + 16000 * Math.pow(velTone, 1.45);
     tone.Q.value = 0.35;
   }
 
   let src;
   if (usable.length) {
-    const bestMidi = nearestIn(usable.map(m => ({ midi: m })), midi).midi;
-    const buf = bank.get(bestMidi);
+    const bestMidi = bestMidi0;
+    const buf = layerBuf || bank.get(bestMidi);
+    peak *= layerGain;
     src = ctx.createBufferSource();
     src.buffer = buf;
     src.playbackRate.value = Math.pow(2, (midi - bestMidi) / 12);
@@ -3777,9 +3837,34 @@ function loadBassOne(kit, K, entry, rr){
     .catch(() => { if (rr === K.rr[0]) bassFailed[kit].add(entry[0]); });
 }
 
+/* ── 電貝斯的放弦聲(`FEELS[x].bassRel`,沒寫就沒有)──────────────────
+   Black And Blue Basses 原作者的 sfz(`05-darkblack_pluck.sfz`)有一組 `trigger=release` 的取樣
+   (`Samples/darkblack/rel/`,每個半音 4 個 round robin):手指把弦壓停的那一下——放弦時的擦弦與琴衍雜音。
+   原作者做成「Release」旋鈕(cc107,預設 0 = 不響),音量照旋鈕比例、按住越久越小(`rt_decay=4`,每秒 −4dB)。
+   `bassRel` 就是那顆旋鈕的比例。檔名跟撥弦那組同一套寫法(`e2` = 實際音高 midi 28);**只有電貝斯那一把有** */
+const BASS_REL = { lo: 23, hi: 60,
+  src: ["https://cdn.jsdelivr.net/gh/sfzinstruments/karoryfer.black-and-blue-basses@main/Samples/darkblack/rel/",
+        "https://raw.githubusercontent.com/sfzinstruments/karoryfer.black-and-blue-basses/main/Samples/darkblack/rel/"],
+  file: (m, r) => `darkblack_${GRETSCH_NAMES[m % 12]}${Math.floor(m / 12)}_rel_rr${r}.wav` };
+const bassRelBufs = new Map(), bassRelAsked = new Set();
+let bassRelQueue = Promise.resolve();
+function ensureBassRel(midis){
+  for (const m0 of midis) {
+    const m = Math.round(m0);
+    if (m < BASS_REL.lo || m > BASS_REL.hi || bassRelAsked.has(m)) continue;
+    bassRelAsked.add(m);
+    const list = [];
+    bassRelBufs.set(m, list);
+    for (const r of [1, 2]) bassRelQueue = bassRelQueue.then(() => drumFillGate())
+      .then(() => fetchDecode(BASS_REL.src, BASS_REL.file(m, r))).then(b => { list.push(b); }).catch(() => {});
+  }
+}
+let bassVoices = [];
+
 function ensureBass(midis){
   const kit = bassKit(), K = BASS_KITS[kit];
   if (K.synth) return Promise.resolve();   // 808 的低音是算出來的,沒有檔案要載
+  if (kit === "electric" && feel().bassRel) ensureBassRel(midis);   // 不擋播放
   const want = new Set();
   for (const m of midis) {
     let best = K.files[0];
@@ -4974,6 +5059,14 @@ function playSMSample(piece, when, gain, v){
     if (!best || Math.abs(db - target) < Math.abs(best[1] - target)) best = [name, db, bufs];
   }
   if (!best) return false;
+  /* **hi-hat 同一組互掐**(`FEELS[x].hatChoke`,沒寫就不掐,零差異):SM Drums 原作者的 sfz
+     (`Programs/mappings/smdrums_sfz_closedhat.sfz`)所有 hi-hat 都是 `group=3 off_by=3`——
+     下一顆 hi-hat 落下時上一顆就停。真的鈸是同一片金屬,再敲一下是打在已經在動的鈸上,
+     不是兩個聲音疊起來;不掐的話十六分連打的尾巴會一直疊,高頻堆成一片 */
+  if (feel().hatChoke && (piece === "hihat" || piece === "hhped")) {
+    if (lastSMHat && when > lastSMHat.at + 0.01)
+      try { lastSMHat.g.gain.cancelScheduledValues(when); lastSMHat.g.gain.setTargetAtTime(0, when, 0.004); } catch (e) {}
+  }
   const buf = best[2][(smRR[piece] = (smRR[piece] || 0) + 1) % best[2].length];
   const layerNorm = 1 + (0.5 - idx / Math.max(1, n - 1)) * 0.55;   // 跟 playDrum 同一條補償
   const g = ctx.createGain();
@@ -4997,11 +5090,13 @@ function playSMSample(piece, when, gain, v){
   const damp = f0.drumDamp && f0.drumDamp[piece];
   if (damp) { g.gain.setValueAtTime(g.gain.value, when + damp[0]); g.gain.setTargetAtTime(0, when + damp[0], damp[1]); }
   src.start(when, leadOf(src.buffer));
+  if (piece === "hihat" || piece === "hhped") lastSMHat = { g, at: when };
   activeSources.add(src);
   src.onended = () => { activeSources.delete(src);
     try { src.disconnect(); g.disconnect(); if (pan) pan.disconnect(); } catch (e) {} };
   return true;
 }
+let lastSMHat = null;
 
 const SRC_D808 = [
   "https://cdn.jsdelivr.net/gh/tidalcycles/Dirt-Samples@master/",
@@ -5383,11 +5478,53 @@ function playBassNote(midi, when, dur, peak){
       src.connect(btone); btone.connect(g);
     } else src.connect(g);
   }
+  /* **單音**(`FEELS[x].bassMono`,沒寫就照舊):原作者 sfz 的 Mono 模式是 `group=1 off_by=1`——
+     新的一顆落下,上一顆還在響的尾巴就停(同一個人、同一隻右手,不會兩顆疊著響) */
+  /* **排程不是照時間先後**:幽靈音(前一格)在主音之後才排、過門的音階線在同一小節的主音之前排。
+     所以不能只記「上一顆」——記最近幾顆,照時間找**前一顆**與**後一顆**:
+     前一顆還在響就在這一顆的起點掐它(它的包絡都在這個時間之前排好,只刪掉之後的收尾);
+     後面已經有一顆比較晚的,就把**自己**在那一顆的起點掐掉。被掐掉的那顆不放放弦聲(手指是直接換到下一顆) */
+  const f0 = feel();
+  let cutAt = Infinity;
+  if (f0.bassMono) {
+    bassVoices = bassVoices.filter(v => v.end > ctx.currentTime - 0.5);
+    let prev = null, next = null;
+    for (const v of bassVoices) {
+      if (v.at < when && (!prev || v.at > prev.at)) prev = v;
+      if (v.at > when && (!next || v.at < next.at)) next = v;
+    }
+    if (prev && prev.end > when) {
+      try { prev.g.gain.cancelScheduledValues(when); prev.g.gain.setTargetAtTime(0.0001, when, 0.006); } catch (e) {}
+      if (prev.rel && prev.relAt > when) try { prev.rel.stop(when); } catch (e) {}
+      prev.end = when;
+    }
+    if (next) cutAt = next.at;
+  }
+  const voice = { g, at: when, end: Math.min(cutAt, when + Math.max(dur, 0.08) + 0.45), rel: null, relAt: 0 };
+  if (f0.bassMono) bassVoices.push(voice);
+  /* 放弦聲(`bassRel`,見 `BASS_REL`):放開的那一刻,按住越久越小;被下一顆掐掉的不放 */
+  const relList = f0.bassRel && kitNow === "electric" && bassRelBufs.get(Math.round(midi));
+  if (relList && relList.length && when + Math.max(dur, 0.08) < cutAt) {
+    const tOff = when + Math.max(dur, 0.08);
+    const rsrc = ctx.createBufferSource();
+    rsrc.buffer = relList[Math.floor(hash01(tickAt(when), 330) * relList.length) % relList.length];
+    const rg = ctx.createGain();
+    rg.gain.setValueAtTime(0.0001, tOff);
+    rg.gain.linearRampToValueAtTime(f0.bassRel * peak * Math.pow(10, -4 * Math.max(dur, 0.08) / 20), tOff + 0.001);
+    rsrc.connect(rg); rg.connect(bassBus);
+    rsrc.start(tOff, leadOf(rsrc.buffer));
+    voice.rel = rsrc; voice.relAt = tOff;
+    activeSources.add(rsrc);
+    rsrc.onended = () => { activeSources.delete(rsrc); try { rsrc.disconnect(); rg.disconnect(); } catch (e) {} };
+  }
   // 貝斯不像鋼琴會一路自然衰減,撐住整個音長再收
   g.gain.setValueAtTime(0.0001, when);
   g.gain.linearRampToValueAtTime(peak, when + 0.012);
   g.gain.setTargetAtTime(peak * 0.75, when + 0.012, 0.35);
   g.gain.setTargetAtTime(0.0001, when + Math.max(dur, 0.08), 0.07);
+  // 後面已經排了一顆比較晚的(見上面 `cutAt`):自己的包絡排完之後,在那一顆的起點收掉
+  if (cutAt < when + Math.max(dur, 0.08) + 0.45)
+    try { g.gain.cancelScheduledValues(cutAt); g.gain.setTargetAtTime(0.0001, cutAt, 0.006); } catch (e) {}
   const stopAt = when + Math.max(dur, 0.08) + 0.45;
   src.start(when, leadOf(src.buffer));
   src.stop(stopAt);
@@ -5953,6 +6090,13 @@ const FEELS = {
     bgPieces: ["ohat"],                      // 背景載,載好之前那一下照打 closed hat
     /* hi-hat 走十六分(使用者指定),但 e / a 要輕——強弱差是它跟放克分得開的地方 */
     hatAcc: [1, 0.42, 0.72, 0.45],
+    hatChoke: true,                          // hi-hat 同組互掐(SM Drums 原作者 sfz:group=3 off_by=3,見 playSMSample)
+    /* 電貝斯:單音(新的一顆掐掉上一顆的尾巴)+ 放弦聲(原作者的「Release」旋鈕轉到一半),見 `BASS_REL` */
+    bassMono: true, bassRel: 0.5,
+    /* Rhodes:真的力度(不含音量修正,`keysTrueVel`)+ jRhodes3c 原作者的力度分層(`keysLayers` 2 = 48–72、73–95 兩層都用,
+       `keysFF` = 112–127 重彈層),見 `playNote`。依據是原作者 sfz 的分層;輕彈層比較暗是那台琴本來的樣子
+       (keysBus 亮度會低一些,量尺分數不當採用或退回的理由) */
+    keysTrueVel: true, keysLayers: 2, keysFF: true,
     /* **pocket**:貝斯落後 4 毫秒、切音吉他往前 2 毫秒。
        110 BPM 的一個十六分是 136 毫秒,所以 4 毫秒只有 3%——
        它不會被聽成「不準」,但那個「浮起來」的感覺就是從這裡來的。

@@ -481,3 +481,37 @@ Steven 聽了之後:「整體聽起來非常機械,比之前開始製作還糟�
 - 審查第 2 輪:無阻擋、可合併。S-a rr 的 salt 改綁取樣(`190 + e[0]`,長號 +100):72/76/79、69/76/79、67/76/79 × 6 個位置,
   撞到同一顆 F4 的兩聲 r 全部不同;harmony.mjs 旋律外音 0。S-c 註解與 HISTORY 換成 `hits.py` 的數字,「未乘時」那組標未驗證。
   S-b(音準改能量加權,A2 rr1 −19 可能是尾巴拉的)與 S-d(probe 記降八度後的最高音)是可選,留到下一次動銅管時做
+
+## 第十一輪(2026-09-27):演奏真實度(Steven:機關槍效應、鈸能量堆積、貝斯死音)
+依據一律是**各取樣庫原作者的 sfz 設定**(不是量尺分數)。只加在 City Pop 的欄位上,沒寫的曲風零差異。
+- hi-hat 互掐 `hatChoke`:SM Drums `smdrums_sfz_closedhat.sfz` 全部 `group=3 off_by=3`(原本只有 open hat 被掐)
+- 電貝斯 `bassMono`(`05-darkblack_pluck.sfz` Mono:`group=1 off_by=1`)+ `bassRel` 0.5(`trigger=release` 的 rel 取樣,原作者「Release」旋鈕 cc107 預設 0,`rt_decay=4`)
+- Rhodes `keysTrueVel`:舊程式先乘音量修正(0.62)才算力度,每一下被低估 38%(City Pop comp 173 下全落在 48–72 那一級)。修正後 76 / 36 / 61
+- Rhodes `keysFF`:最強那幾下(> 111)用 jRhodes3c 112–127 層(比主層亮 100–350Hz)
+- **不採用** Rhodes 輕彈兩層(`keysLayers`):錄音本身偏暗,keysBus 亮度 comp 432 → 355Hz、drive 529 → 336Hz(只用 73–95 那層也 373 / 367)——
+  Steven 說過 Rhodes「太厚太悶」(判準 ③)。Salamander 的建議(踏板共鳴、16 層)不適用:City Pop 不用平台鋼琴
+- 已經有的:共用卷積殘響(鼓、吉他、銅管、鋪底、打擊、鍵盤都送)、鼓房間麥、總線黏著壓縮;時間與力度人性化用 `hash01`(整份檔案不准 `Math.random`)
+- 量測(`cases_real.json` × `probe_solo.js` → `bus_cmp.py`,orchFix 2,單次):
+  貝斯 RMS −18.0 → −18.3、峰值 −1.4 → −2.7(單音不再疊尾巴);鼓 嘶% 2.3 → 2.3、亮度 1095 → 1049 / 767 → 740;
+  Rhodes(真的力度 + 重彈層)RMS −20.6 → −20.7、亮度 432 → 448 / 529 → 520、峰值 −3.5 → −2.7
+- 規則:harmony.mjs City Pop 2 組 × comp / drive 旋律外音 0;16 段(e0a26e7)peak 全 0.85、RMS pad −14.8～−14.9、comp −12.9～−13.2、drive −12.3～−12.6、mix −12.4～−14.0、錯誤 0
+- 效能(`cases_perf.json`,3 次):p95 48–62ms、最久 152–223、來不及 21–23(上一輪 p95 46–56、最久 128–170、來不及 23–25)——最久那一跳略高,
+  可能是播放中背景解碼(重彈層、放弦聲都排在 `drumFillGate` 之後);「來不及 ≠ 0」議題照舊【尚未開始】
+
+### 第十一輪審查第 1 輪的處理
+- **阻擋(貝斯單音吃掉音)【同意】已修(5bf3042)**:貝斯不是照時間先後排的(幽靈音在主音之後排、過門在主音之前排),
+  改成 `bassVoices` 照時間找前一顆(掐它)與後一顆(把自己在那一刻收掉,不放放弦聲)。
+  驗證(`cases_mono.json` × `probe_solo.js` bassBus → `onsets.py`,單次):安靜比例 修之前 e0a26e7 0.16 / 0.16、
+  修好 0.14 / 0.13、單音關 0.14 / 0.14 → 修好跟單音關一樣。**起音數不能用**:同一版重錄會跳(bug 版一次 88、一次 97 / 91),
+  修正的理由是程式邏輯(審查員第 2 輪逐步推過幽靈音、過門、插在中間、同時兩顆四種情況)
+- S1【同意】`cases_real.json` 的 new 指 HEAD、重錄(下面);S3【同意】註解修正;S4【同意】`probe_real.js` 加分層計數
+- S2【同意】「太厚太悶」是 HISTORY 的量尺結論(Rhodes 500Hz +2.7dB),不是 Steven 說的,之前寫錯了。
+  沒有這一條,不開輕彈層的理由只剩亮度分數,照規則不能當退回的理由 → **輕彈兩層改成開**(`keysLayers: 2`,原作者 sfz 分層)
+- 重錄(5bf3042,`cases_real.json` × `probe_solo.js` → `bus_cmp.py`,單次):
+  貝斯 RMS −18.0 → −18.2、峰值 −1.4 → −2.6;鼓 嘶% 2.1–2.2 → 2.1、亮度 985 → 996 / 743 → 695;
+  Rhodes RMS −20.5 → −20.5 / −22.6 → −22.6、亮度 428 → 363 / 519 → 336、峰值 −3.4 → −2.1 / −6.9 → −5.5
+- 力度分級(`probe_real.js`,≤72 / ≤95 / ≤111 / >111):comp 76 / 36 / 14 / 47、drive 384 / 61 / 6 / 0
+- `cases_def.json` 16 段:peak 全 0.85、RMS pad −14.6～−14.8、comp −12.8～−13.3、drive −12.2～−12.6、mix −12.5～−13.9、錯誤 0;
+  harmony.mjs City Pop「Fmaj7 - E7 - Am7 - C7」comp / mix / drive 旋律外音 0
+- 需 Steven 聽過:Rhodes 輕彈層(不喜歡就 `keysLayers: 0`)、放弦聲份量(`bassRel`)
+- 審查第 2 輪:無阻擋、可合併。S1【同意】量法進 repo(`onsets.py`、`cases_mono.json`),結果如上;S2 Rhodes drive 變暗(519 → 336Hz,384 / 451 下在 48–72 層)列「需 Steven 聽過」

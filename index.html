@@ -2799,6 +2799,11 @@ const RHODES_LAYERS = [
   { top: 72 / 127, table: [[29, "As_029__F1_431", 0.56], [35, "As_035__B1_433", 0.52], [40, "As_040__E2_435", 0.63], [45, "As_045__A2_437", 0.75], [50, "As_050__D3_439", 0.76], [55, "As_055__G3_441", 0.71], [59, "As_059__B3_443", 0.91], [62, "As_062__D4_445", 0.87], [65, "As_065__F4_447", 0.76], [71, "As_071__B4_449", 0.87], [76, "As_076__E5_451", 1.01]] },
   { top: 95 / 127, table: [[29, "As_029__F1_361", 0.64], [35, "As_035__B1_363", 0.69], [40, "As_040__E2_365", 0.70], [45, "As_045__A2_367", 0.73], [50, "As_050__D3_369", 0.79], [55, "As_055__G3_371", 0.68], [59, "As_059__B3_373", 0.86], [62, "As_062__D4_375", 0.82], [65, "As_065__F4_377", 0.76], [71, "As_071__B4_449", 0.87], [76, "As_076__E5_451", 1.01]] },
 ].map(L => ({ top: L.top, table: L.table.map(e => ({ midi: e[0], file: e[1] + "-mono.flac", gain: e[2] })) }));
+/* **重彈層**(`FEELS[x].keysFF`):同一份 sfz 的 112–127 那一層——Rhodes 用力彈才有的「bark」,
+   比 `RHODES_TABLE`(96–111)亮 100–350Hz(頻譜重心)。只給最強的那幾下(力度 × 127 > 111,分界 ±5 用 `hash01`),
+   重音跟一般的音不會是同一個檔。增益同 `RHODES_LAYERS` 的算法(拉回主層的音頭響度,音量照舊由力度決定)。
+   輕彈的兩層(`RHODES_LAYERS`)錄音本身就暗,整台會變悶,沒有開 */
+const RHODES_FF = { from: 111 / 127, table: [[29, "As_029__F1_1109", 1.12], [35, "As_035__B1_1111", 1.07], [40, "As_040__E2_1113", 1.13], [45, "As_045__A2_1115", 1.06], [50, "As_050__D3_1117", 1.12], [55, "As_055__G3_1119", 0.92], [59, "As_059__B3_1121", 0.88], [62, "As_062__D4_1123", 0.93], [65, "As_065__F4_1125", 1.13], [71, "As_071__B4_1127", 1.15], [76, "As_076__E5_1129", 1.13], [81, "As_081__A5_2101", 1.29], [86, "As_086__D6_2103", 1.07], [91, "As_091__G6_2105", 0.93], [96, "As_096__C7_2107", 1.06]].map(e => ({ midi: e[0], file: e[1] + "-mono.flac", gain: e[2] })) };
 
 /* 哪一種曲風用哪一台琴。寫在 `FEELS[x].piano`,跟貝斯的 `kit` 同一個做法——
    不要在排程裡針對某一種曲風寫 if */
@@ -2823,7 +2828,7 @@ const PIANO_KITS = {
      (量過:四個音的和弦 Salamander 1.17、Rhodes 2.37),
      照原樣接進去 City Pop 整段會衝到 0.92。0.62 是把兩台拉到同一個刻度的值,
      動它就要重量一次整組響度 */
-  rhodes:   { src: SRC_RHODES, table: RHODES_TABLE, gain: 0.62, tau: 1.5, layers: RHODES_LAYERS },
+  rhodes:   { src: SRC_RHODES, table: RHODES_TABLE, gain: 0.62, tau: 1.5, layers: RHODES_LAYERS, ff: RHODES_FF },
 };
 function pianoKit(){
   if (typeof FEELS === "undefined" || typeof feelNow === "undefined") return "acoustic";
@@ -2873,8 +2878,9 @@ const layerBufs = new Map(), layerAsked = new Set();
 let layerQueue = Promise.resolve();
 function loadPianoLayers(kit, midis){
   const K = PIANO_KITS[kit];
-  if (!K || !K.layers || !feel().keysLayers) return;
-  for (const L of K.layers) for (const m of neededSampleMidis(midis, K.table)) {
+  if (!K) return;
+  const Ls = [...(K.layers && feel().keysLayers ? K.layers : []), ...(K.ff && feel().keysFF ? [K.ff] : [])];
+  for (const L of Ls) for (const m of neededSampleMidis(midis, K.table)) {
     const e = L.table.find(x => x.midi === m);
     if (!e || layerAsked.has(e.file)) continue;
     layerAsked.add(e.file);
@@ -3440,15 +3446,21 @@ function playNote(midi, when, dur, peak){
      低通也一直多壓一截(被回報過 Rhodes「太厚太悶」)。寫在 `FEELS[x].keysLayers`(連力度層一起開),
      沒寫的曲風照舊(Funk 也是 Rhodes,先不動);平台鋼琴 gain 1,本來就沒差 */
   const layered = !!(feel().keysLayers && K.layers);
-  const vel = Math.max(0.12, Math.min(1, (layered ? peak / K.gain : peak) / velRef));
+  const vel = Math.max(0.12, Math.min(1, (feel().keysTrueVel ? peak / K.gain : peak) / velRef));
   /* **力度層**(`K.layers`,只有 Rhodes 有):照原作者 sfz 的分界挑層(力度 × 127 ≤ 72 → 48–72 那層、≤ 95 → 73–95 那層、
      以上是主層)。分界附近 ±5 用 `hash01` 決定落哪一邊——同一個力度連彈時不會每一下都是同一個檔案(「機關槍」)。
      層有自己的音色,低通只補層內的差(力度 ÷ 這一層的上限) */
   const bestMidi0 = usable.length ? nearestIn(usable.map(m => ({ midi: m })), midi).midi : -1;
   let layerBuf = null, layerGain = 1, velTone = vel;
-  if (layered && bestMidi0 >= 0) {
-    const jit = (hash01(tickAt(when), 320 + midi) - 0.5) * 0.08;
-    for (const L of K.layers) {
+  const jit = (hash01(tickAt(when), 320 + midi) - 0.5) * 0.08;
+  if (feel().keysFF && K.ff && bestMidi0 >= 0 && vel + jit > K.ff.from) {
+    const e = K.ff.table.find(x => x.midi === bestMidi0);
+    const b = e && layerBufs.get(e.file);
+    if (b) { layerBuf = b; layerGain = e.gain; }
+  }
+  if (layered && bestMidi0 >= 0 && !layerBuf) {
+    /* `keysLayers` 是**用幾層比較輕的**(從上面數):1 = 只用 73–95、2 = 再加 48–72 */
+    for (const L of K.layers.slice(-Math.min(K.layers.length, +feel().keysLayers || 0))) {
       if (vel + jit > L.top) continue;
       const e = L.table.find(x => x.midi === bestMidi0);
       const b = e && layerBufs.get(e.file);
@@ -6059,8 +6071,10 @@ const FEELS = {
     hatChoke: true,
     /* 電貝斯:單音(新的一顆掐掉上一顆的尾巴)+ 放弦聲(原作者的「Release」旋鈕轉到一半),見 `BASS_REL` */
     bassMono: true, bassRel: 0.5,
-    /* Rhodes:真的力度(不含音量修正)+ jRhodes3c 原作者的力度層,見 `RHODES_LAYERS` 與 `playNote` */
-    keysLayers: true,                          // hi-hat 同組互掐(SM Drums 原作者 sfz:group=3 off_by=3,見 playSMSample)
+    /* Rhodes:真的力度(不含音量修正,`keysTrueVel`,見 `playNote`)。
+       原作者的力度層(`keysLayers`,見 `RHODES_LAYERS`)**不開**:輕彈錄音本身就暗,開了整台 Rhodes 變悶
+       (keysBus 亮度 432 → 355Hz),Steven 以前說過 Rhodes「太厚太悶」 */
+    keysTrueVel: true, keysFF: true,                          // hi-hat 同組互掐(SM Drums 原作者 sfz:group=3 off_by=3,見 playSMSample)
     /* **pocket**:貝斯落後 4 毫秒、切音吉他往前 2 毫秒。
        110 BPM 的一個十六分是 136 毫秒,所以 4 毫秒只有 3%——
        它不會被聽成「不準」,但那個「浮起來」的感覺就是從這裡來的。

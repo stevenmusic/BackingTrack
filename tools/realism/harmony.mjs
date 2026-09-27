@@ -29,6 +29,8 @@ await pg.evaluate(() => {
   wrap('playKeysChord', (ms, t, d, g, kind) => (ms || []).forEach(m => rec(kind === 'low' ? 'padlow' : 'pad', m, t, d)));
   wrap('padLegato', (ms, t, d) => (ms || []).forEach(m => rec('pad', m, t, d)));
   wrap('playBrass', (ms, t, d) => (ms || []).forEach(m => rec('brass', m, t, d)));
+  // 薩克斯(`parts.brass.sax`)是 `brassParts` 多加的那一聲:取樣不載也照樣算它會吹哪顆
+  wrap('playBrassSmp', (ms, t, d, g, pos, ch) => brassParts(ms || [], ch).filter(p => p.sax).forEach(p => rec('sax', p.m, t, d)));
   wrap('synthKeyNote', (m, t, d) => rec('synth', m, t, d));
   wrap('playArp', (m, t, d) => rec('arp', m, t, d));
   wrap('playVox', (m, t, d) => rec('vox', m, t, d));

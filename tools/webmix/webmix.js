@@ -386,7 +386,7 @@ function mkMonoLow(ctx){
    晃動的感覺來自三條之間的**相對**延遲一直在變(梳狀的缺口在 2k 以上游走),不是把音高拉走。
    set(null) = 繞過;set({ slow: [Hz, ms], fast: [Hz, ms], base: ms }) */
 function mkEnsemble(ctx){
-  const sw = mkSwitch(ctx), sum = ctx.createGain(); sum.gain.value = 1 / Math.sqrt(3) * 1.04;   // 三條大多同相,1.04 讓鋪底單獨量的 RMS 跟沒開時一樣(City Pop 量過)
+  const sw = mkSwitch(ctx), sum = ctx.createGain(); sum.gain.value = 1 / Math.sqrt(3) * 0.865;   // 三條在低頻同相(+4.8dB)、高頻不相關(+0dB),補償看鋪底多亮:0.865 讓 piano / brass 兩種配器各差約 ±1dB(tools/realism/cases_timbre.json)
   const lfo = (hz, phase) => {                          // 帶相位的正弦 LFO:PeriodicWave 的 sin(ωt + φ)
     const o = ctx.createOscillator();
     o.setPeriodicWave(ctx.createPeriodicWave(new Float32Array([0, Math.sin(phase)]), new Float32Array([0, Math.cos(phase)]), { disableNormalization: true }));

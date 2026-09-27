@@ -63,6 +63,8 @@ https://bassmagazine.jp/player/interveiw-itokoki202204/
 - 「歪み要素ゼロのクリーン・トーン」(村松邦男);鈴木茂的「コンプをかけたトーン」;空間系多用
 - 「16ビートの裏でザクザクとビートを刻んでいく」(村松邦男「針切り男」)
 - 「Aメロとサビでカッティングのトーンを変化させる」(山下達郎「TOWN」);ダブル・ストップ(「斜陽」)
+- 對到我們(`mkAmp`,2026-09-27):**讀到的**只有「乾淨、有壓縮、空間系」;
+  12 吋喇叭 90Hz–5k、挖 250Hz 空心琴箱鳴 −3dB、1.2k 單線圈的咬 +2dB、前級 drive 1.2 **都是推論**(一般吉他音箱與喇叭的頻寬、空心琴與單線圈的差別),沒有出處
 
 ### C1 唱片樂手名單(日文維基百科,2026-09-26 讀到;審查員核對過原始碼):配器與音色怎麼來的
 - 山下達郎『FOR YOU』(1982)8 首歌:
@@ -95,6 +97,8 @@ https://bassmagazine.jp/player/interveiw-itokoki202204/
   J. Haible「String Ensemble / Triple Chorus」電路文件(http://jhaible.com/legacy/triple_chorus/triple_chorus.html,容器擋掉沒讀到原文,摘要來自搜尋結果)、
   jpcima/ensemble-chorus(BSL-1.0,Solina 與 Eminent 310 的數位模型:3–6 條 BBD、Chorus + Vibrato 兩層 LFO)
 - 對到我們:C1 的 KORG Λ Strings 是弦樂機;City Pop 的合成鋪底 = 弦樂機,聲音的來源是這顆效果,不是振盪器 → `mkEnsemble`
+- **讀到的**:三條、兩顆 LFO(約 0.6 / 6Hz)、120°、全濕。**推論 / 我們自己定的**:深度(0.25ms / 0.02ms,被 CLAUDE.md「≤3 音分」卡住,原機可能更深)、
+  基本延遲 7ms、三條擺 左 / 中 / 右;來源多是論壇,Haible 原文沒讀到
 
 ## 還缺的(權威但沒讀到)
 - ギター・マガジン 2019 年 4 月號本體(62 段切音譜例)、2020 年 1 月號(山下達郎與切音)

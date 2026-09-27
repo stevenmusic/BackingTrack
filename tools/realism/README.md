@@ -59,6 +59,7 @@
 - `REALISM_SOLO=<bus>` + `probe_solo.js`:只留一條 bus;`fold.py` 按小節折疊比每小節峰值(分開錄的 bus 之間只比音量,不比格子)
 - `probe_strum.js`:記吉他每一下排在第幾拍
 - `probe_brassonly.js` + `cases_bcal.json` → `hits.py`:銅管單獨錄、每一下 RMS(校 `BRASS_GAIN`)
+- `lufs.py <render 輸出>`:整合響度 LUFS(BS.1770-4)、True Peak dBTP(4× 升取樣)、L/R 相關、單聲道損失。母帶驗收用(`docs/WEB_MIXING.md`)。
 - `REALISM_CPU=6` + `probe_perf.js` + `cases_perf.json` / `cases_perf0.json`(同一版關掉真管樂):排程一跳 p95 / 最久 / 來不及。
   `ms` 從第 8 拍起算,`late` 從頭算(含預備拍)
 - `brass_meas.py`:VSCO-2-CE 管樂取樣的音準(起音後 50–290ms)與音量 → `BRASS_SMP`

@@ -2538,6 +2538,13 @@ Tone.js 那三件管樂**只有小號能用**。量「峰值出現在第幾秒�
 
 ---
 
+- **Web Audio 的 lowpass / highpass Q 是 dB**(2026-09-27):三段壓縮的 LR4 寫了 Q 0.707(以為是線性),加回來在切點凸 6dB,
+  整首響度對齊後 500–1k −5dB、2–4k +2dB。脈衝空測(OfflineAudioContext)才抓到;改 −3.01dB 之後 ±0.6dB
+- **DynamicsCompressor 自己補增益**(2026-09-27):`(1/fullRangeGain)^0.6`,−30/2:1 自己大 8dB。三段壓縮的高頻段因此被推亮,
+  門檻越壓越低反而越亮。`compAutoMakeupDb` 照 WebKit 原始碼算、在積木裡扣掉。**舊的壓縮器(bassComp、combComp、drumGlue、masterGlue)沒改**,
+  它們的數字是帶著這個補償一起調、Steven 聽過的
+- **WaveShaper 2× 超取樣有 2.7ms 延遲**:bus 飽和不開超取樣
+
 ## 第十輪進度(持續更新)
 - 貝斯:片段庫 v1(`FEELS.citypop.bassPhr`,12 首轉譜的 96 個半小節)已接上;
   **挑選層已做**(2026-09-26,`pickBassPhr`):模擬 64 小節(一小節一顆 / 兩顆 / 三顆混著)跟原本的亂抽比——

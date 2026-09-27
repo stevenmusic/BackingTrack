@@ -554,3 +554,149 @@ Steven:「為什麼改了那麼久,聲音還是沒有明顯進步」「銅管聲
   原本反拍一律上刷 −4.2dB、& 晚 3ms → `chopAccs` [1, 1.03, 1.21, 1.11]、`lag16.gtr` [0, 2, −10, 2]
 - Rhodes 與鋪底沒有找到可商用的真人伴奏資料,照舊
 - 驗證:旋律外音 0;RMS comp / drive / mix 見 PR,peak 0.85
+
+## 第十三輪附錄 2:Lakh MIDI(Rhodes / 貝斯 / 電吉他的律動)——**不採用**
+`lmd_groove.py`(Lakh MIDI CC BY 4.0,前 2 萬檔,只留單一速度 85–130、4/4、沒量化、力度 ≥ 10 種、十六分律動的軌):
+電鋼琴 335 軌 e / & / a 相對正拍 −0.8 / −0.6 / −0.6dB;貝斯 915 軌 −0.2 / +0.4 / −0.5dB;電吉他 328 軌 −1.2 / −0.8 / −1.2dB;
+早晚幾乎都是 0 或 ±8.3ms(MIDI 檔自己的時間格子)。這是網友輸入的 MIDI,不是真人錄音:輕重幾乎平、時間是量化格,不可信。
+GuitarSet(真人錄音)量到吉他反拍 −2.5～−3.9dB,兩者差很多。Rhodes / 貝斯維持原設定;要改需要真人彈 Rhodes 的**錄音**資料(目前找不到可商用的)
+
+## 第十四輪(2026-09-27):混音與母帶的每一步都補上(Steven:「所有混音跟母帶的步驟都要幫我加上,不可以遺漏或偷懶」)
+
+**補上的站**(全部是 `FEELS[x].mix` 欄位,沒寫 = 透明,只有 City Pop 開):
+
+| 站 | 欄位 | City Pop |
+| --- | --- | --- |
+| Rhodes 壓縮 | `keysComp` | −22dB、2.5:1 |
+| 鼓 / 貝斯飽和 | `drumSat` / `bassSat` | 0.35 / 0.5 |
+| 鼓並聯壓縮 | `drumPar` | 1、−30、8:1、壓扁那份低通 2.5k |
+| 殘響回送高通 | `revHp` | 250Hz |
+| 母帶三段壓縮 | `masterMB` | LR4 200 / 3k |
+| 低頻單聲道 | `monoBelow` | 120Hz |
+| True Peak 限幅 | `truePeak` | 開 |
+| 響度對齊 | `lufs` | −14 |
+
+抖動(dither)不適用:即時播放是 32-bit 浮點。
+
+**做的時候抓到的兩個 Web Audio 陷阱**(寫進 CLAUDE.md 與 `docs/WEB_MIXING.md`):
+1. `lowpass` / `highpass` 的 Q 是 dB:分頻器加回來在 250Hz、4kHz 各凸 6dB,整首 500–1k −5dB、2–4k +2dB。
+   用脈衝空測抓到,改 `BUTTER_Q_DB` 後 ±0.6dB。
+2. DynamicsCompressor 自己補增益:三段壓縮的高頻段(−24、2:1)自己大 6dB,又把 4k 推亮。
+   照 WebKit 原始碼算(`compAutoMakeupDb`,8 組實測誤差 < 0.01dB)扣掉。
+
+**驗收**(City Pop 同一段進行,錄 30 秒):
+
+| 疏密 | 改之前 LUFS / dBTP | 改之後 LUFS / dBTP |
+| --- | --- | --- |
+| comp | −11.4 / −1.30 | −13.9 / −1.41 |
+| drive | −10.3 / −1.26 | −13.6 / −1.41 |
+| mix | −11.2 / −1.31 | −13.0 / −1.41 |
+| pad | −14.0 / −1.31 | −14.8 / −1.41 |
+
+- **響度**:疏密之間從差 3.7dB 收到差 1.7dB。mix 偏大聲,因為錄的那 30 秒剛好是 comp / drive 段;整合響度算整首,包括 pad 那一圈。
+- **True Peak**:原本會超過天花板 0.1dB,現在剛好等於天花板。
+- **音色**:響度對齊後比八度頻帶,comp 的改變都在 ±1.5dB 內。
+  - 31–125Hz +1:單聲道低頻更集中
+  - 500Hz −1.5:Rhodes 壓縮
+  - 2–5k −0.5～−0.8:並聯壓縮那份過 2.5k 低通之後(見審查回應 1),主旋律的位置有讓出來
+- **其他曲風零差異**:Pop / Bossa / K-Pop 的 LUFS 一樣。
+- **旋律規則**:0 違規,下數不為 0。
+- **效能**:CPU 6× 的來不及,改之前 23、改之後 20–23(舊問題,沒有變差)。
+
+**決定**:全部採用。三條都過:
+- ① 每一站都是錄音室混音 / 母帶的標準步驟(EBU R128 / ITU-R BS.1770-4 是出處)
+- ② 規則全過
+- ③ 沒有推翻 Steven 退回過的:
+  - 2–5k 沒被推
+  - 鋪底 / 吉他沒進出
+  - 音色沒換
+
+**可搬走**:`tools/webmix/webmix.js`(從 index.html 抽出來)、`tools/webmix/test.html`(自我測試通過:worklet 載到、峰值 0.85)。
+
+**重跑方法**:
+- 進行:`Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7`,City Pop,四種疏密
+- case:`{"version":"WORKTREE","feel":"citypop","style":<疏密>,"prog":<上面>}`
+- 指令:`REALISM_SECS=30 REALISM_OUT=<資料夾> node tools/realism/render.mjs <cases>`,再跑 `lufs.py <資料夾>`
+- 改之前那一組是 HEAD b7f2620、錄 36 秒
+- 空測:`node tools/realism/webmix_test.mjs`(要先開 http 8765)
+
+### 第十四輪審查(reviewer,medium)
+
+原文:
+
+> ### 1. 阻擋
+> 無。
+>
+> ### 2. 建議
+> 1. 並聯壓縮的乾路在 44.1kHz 下會掉高頻(`dly.delayTime.value = COMP_LATENCY`)。
+>    - 44.1k 時 0.006 秒是 264.6 取樣,而 Chromium / WebKit 壓縮器的 preDelay 是截成整數(264)。
+>    - DelayNode 的小數延遲會線性內插:|0.4+0.6e^{-jω}| 在 10kHz 約 −2.3dB、16kHz 約 −6.8dB。
+>    - 開 drumPar 時,整組鼓的乾聲(含 hi-hat)都走這條;另外壓縮路與乾路還差 0.6 取樣。
+>    - 驗證只做了 48k。
+>    - 改法:`Math.floor(COMP_LATENCY*ctx.sampleRate)/ctx.sampleRate`,playDrum 的扣除也用同一個值。
+> 2. `revHpN.Q.value = 0.7` 正好是這輪自己記下的陷阱。
+>    - highpass 的 Q 是 dB,0.7 dB 換成線性是 1.084,在 fc×1.32 會有約 +1.7dB 的共振峰。
+>    - City Pop 250Hz 等於在殘響回送的 330Hz 推 1.7dB。
+>    - 改 `BUTTER_Q_DB`。
+> 3. `revHp` 沒寫的曲風不是嚴格零差異:所有曲風的殘響回送都多了一顆 20Hz 高通。
+> 4. `installTrueLimiter` 先把整條母帶 disconnect,才 `new AudioWorkletNode(ctx, "loudness-norm")`。
+>    - 這行一丟例外會被 `.catch(() => {})` 吞掉,母帶斷線 → 整個 app 沒聲音。
+>    - 應該兩顆 node 都建好之後才 disconnect / 重接。
+> 5. `agcReset` 的記憶:
+>    - 播放中換曲風 / 疏密,收斂值會存到上一次按播放時的 key 底下。
+>    - key 沒包含 `orchNow`。
+>    - 只有 `on` 的曲風應該寫進記憶。
+> 6. 播放中從 City Pop 換到別的曲風,AGC 增益會在 2.7ms 內瞬間跳回 0dB。
+> 7. 這輪的時間補償是對的,但既有的 `drumGlue` / `combComp` 一直在路上:鼓與吉他本來就晚 6ms。
+>    所以 City Pop 貝斯 −6、鍵盤 −6 補到 0 之後,其實比大鼓早 6ms。建議量一次。
+> 8. 空測的腳本沒進 repo,標未驗證;建議做成 `tools/webmix/nulltest.html`(44.1k 與 48k)。
+> 9. REVIEW.md 的驗收表沒寫進行、cases 檔、render 指令。
+>
+> ### 3. 需 Steven 聽過
+> - City Pop 整體變小聲約 2.5–3dB,播放中跟 Pop 切換時會明顯小一截。
+> - 響度對齊讓疏密之間的音量差從 3.7dB 縮到 1.7dB(疏密是使用者那一軸,pad 本來就該比 drive 小聲)。
+> - 每一站的數值沒有 `docs/SOURCES.md` 出處(依據是 Steven 的要求與業界慣例),量多少是耳朵的事。
+>
+> ✅ 可合併
+
+回應:
+
+1. 【同意】`compLatency(ctx)` 取整數取樣,mkParallel 與 playDrum 共用。
+   - 空測 44.1k:延遲 264、並聯頻響平到 0.00dB;48k:288。
+   - **連帶發現**:修好之後乾的 hi-hat 不再被低通,響度對齊後 4k +1.7、8k +2.1(原本被這個 bug 蓋住)。
+   - 因此並聯那份加 2.5k 低通(`drumParLp`)。之後 2–5k 是 −0.5～−0.8、125Hz 以下 +1(只多鼓身)。
+2. 【同意】改 `BUTTER_Q_DB`。
+3. 【同意】殘響回送高通改用 `mkSwitch`,沒寫就整顆繞過 = 嚴格零差異。
+4. 【同意】兩顆 worklet node 都建好才拆舊鏈;webmix.js 的退路也先拆掉一半的連線再接回。
+5. 【同意】
+   - key 改成 曲風 / 疏密 / 配器,只記開著 `lufs` 的。
+   - `applyMix` 裡的 `agcNote()` 在換 key 時,先把收斂值存到舊 key。
+   - 按播放時,只有 key 沒變才更新記憶。
+6. 【同意】關掉時每秒 6dB 慢慢回 0。
+7. 【同意,另開議題】空測量到 DynamicsCompressor 的延遲是 264 / 288 取樣,所以 `drumGlue` / `combComp` 確實各讓鼓 / 吉他晚 6ms。
+   數字沒改(那是 Steven 聽過的律動);列為議題 **M1**,見下。
+8. 【同意】`tools/webmix/nulltest.html` + `tools/realism/webmix_test.mjs`,44.1k / 48k 全過:
+   - 三段壓縮平到 0.00dB
+   - Side 31Hz −47dB、Mid 0dB
+   - 並聯 +6.02 全頻一樣
+   - 壓縮器延遲 264 / 288
+   - `compAutoMakeupDb` 誤差 ≤ 0.001dB
+9. 【同意】重跑方法寫在上面。
+
+**【待 Steven 決定】**
+- **D1 整體音量**
+  - 選項:
+    - (a) −14 LUFS(串流平台標準,現在的設定)
+    - (b) −12 LUFS(大聲 2dB,限幅器會多壓一點)
+  - 改 `mix.lufs` 一個數字。
+  - 取捨:大聲聽起來比較「滿」,但伴奏跟人聲 / 樂器一起播時,−14 的空間比較大。
+- **D2 疏密之間的音量差**
+  - 選項:
+    - (a) 現在:每次播放各自量整合響度,pad 跟 drive 單獨播都對到 −14
+    - (b) 響度對齊改成「每個曲風一個固定增益」(照 comp 量一次),保留 pad 比 drive 小聲
+  - 取捨:(a) 每種疏密單獨播放時一樣大聲;(b) 疏密的起伏比較像真的編曲。
+
+**議題 M1(尚未開始)**:
+- 現況:鼓(`drumGlue`)與吉他(`combComp`)經過壓縮器,晚 6ms。貝斯(−6)、鍵盤(−6)補過。
+- 問題:目前的「貝斯落後」其實是 −6ms。
+- 要做的:先量對齊到哪一層,再決定。**不改數字直到 Steven 聽過**。

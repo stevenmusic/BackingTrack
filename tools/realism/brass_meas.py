@@ -12,8 +12,8 @@ import sys, glob, re, os
 import numpy as np, soundfile as sf, librosa
 
 ROOT = sys.argv[1] if len(sys.argv) > 1 else '/tmp/smp/VSCO-2-CE'
-SETS = [('tpt', 'Brass/Trumpet/stac/Sum_SHTrumpet_stac_{}_v3_rr{}.wav'),
-        ('tbn', 'Brass/Tenor Trombone/stac/tenortbn_stac_{}_v3_rr{}.wav')]
+SETS = [('tpt', 'Brass/Trumpet/stac/Sum_SHTrumpet_stac_{}_v2_rr{}.wav'),
+        ('tbn', 'Brass/Tenor Trombone/stac/tenortbn_stac_{}_v2_rr{}.wav')]
 PC = {'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11}
 
 
@@ -23,7 +23,7 @@ def nominal(lab):                       # 檔名的八度比標準低一個:A2 =
 
 
 for ins, pat in SETS:
-    labs = sorted({re.search(r'stac_([A-G]#?\d)_v3', f).group(1)
+    labs = sorted({re.search(r'stac_([A-G]#?\d)_v2', f).group(1)
                    for f in glob.glob(os.path.join(ROOT, pat.format('*', '*')))}, key=nominal)
     rows = []
     for lab in labs:

@@ -7,5 +7,7 @@
   const ps = window.playBrassSmp; window.playBrassSmp = function(ms){ const r = ps.apply(this, arguments); n.s += ms.length - r.length; return r; };
   const all = ['drumBus', 'bassBus', 'keysBus', 'padBus', 'percBus', 'reverbBus', 'roomBus', 'echoBus'];
   setInterval(() => { for (const k of all) { const b = window.eval('typeof ' + k + ' !== "undefined" ? ' + k + ' : null'); if (b) b.gain.value = 0; } }, 20);
-  setInterval(() => { if (typeof combBus !== 'undefined' && combBus) combBus.gain.value = 0.062; }, 20);
+  // combBus 0.62 → 0.062、brassBus 1 → 0.1(都 −20dB;真管樂 2026-09-27 起走自己的 brassBus)
+  setInterval(() => { if (typeof combBus !== 'undefined' && combBus) combBus.gain.value = 0.062;
+    if (typeof brassBus !== 'undefined' && brassBus) brassBus.gain.value = 0.1; }, 20);
   window.__probeReport = () => n; })();

@@ -3120,7 +3120,9 @@ class LoudnessNorm extends AudioWorkletProcessor {
         const step = P.rate[0] * 0.1;
         this.gdb += Math.max(-step, Math.min(step, want - this.gdb));
       }
-    } else if (!on) this.gdb = 0;
+    } else if (!on && this.gdb !== 0) {                               // 關掉:每秒 6dB 慢慢回 0,不要一下跳
+      const step = 6 * n / sampleRate; this.gdb = Math.abs(this.gdb) <= step ? 0 : this.gdb - Math.sign(this.gdb) * step;
+    }
     const g1 = Math.pow(10, this.gdb / 20);
     for (let i = 0; i < n; i++) {
       const g = g0 + (g1 - g0) * (i + 1) / n;
@@ -3159,11 +3161,16 @@ function compAutoMakeupDb(T, R, knee){
   const sat = x => x < kx ? curve(x, k) : db2(yk + (l2d(x) - (T + knee)) / R);
   return -0.6 * l2d(sat(1));
 }
+/* 壓縮器的延遲是 preDelay × 取樣率**截成整數**(44.1k = 264 個取樣,不是 264.6)。
+   DelayNode 遇到小數延遲會線性內插 = 多過一顆低通(44.1k 時 10kHz −2.3dB),所以補償一律用整數取樣 */
+const compLatency = (c) => Math.floor(COMP_LATENCY * c.sampleRate) / c.sampleRate;
 const unMakeup = (T, R, knee) => Math.pow(10, -compAutoMakeupDb(T, R, knee) / 20);
 function mkSwitch(ctx){                     // 乾 / 處理過 二選一(交叉淡化 20ms,不會爆音)
   const input = ctx.createGain(), output = ctx.createGain(), dry = ctx.createGain(), wet = ctx.createGain();
   wet.gain.value = 0; input.connect(dry); dry.connect(output); wet.connect(output);
   const set = (on) => { const t = ctx.currentTime;
+    dry.gain.cancelScheduledValues(t); wet.gain.cancelScheduledValues(t);
+    if (t < 0.05) { dry.gain.setValueAtTime(on ? 0 : 1, t); wet.gain.setValueAtTime(on ? 1 : 0, t); return; }   // 剛建好還沒出聲:直接切
     dry.gain.setTargetAtTime(on ? 0 : 1, t, 0.02); wet.gain.setTargetAtTime(on ? 1 : 0, t, 0.02); };
   return { input, output, wet, set };
 }
@@ -3197,17 +3204,20 @@ function mkSat(ctx, R){
     sh.curve = c; } };
 }
 /* 並聯壓縮(紐約壓縮):乾的原樣 + 壓得很重的那一份墊在下面 → 音頭不變、尾巴與房間變厚。
-   set(量, 門檻, 比例);量 0 = 關(乾的也不延遲) */
+   壓扁的那份可以過一顆低通(`lp` Hz,沒寫 = 不過):鈸被壓扁之後尾巴一直在,2–5k 會變多(backing track 要讓出來),
+   只拿它的鼓身。set(量, 門檻, 比例, 低通);量 0 = 關(乾的也不延遲) */
 function mkParallel(ctx){
   const input = ctx.createGain(), output = ctx.createGain();
   const direct = ctx.createGain(), dly = ctx.createDelay(0.05), dlyG = ctx.createGain();
-  const c = ctx.createDynamicsCompressor(), send = ctx.createGain();
-  dly.delayTime.value = COMP_LATENCY; dlyG.gain.value = 0; send.gain.value = 0;
+  const c = ctx.createDynamicsCompressor(), send = ctx.createGain(), lpSw = mkSwitch(ctx), lpF = ctx.createBiquadFilter();
+  lpF.type = "lowpass"; lpF.Q.value = BUTTER_Q_DB; lpSw.input.connect(lpF); lpF.connect(lpSw.wet);
+  dly.delayTime.value = compLatency(ctx); dlyG.gain.value = 0; send.gain.value = 0;
   c.knee.value = 0; c.attack.value = 0.003; c.release.value = 0.08;
   input.connect(direct); direct.connect(output);
   input.connect(dly); dly.connect(dlyG); dlyG.connect(output);
-  input.connect(c); c.connect(send); send.connect(output);
-  return { input, output, set(amt, thr, ratio){
+  input.connect(c); c.connect(lpSw.input); lpSw.output.connect(send); send.connect(output);
+  return { input, output, set(amt, thr, ratio, lp){
+    lpSw.set(lp > 0); if (lp > 0) lpF.frequency.value = lp;
     const on = amt > 0;
     thr = thr == null ? -30 : thr; ratio = ratio || 8;
     direct.gain.value = on ? 0 : 1; dlyG.gain.value = on ? 1 : 0; send.gain.value = on ? amt * unMakeup(thr, ratio, 0) : 0;
@@ -3280,10 +3290,11 @@ function installTrueLimiter(){
     /* 換成新的鏈:飽和 → outGain → 看前面的限幅器 → 軟削波(現在只是保險,碰不到)。
        **masterGain 1.9 → 0.75**:進飽和的尖峰落在 0.8 以下,不再硬削波;
        舊的 DynamicsCompressor 不在路上了,響度改由 outGain 決定 */
-    masterSat.disconnect(); limiter.disconnect(); outGain.disconnect();
-    /* 響度對齊放在限幅器前面:推到目標之後再由限幅器守天花板 */
+    /* 響度對齊放在限幅器前面:推到目標之後再由限幅器守天花板。
+       **兩顆 worklet 都建好才拆舊鏈**:建到一半丟例外的話舊鏈還在,不會整個沒聲音 */
     const agc = new AudioWorkletNode(ctx, "loudness-norm", { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2] });
     agc.port.onmessage = e => { agcGainDb = e.data; };
+    masterSat.disconnect(); limiter.disconnect(); outGain.disconnect();
     masterSat.connect(agc); agc.connect(outGain); outGain.connect(node); node.connect(softClip);
     loudNorm = agc;
     trueLimiter = node;
@@ -3456,9 +3467,10 @@ function ensureAudio(){
     revTone.type = "lowpass"; revTone.frequency.value = 20000; revTone.Q.value = 0.5;
     /* 殘響回來的低頻要切(`mix.revHp`,預設 20Hz = 透明):低頻的殘響是糊掉大鼓與貝斯的第一名,
        錄音室的回送一定先掛一顆高通(200–400Hz) */
-    revHpN = ctx.createBiquadFilter();
-    revHpN.type = "highpass"; revHpN.frequency.value = 20; revHpN.Q.value = 0.7;
-    reverbBus.connect(pre); pre.connect(conv); conv.connect(revTone); revTone.connect(revHpN); revHpN.connect(wet);
+    revHpN = (() => { const sw = mkSwitch(ctx), f = ctx.createBiquadFilter();
+      f.type = "highpass"; f.Q.value = BUTTER_Q_DB; sw.input.connect(f); f.connect(sw.wet);
+      return { input: sw.input, output: sw.output, set(hz){ sw.set(hz > 0); if (hz > 0) f.frequency.value = hz; } }; })();   // 沒寫 = 整顆繞過
+    reverbBus.connect(pre); pre.connect(conv); conv.connect(revTone); revTone.connect(revHpN.input); revHpN.output.connect(wet);
     wet.connect(masterGain);   // 接在 masterGain 之前,殘響一樣受限幅器保護
 
     /* 鼓與貝斯各走自己的匯流排:鼓只沾一點殘響(太濕會糊掉拍點),
@@ -4490,7 +4502,7 @@ function playDrum(piece, when, gain, vel){
   if (gv) gain *= gv[1];
   when += gv && feel().drumsGV !== "vel" ? gv[0] : humanTime(pk, when, 303 + piece.length);
   /* 鼓的並聯壓縮開著時,乾的那一路補了壓縮器的 6ms(`mkParallel`),整組鼓在這裡扣回來 */
-  if ((feel().mix || {}).drumPar > 0) when -= COMP_LATENCY;
+  if ((feel().mix || {}).drumPar > 0) when -= compLatency(ctx);
   // 實錄鼓組的大鼓也要能觸發側鏈(原本只有 808 的大鼓會);給不給看 FEELS[x].duck
   if (piece === "kick") duckBass(when);
   // closed hat / 踩鈸落下時,上一顆還在響的 open hat 要停(808 的 open hat 另外有 D808_CUT)
@@ -6044,8 +6056,8 @@ function applyMix(){
   if (keysComp) keysComp.set(m.keysComp, m.keysRatio || 2.5, 0.012, 0.18, m.keysMakeup || 1);
   if (drumSatN) drumSatN.set(m.drumSat || 0);
   if (bassSatN) bassSatN.set(m.bassSat || 0);
-  if (drumPar) drumPar.set(m.drumPar || 0, m.drumParThr, m.drumParRatio);
-  if (revHpN) revHpN.frequency.value = m.revHp || 20;
+  if (drumPar) drumPar.set(m.drumPar || 0, m.drumParThr, m.drumParRatio, m.drumParLp);
+  if (revHpN) revHpN.set(m.revHp || 0);
   if (masterMB) masterMB.set(m.masterMB || null);
   if (masterMono) masterMono.set(m.monoBelow || 0);
   if (trueLimiter) trueLimiter.parameters.get("tp").value = m.truePeak ? 1 : 0;
@@ -6054,15 +6066,25 @@ function applyMix(){
     P.get("on").value = on ? 1 : 0;
     /* 目標是**最後輸出**的響度;AGC 在 outGain 前面,所以扣掉 outGain 的倍數 */
     if (on) P.get("target").value = m.lufs - 20 * Math.log10(outGain.gain.value || 1);
+    agcNote();
   }
 }
-/* 每次按播放:響度重新量(換歌了),增益從這個曲風上次收斂的值出發,不會一開頭先大聲再掉下去 */
+/* 每次按播放:響度重新量(換歌了),增益從這個「曲風 / 疏密 / 配器」上次收斂的值出發,不會一開頭先大聲再掉下去。
+   記憶只記開著 `lufs` 的;播放中換曲風 / 疏密時 `agcNote()` 先把收斂值存到**舊的** key 底下,再換 key */
 const agcMemo = {};
+function agcKey(){ return feelNow + "/" + styleOn + "/" + (typeof orchNow !== "undefined" ? orchNow : ""); }
+function agcNote(){
+  const k = agcKey();
+  if (agcNote.key && agcNote.key !== k && agcNote.on) agcMemo[agcNote.key] = agcGainDb;
+  agcNote.key = k; agcNote.on = (feel().mix || {}).lufs != null;
+}
 function agcReset(){
   if (!loudNorm) return;
-  const k = feelNow + "/" + styleOn;
-  if (agcReset.key) agcMemo[agcReset.key] = agcGainDb;
-  agcReset.key = k;
+  agcNote();
+  const k = agcNote.key;
+  /* 上一次播放跟這次同一個 key(中間沒換過)才把上次收斂的值記下來;換過的話 `agcNote` 已經存到舊 key 了 */
+  if (agcReset.last === k && agcNote.on) agcMemo[k] = agcGainDb;
+  agcReset.last = k;
   loudNorm.port.postMessage({ reset: true, gdb: agcMemo[k] != null ? agcMemo[k] : (feel().mix || {}).lufsInit || 0 });
 }
 
@@ -6556,7 +6578,9 @@ const FEELS = {
            drumSat: 0.35, bassSat: 0.5,
            /* 鼓的並聯壓縮(紐約壓縮):8:1 壓扁的那份(扣掉瀏覽器自動補的增益之後)跟乾的一樣大墊在下面,
               音頭不變、鼓身與尾巴變厚;鼓單獨量 RMS +0.5dB、亮度 1116 → 1073Hz */
-           drumPar: 1, drumParThr: -30, drumParRatio: 8,
+           /* 壓扁的那份過 2.5k 低通:不過的話 hi-hat 的尾巴被撐起來,響度對齊後 4k +1.7、8k +2.1(2–5k 要讓給主旋律);
+              過了之後 2–5k −0.5～−0.8、125Hz 以下 +1(只多了鼓身) */
+           drumPar: 1, drumParThr: -30, drumParRatio: 8, drumParLp: 2500,
            /* 殘響回送切 250Hz 以下:低頻殘響糊掉大鼓與貝斯 */
            revHp: 250,
            /* 母帶三段壓縮:每段 1.5–2:1、只碰最大聲的那幾下(門檻 −18～−24) */

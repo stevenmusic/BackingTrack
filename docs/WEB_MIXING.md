@@ -21,7 +21,7 @@ const mix = await createWebMix(ctx, {
   multiband: { lo: [-18, 2, 0.03, 0.2], mid: [-20, 1.5, 0.02, 0.15], hi: [-24, 2, 0.005, 0.1] },
   reverb: { hp: 250, lp: 6000 },
 });
-const drums = mix.bus("drums", { hp: 45, comp: [-18, 3, 0.01, 0.12], par: [1, -30, 8], sat: 0.35, send: 0.05 });
+const drums = mix.bus("drums", { hp: 45, comp: [-18, 3, 0.01, 0.12], par: [1, -30, 8, 2500], sat: 0.35, send: 0.05 });
 const bass  = mix.bus("bass",  { hp: 55, comp: [-24, 4, 0.006, 0.15, 1.1], sat: 0.5 });
 const keys  = mix.bus("keys",  { eq: [600, -3, 0.4], comp: [-22, 2.5, 0.012, 0.18], chorus: 0.25, send: 0.2 });
 drumSampler.connect(drums.input);
@@ -39,7 +39,7 @@ mix.meter();            // { worklet, agcGainDb, limiterReductionDb }
 | 2 | 高通 / 低通 | bus `hp` | 每一層切掉不屬於它的超低頻(那是貝斯與大鼓的) | 鼓 45、貝斯 55、吉他 / 鋪底各自 |
 | 3 | 減法 EQ | bus `eq` | 先挖掉擠的那一段(250–600Hz 箱子聲),再考慮加 | 鍵盤 600Hz −3、鼓 1k −7 |
 | 4 | 串聯壓縮 | bus `comp` | 讓一層「站在同一個位置」 | 貝斯 −24/4:1、吉他、Rhodes −22/2.5:1 |
-| 5 | 並聯壓縮 | bus `par` | 紐約壓縮:音頭不變,鼓身與尾巴變厚 | 鼓 1 份、−30/8:1 |
+| 5 | 並聯壓縮 | bus `par` | 紐約壓縮:音頭不變,鼓身與尾巴變厚;壓扁的那份過低通,鈸尾巴才不會把 2–5k 撐起來 | 鼓 1 份、−30/8:1、低通 2.5k |
 | 6 | 飽和 | bus `sat` | 磁帶 / 前級的圓:尖峰磨一點、泛音多一點,小喇叭聽得到 | 鼓 0.35、貝斯 0.5 |
 | 7 | 亮度 / 空氣 | bus `air` | 高頻架子;**backing track 2–5kHz 要讓給主旋律** | City Pop 全部 0 |
 | 8 | 調變 | bus `chorus` | Rhodes / 吉他的 chorus(音高偏移 ≤ 3 音分) | 0.25 |
@@ -71,18 +71,25 @@ mix.meter();            // { worklet, agcGainDb, limiterReductionDb }
    - `compAutoMakeupDb()` 照 WebKit 原始碼算出來再扣掉(跟實測差 < 0.01dB)
 3. **DynamicsCompressor 自帶 6ms 延遲**(288 取樣 @ 48k)。
    - 串聯:開了就整條晚 6ms → 用開關切,而且那一軌提早 6ms 排
-   - 並聯:乾的那一路一定要補同樣的 6ms,不然會梳狀濾波 / 變兩下
+   - 並聯:乾的那一路一定要補同樣的延遲,不然會梳狀濾波 / 變兩下
+   - 延遲是 `0.006 × 取樣率` **截成整數**(44.1k = 264、48k = 288):補償也要整數取樣(`compLatency`),
+     小數延遲的 DelayNode 會線性內插 = 多一顆低通(44.1k 時 10kHz −2.3dB)
 4. **WaveShaper 的 `oversample: "2x"` 有 128 取樣(2.7ms)延遲**;曲線只管 −1～1,超出去硬削。
    - 飽和前 ÷R、後 ×R 撐大範圍
    - k 小的時候不開超取樣
-5. **AudioWorklet 只能在 http(s) 載**(Blob URL 也一樣);`file://` 會失敗 → 一定要有退路(這裡退回內建壓縮器)。
-6. **量響度要用 BS.1770**:K 加權、400ms 塊、−70 絕對閘門與 −10 LU 相對閘門。
+5. **AudioParam 在剛建好的 context 上用 `setTargetAtTime` 會從預設值慢慢滑過去**:開關(`mkSwitch`)在 `currentTime < 0.05` 時直接設。
+6. **AudioWorklet 只能在 http(s) 載**(Blob URL 也一樣);`file://` 會失敗 → 一定要有退路(這裡退回內建壓縮器)。
+7. **量響度要用 BS.1770**:K 加權、400ms 塊、−70 絕對閘門與 −10 LU 相對閘門。
    - 用 RMS 或 AnalyserNode 輪詢都不準
    - 播放中的響度對齊要**量進來的訊號**(不是自己調過的),不然會自己追自己
-7. **分頻器要相位對齊**:三段時,低頻段要多過一顆第二切點的二階全通(Q 0.707),三段加回來才是平的。
+8. **分頻器要相位對齊**:三段時,低頻段要多過一顆第二切點的二階全通(Q 0.707),三段加回來才是平的。
    - 驗法:脈衝進去、各段門檻 0 / 比例 1,量頻響要 ±0.6dB 以內
 
 ## 驗收方法(每次改都跑)
+
+- **自動測試**:在 repo 根目錄 `python3 -m http.server 8765 &`,再 `node tools/realism/webmix_test.mjs`。
+  - `nulltest.html` 在 44.1k / 48k 各跑一次:三段壓縮加回來的頻響、低頻單聲道的 Mid / Side、並聯壓縮、每顆積木的延遲、`compAutoMakeupDb` 對實測
+  - `test.html` 跑整條鏈:worklet 有沒有載到、峰值 ≤ 0.85
 
 - **積木的空測(null test)**:OfflineAudioContext 丟脈衝,量頻響與延遲。
   - 三段壓縮加回來 ±0.6dB

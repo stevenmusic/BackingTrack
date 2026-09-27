@@ -1,0 +1,48 @@
+<!doctype html><meta charset="utf-8"><title>webmix 空測</title>
+<body style="background:#111;color:#eee;font:14px system-ui">
+<p>webmix 積木的空測(null test):脈衝進去,量頻響(八度點)與延遲;44.1k 與 48k 各一次。要走 http。</p>
+<pre id="o">跑…</pre>
+<script type="module">
+import { mkMultiband, mkMonoLow, mkParallel, mkSat, mkComp, compAutoMakeupDb, compLatency } from "./webmix.js";
+const F = [31, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
+function dft(h, sr, f){ let re = 0, im = 0; for (let i = 0; i < h.length; i++) { const w = 2 * Math.PI * f * i / sr; re += h[i] * Math.cos(w); im -= h[i] * Math.sin(w); } return 20 * Math.log10(Math.hypot(re, im) + 1e-12); }
+async function impulse(sr, build, side){
+  const N = sr, ctx = new OfflineAudioContext(2, N, sr), buf = ctx.createBuffer(2, N, sr);
+  const at = sr / 2; buf.getChannelData(0)[at] = 0.5; buf.getChannelData(1)[at] = side ? -0.5 : 0.5;
+  const s = ctx.createBufferSource(); s.buffer = buf; const b = build(ctx); s.connect(b.input); b.output.connect(ctx.destination); s.start();
+  const out = (await ctx.startRendering()).getChannelData(0).slice(sr / 2, sr / 2 + 32768).map(v => v / 0.5);
+  let pk = 0; for (let i = 1; i < out.length; i++) if (Math.abs(out[i]) > Math.abs(out[pk])) pk = i;
+  return { lat: pk, resp: F.map(f => +dft(out, sr, f).toFixed(2)) };
+}
+async function makeup(sr, T, R, K){
+  const ctx = new OfflineAudioContext(1, sr, sr), o = ctx.createOscillator(), g = ctx.createGain(), c = ctx.createDynamicsCompressor();
+  o.frequency.value = 1000; g.gain.value = 0.001; c.threshold.value = T; c.ratio.value = R; c.knee.value = K;
+  o.connect(g); g.connect(c); c.connect(ctx.destination); o.start();
+  const d = (await ctx.startRendering()).getChannelData(0); let m = 0; for (let i = sr / 2; i < sr; i++) m = Math.max(m, Math.abs(d[i]));
+  return +(20 * Math.log10(m / 0.001) - compAutoMakeupDb(T, R, K)).toFixed(3);
+}
+const res = {}, fails = [];
+for (const sr of [44100, 48000]) {
+  const r = res[sr] = {};
+  r.multiband = await impulse(sr, c => { const m = mkMultiband(c, 200, 3000); m.set({ lo: [0, 1, 0.03, 0.2], mid: [0, 1, 0.02, 0.15], hi: [0, 1, 0.005, 0.1] }); return m; });
+  r.monoMid = await impulse(sr, c => { const m = mkMonoLow(c); m.set(120); return m; });
+  r.monoSide = await impulse(sr, c => { const m = mkMonoLow(c); m.set(120); return m; }, true);
+  r.parallel = await impulse(sr, c => { const m = mkParallel(c); m.set(1, 0, 1); return m; });
+  r.sat = await impulse(sr, c => { const m = mkSat(c, 4); m.set(0.35); return m; });
+  r.comp = await impulse(sr, c => { const m = mkComp(c, 6); m.set(0, 1, 0.01, 0.1, 1); return m; });
+  r.expectLatency = Math.round(compLatency({ sampleRate: sr }) * sr);
+  r.makeupErr = [];
+  for (const [T, R, K] of [[-30, 2, 6], [-22, 2.5, 6], [-18, 2, 6], [-12, 1.5, 6], [-24, 4, 6], [-30, 8, 0], [-16, 2, 8], [-18, 3, 12]]) r.makeupErr.push(await makeup(sr, T, R, K));
+  const flat = (x, tol) => Math.max(...x.resp) - Math.min(...x.resp) <= tol;
+  if (!flat(r.multiband, 1.2)) fails.push(sr + " 三段壓縮不平");
+  if (!flat(r.monoMid, 0.3)) fails.push(sr + " 低頻單聲道動到 Mid");
+  if (!(r.monoSide.resp[0] < -30 && r.monoSide.resp[5] > -0.3)) fails.push(sr + " 低頻單聲道 Side 沒收對");
+  if (!flat(r.parallel, 0.3)) fails.push(sr + " 並聯壓縮有梳狀 / 掉高頻");
+  if (r.comp.lat !== r.expectLatency || r.parallel.lat !== r.expectLatency) fails.push(sr + " 壓縮器延遲不是 " + r.expectLatency);
+  if (r.sat.lat !== 0) fails.push(sr + " 飽和有延遲");
+  if (r.makeupErr.some(e => Math.abs(e) > 0.05)) fails.push(sr + " compAutoMakeupDb 跟實測不合");
+}
+res.fails = fails; res.ok = !fails.length;
+document.getElementById("o").textContent = JSON.stringify(res, null, 1) + (res.ok ? "\n全部通過" : "\n沒通過:" + fails.join("、"));
+window.__res = res;
+</script>

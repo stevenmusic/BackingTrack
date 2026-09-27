@@ -29,8 +29,9 @@ async function createWebMix(ctx, opts){
   const rev = ctx.createGain(), pre = ctx.createDelay(0.2), conv = ctx.createConvolver(), revLp = ctx.createBiquadFilter(), revHp = ctx.createBiquadFilter(), revWet = ctx.createGain();
   pre.delayTime.value = 0.018; conv.buffer = buildImpulseResponse(ctx, opts.reverbSeconds || 2.0, 2.4);
   revLp.type = "lowpass"; revLp.frequency.value = 20000; revLp.Q.value = 0.5;
-  revHp.type = "highpass"; revHp.frequency.value = 20; revHp.Q.value = 0.7; revWet.gain.value = 0.26;
-  rev.connect(pre); pre.connect(conv); conv.connect(revLp); revLp.connect(revHp); revHp.connect(revWet); revWet.connect(input);
+  revHp.type = "highpass"; revHp.frequency.value = 10; revHp.Q.value = BUTTER_Q_DB; revWet.gain.value = 0.26;
+  const revHpSw = mkSwitch(ctx); revHpSw.input.connect(revHp); revHp.connect(revHpSw.wet);
+  rev.connect(pre); pre.connect(conv); conv.connect(revLp); revLp.connect(revHpSw.input); revHpSw.output.connect(revWet); revWet.connect(input);
 
   /* worklet(True Peak 限幅 + 響度對齊);載不到就退回內建壓縮器當限幅(沒有響度對齊) */
   let limiter = null, agc = null, agcDb = 0, grDb = 0;
@@ -44,6 +45,7 @@ async function createWebMix(ctx, opts){
     limiter.port.onmessage = e => { grDb = 20 * Math.log10(e.data || 1); };   // 限幅器回報的是這半秒最小的增益(倍數)
     sat.connect(agc); agc.connect(out); out.connect(limiter); limiter.connect(clip);
   } catch (e) {
+    try { sat.disconnect(); out.disconnect(); } catch (_) {}
     limiter = agc = null; console.warn("webmix: AudioWorklet 載不到,退回內建壓縮器當限幅(沒有響度對齊 / True Peak)", e);
     const lim = ctx.createDynamicsCompressor();
     lim.threshold.value = -1; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.1;
@@ -68,14 +70,14 @@ async function createWebMix(ctx, opts){
     x.chorus.output.connect(x.width.input); x.width.output.connect(input);
     x.eq.connect(x.send); x.send.connect(rev);
     /* 欄位(全部可省略 = 透明):
-       level 倍數、hp Hz、eq [Hz, dB, Q]、comp [門檻, 比例, 起音, 放開, 補償倍數]、par [量, 門檻, 比例]、
+       level 倍數、hp Hz、eq [Hz, dB, Q]、comp [門檻, 比例, 起音, 放開, 補償倍數]、par [量, 門檻, 比例, 低通 Hz]、
        sat k(0.2–0.6 = 輕)、air [Hz, dB]、chorus 0–1、width 0(單聲道)–1(原樣)、send 殘響送 */
     x.set = (c) => { c = c || {};
       x.input.gain.value = c.level == null ? 1 : c.level;
       x.hp.frequency.value = c.hp || 20;
       const eq = c.eq || [1000, 0, 1]; x.eq.frequency.value = eq[0]; x.eq.gain.value = eq[1]; x.eq.Q.value = eq[2] || 1;
       const cp = c.comp || []; x.comp.set(cp[0], cp[1], cp[2], cp[3], cp[4]);
-      const pr = c.par || [0]; x.par.set(pr[0], pr[1], pr[2]);
+      const pr = c.par || [0]; x.par.set(pr[0], pr[1], pr[2], pr[3]);
       x.sat.set(c.sat || 0);
       const a = c.air || [6500, 0]; x.air.frequency.value = a[0]; x.air.gain.value = a[1];
       x.chorus.wet.gain.value = c.chorus || 0; x.width.set(c.width == null ? 1 : c.width);
@@ -91,7 +93,7 @@ async function createWebMix(ctx, opts){
     const me = m.midEq || [400, 0]; mid.frequency.value = me[0]; mid.gain.value = me[1];
     const ae = m.airEq || [5000, 0]; air.frequency.value = ae[0]; air.gain.value = ae[1];
     mb.set(m.multiband || null); mono.set(m.monoBelow || 0);
-    const r = m.reverb || {}; revLp.frequency.value = r.lp || 20000; revHp.frequency.value = r.hp || 20; revWet.gain.value = r.level == null ? 0.26 : r.level;
+    const r = m.reverb || {}; revLp.frequency.value = r.lp || 20000; revHpSw.set(r.hp > 0); if (r.hp > 0) revHp.frequency.value = r.hp; revWet.gain.value = r.level == null ? 0.26 : r.level;
     if (limiter) limiter.parameters.get("tp").value = m.truePeak ? 1 : 0;
     if (agc) { const P = agc.parameters; P.get("on").value = m.lufs != null ? 1 : 0;
       if (m.lufs != null) P.get("target").value = m.lufs - 20 * Math.log10(out.gain.value); }
@@ -101,10 +103,10 @@ async function createWebMix(ctx, opts){
   return { input, reverb: rev, bus, buses, set,
     reset(startDb){ if (agc) agc.port.postMessage({ reset: true, gdb: startDb || 0 }); },
     meter(){ return { worklet: !!limiter, agcGainDb: agcDb, limiterReductionDb: grDb }; },
-    COMP_LATENCY };
+    COMP_LATENCY: compLatency(ctx) };
 }
 
-const WebMix = { createWebMix, mkComp, mkSat, mkParallel, mkMultiband, mkMonoLow, lr4, compAutoMakeupDb, makeChorus, buildImpulseResponse, COMP_LATENCY, LIMITER_SRC };
+const WebMix = { createWebMix, mkComp, mkSat, mkParallel, mkMultiband, mkMonoLow, lr4, compAutoMakeupDb, compLatency, makeChorus, buildImpulseResponse, COMP_LATENCY, LIMITER_SRC };
 if (typeof window !== "undefined") window.WebMix = WebMix;
-export { createWebMix, mkComp, mkSat, mkParallel, mkMultiband, mkMonoLow, lr4, compAutoMakeupDb, makeChorus, buildImpulseResponse, COMP_LATENCY, LIMITER_SRC };
+export { createWebMix, mkComp, mkSat, mkParallel, mkMultiband, mkMonoLow, lr4, compAutoMakeupDb, compLatency, makeChorus, buildImpulseResponse, COMP_LATENCY, LIMITER_SRC };
 export default WebMix;

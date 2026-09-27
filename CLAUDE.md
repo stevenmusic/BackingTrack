@@ -120,15 +120,16 @@
 - `buildVoicing` 每小節挑離前一個最近的轉位;捨音順序 五音 → 根音(轉位不捨)→ 延伸音,上聲部最多四音(`trimTones`)
 - 鋼琴 comping:重拍落滿、反拍拿掉底下的音(頂音一直在);音長用 `compDur()`(每小節一種觸鍵);強弱 1.35 / 1.0 / 0.62 / 0.45
 - 力度改音色不只改音量:鋼琴與貝斯都有力度低通(`velRef`);**平台鋼琴不做多力度層**(記憶體會爆)。
-  City Pop 的 Rhodes:力度用乘音量修正之前的值(`keysTrueVel`),最強的幾下用 jRhodes3c 112–127 那層(`keysFF`,只載用到的音、背景補);
-  輕彈兩層(`keysLayers`)錄音本身偏暗、整台變悶,不開
+  City Pop 的 Rhodes:力度用乘音量修正之前的值(`keysTrueVel`),照 jRhodes3c 原作者 sfz 的分界用 48–72 / 73–95(`keysLayers`)
+  與 112–127(`keysFF`)層;只載用到的音、開始播放後背景補
 - 左手讓位:`lhGain()` = `FEELS[x].lh` ?? (boogie 0.38 : 0.55);三種疏密左手都要撐長
 - 吉他:Pop 刷弦用真的手型(`realShape`,照移調後的根音挑,`prewarmGuitar` 也要傳 transpose);
   封閉和弦 5 弦 / 6 弦照**左手位置**挑移動最少的(`gtrHand` / `strumNotes`,`resetLap` 歸零),`prewarmGuitar` 要照播放順序走多圈;
   切音的ギター・マガジン指型(`parts.chopForms`)與右手一直刷(`parts.chopBrush`)**預設不開**:一起開時 Steven 說「非常機械」;
   Bossa 拇指低音 + 三弦 clave(跟 cross stick 共用 `g.clave`);切音不彈根音;每條弦差兩三音分
 - 貝斯一律待在 E1–D♯2 附近(`bassMidiFor`),移調不跟著跑;兩把琴 buffer 分開收(`bassBuffers.electric/.upright`),檔名音高寫法不同不准混用
-- 電貝斯照 Black And Blue 原作者 sfz:單音(`bassMono`,新的一顆掐掉上一顆的尾巴)、放弦聲(`bassRel` = Release 旋鈕比例,`BASS_REL`)
+- 電貝斯照 Black And Blue 原作者 sfz:單音(`bassMono`)、放弦聲(`bassRel` = Release 旋鈕比例,`BASS_REL`)。
+  **貝斯不是照時間先後排的**(幽靈音在主音之後排、過門在主音之前排):單音要照時間找前後兩顆(`bassVoices`),不准只記「上一顆」
 - 鋪底一顆和弦落一次、不跟節奏打;City Pop 用連奏鋪底(`padLegato`)。失諧至少四顆不等距,兩顆一定是固定晃動
 - 樂句呼吸:`phraseHole()`(鍵盤與吉他不同 salt);編曲層級 `FEELS[x].arrange` / `layerOn()`,**關卡只在 `scheduleExtras`**,
   只有第四層(吉他、鋪底、銅管、打擊小物)可以進出,鼓/貝斯/鋼琴永遠在

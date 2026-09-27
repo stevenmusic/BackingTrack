@@ -2919,7 +2919,7 @@ let bassHpN = null, drumHpN = null, drumLowN = null, keysPresN = null;
 let bassEqN = null, bassCompN = null, bassMk = null, bassDry = null, bassWet = null, drumAir = null, drumMidN = null, drumRevSend = null;
 let combAir = null, combChorus = null, masterMid = null, masterAirN = null, revTone = null, drumWidth = null, padLp = null;
 /* 混音 / 母帶的其餘幾站(全部寫在 `FEELS[x].mix`,沒寫 = 透明,見 `applyMix`) */
-let keysComp = null, drumSatN = null, bassSatN = null, drumPar = null, revHpN = null, masterMB = null, masterMono = null;
+let padEns = null, gtrAmp = null, keysComp = null, drumSatN = null, bassSatN = null, drumPar = null, revHpN = null, masterMB = null, masterMono = null;
 let echoBus = null, echoL = null, echoR = null;
 /* 延遲時間跟著速度走:八分與附點八分(那是最常見的一組乒乓)。
    **速度一改就要重算**,不然換速度之後延遲會跟節奏錯開 */
@@ -3279,6 +3279,56 @@ function mkMonoLow(ctx){
     sw.set(hz > 0);
     if (hz > 0) { ap.frequency.value = hz; hp.input.frequency.value = hp.output.frequency.value = hz; } } };
 }
+/* 弦樂機的合奏效果(ensemble):ARP Solina / KORG Λ / Roland 的 string machine 聲音的來源不是振盪器,是這一顆——
+   三條 BBD 類比延遲線,各被「一慢一快」兩顆 LFO 調變,三條的 LFO 相位差 120°,三條加起來 = 一群人在拉,
+   不是一台琴在響(出處見 docs/SOURCES.md P1)。全濕(原機就沒有乾聲),三條擺 左 / 中 / 右。
+   **音高偏移照 CLAUDE.md 的上限**:慢 0.6Hz × 0.25ms 與快 6.2Hz × 0.02ms 各 1.6、1.3 音分,加起來 < 3 音分;
+   晃動的感覺來自三條之間的**相對**延遲一直在變(梳狀的缺口在 2k 以上游走),不是把音高拉走。
+   set(null) = 繞過;set({ slow: [Hz, ms], fast: [Hz, ms], base: ms }) */
+function mkEnsemble(ctx){
+  const sw = mkSwitch(ctx), sum = ctx.createGain(); sum.gain.value = 1 / Math.sqrt(3) * 0.865;   // 三條在低頻同相(+4.8dB)、高頻不相關(+0dB),補償看鋪底多亮:0.865 讓 piano / brass 兩種配器各差約 ±1dB(tools/realism/cases_timbre.json)
+  const lfo = (hz, phase) => {                          // 帶相位的正弦 LFO:PeriodicWave 的 sin(ωt + φ)
+    const o = ctx.createOscillator();
+    o.setPeriodicWave(ctx.createPeriodicWave(new Float32Array([0, Math.sin(phase)]), new Float32Array([0, Math.cos(phase)]), { disableNormalization: true }));
+    o.frequency.value = hz; return o; };
+  const lines = [0, 1, 2].map(k => {
+    const d = ctx.createDelay(0.05), gs = ctx.createGain(), gf = ctx.createGain();
+    const ls = lfo(0.6, k * 2 * Math.PI / 3), lf = lfo(6.2, k * 2 * Math.PI / 3);
+    ls.connect(gs); gs.connect(d.delayTime); lf.connect(gf); gf.connect(d.delayTime);
+    const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+    sw.input.connect(d);
+    if (pan) { pan.pan.value = [-0.6, 0, 0.6][k]; d.connect(pan); pan.connect(sum); } else d.connect(sum);
+    return { d, gs, gf, ls, lf };
+  });
+  sum.connect(sw.wet);
+  let started = false;
+  return { input: sw.input, output: sw.output, set(cfg){
+    sw.set(!!cfg); if (!cfg) return;
+    if (!started) { const t = ctx.currentTime; lines.forEach(l => { l.ls.start(t); l.lf.start(t); }); started = true; }
+    const sl = cfg.slow || [0.6, 0.25], fa = cfg.fast || [6.2, 0.02], base = (cfg.base || 7) / 1000;
+    lines.forEach(l => { l.ls.frequency.value = sl[0]; l.lf.frequency.value = fa[0];
+      l.gs.gain.value = sl[1] / 1000; l.gf.gain.value = fa[1] / 1000; l.d.delayTime.value = base; }); } };
+}
+/* 音箱 + 喇叭箱(吉他):唱片上的切音是**單線圈的 Tele / Strat → 壓縮效果器 → 音箱 → 喇叭箱 → 麥克風**(docs/SOURCES.md G2)。
+   我們的取樣是 Hofner Club(空心琴)直接錄進來,沒有音箱那一段:
+   - 前級一點點飽和(`drive`,乾淨音箱推一點就圓,尖的刷弦被磨掉)
+   - 喇叭箱:12 吋喇叭的頻寬大約 80Hz–5kHz,5k 以上是陡的斷崖(那就是「DI 聲很刺、上了音箱就好聽」的原因)
+   - 空心琴的箱體共鳴在 200–300Hz(悶、圓),單線圈沒有 → 挖掉;單線圈的咬在 1–2k(不碰 2–5k,那是主旋律的)
+   set(null) = 繞過;set({ drive, hp, body: [Hz, dB], bite: [Hz, dB], lp }) */
+function mkAmp(ctx){
+  const sw = mkSwitch(ctx), sat = mkSat(ctx, 4);
+  const hp = lr4(ctx, "highpass", 90), lp = lr4(ctx, "lowpass", 5000);
+  const body = ctx.createBiquadFilter(), bite = ctx.createBiquadFilter();
+  body.type = "peaking"; body.Q.value = 1.0; bite.type = "peaking"; bite.Q.value = 0.9;
+  sw.input.connect(sat.input); sat.output.connect(hp.input); hp.output.connect(body); body.connect(bite); bite.connect(lp.input); lp.output.connect(sw.wet);
+  return { input: sw.input, output: sw.output, set(cfg){
+    sw.set(!!cfg); if (!cfg) return;
+    sat.set(cfg.drive || 0);
+    hp.input.frequency.value = hp.output.frequency.value = cfg.hp || 90;
+    lp.input.frequency.value = lp.output.frequency.value = cfg.lp || 5000;
+    const b = cfg.body || [250, 0], t = cfg.bite || [1600, 0];
+    body.frequency.value = b[0]; body.gain.value = b[1]; bite.frequency.value = t[0]; bite.gain.value = t[1]; } };
+}
 function installTrueLimiter(){
   if (!ctx.audioWorklet || !window.Blob || !window.URL) return;
   const url = URL.createObjectURL(new Blob([LIMITER_SRC], { type: "application/javascript" }));
@@ -3587,11 +3637,12 @@ function ensureAudio(){
     combBus.connect(combHp); combHp.connect(combEq); combEq.connect(combComp);
     combAir = shelf(ctx, "highshelf", 6500);
     combChorus = makeChorus(ctx);
-    combComp.connect(combMakeup); combMakeup.connect(combAir);
+    gtrAmp = mkAmp(ctx);
+    combComp.connect(combMakeup); combMakeup.connect(gtrAmp.input); gtrAmp.output.connect(combAir);
     combAir.connect(combChorus.input); combChorus.output.connect(masterGain);
     const cSend = ctx.createGain();
     cSend.gain.value = 0.22;
-    combMakeup.connect(cSend); cSend.connect(reverbBus);
+    gtrAmp.output.connect(cSend); cSend.connect(reverbBus);   // 送殘響在音箱之後(麥克風收到的才進房間);沒開音箱 = 原本的點
     /* 真管樂自己一條 bus(原本跟吉他共用 combBus:吃到吉他的壓縮、3.5k 以上的提亮與 chorus,銅管被推得又尖又扁)。
        收 5.5k 以上、3k 挖 3dB(那段是主旋律要站的地方,這是 backing track)、殘響多送一點(管樂組是在房間裡吹的) */
     brassBus = ctx.createGain();
@@ -3612,10 +3663,11 @@ function ensureAudio(){
        評語是「太尖銳、太突出、要溫暖一點」——這顆是拿來做 A/B 的 */
     padLp = ctx.createBiquadFilter();
     padLp.type = "lowpass"; padLp.frequency.value = 20000; padLp.Q.value = 0.5;
-    padBus.connect(padHp); padHp.connect(padEq); padEq.connect(padLp); padLp.connect(masterGain);
+    padEns = mkEnsemble(ctx);
+    padBus.connect(padHp); padHp.connect(padEq); padEq.connect(padLp); padLp.connect(padEns.input); padEns.output.connect(masterGain);
     const pSend = ctx.createGain();
     pSend.gain.value = 0.42;
-    padLp.connect(pSend); pSend.connect(reverbBus);
+    padEns.output.connect(pSend); pSend.connect(reverbBus);   // 合奏效果之後送;沒開 = 原本的點
     /* 鍵盤(鋼琴 / Rhodes)原本每一顆音直接接 masterGain,**沒有 bus 就沒辦法混**。
        挖 280Hz(整首最擠的那一段)、補一點高頻(Rhodes 的鐘聲)、再過 chorus */
     keysBus = ctx.createGain();
@@ -6053,6 +6105,8 @@ function applyMix(){
   if (combAir) { combAir.frequency.value = m.gtrAirHz || 6500; combAir.gain.value = m.gtrAir || 0; }
   if (combChorus) combChorus.wet.gain.value = m.gtrChorus || 0;
   /* ── 其餘的混音 / 母帶站(沒寫 = 透明)── */
+  if (padEns) padEns.set(m.padEns || null);
+  if (gtrAmp) gtrAmp.set(m.gtrAmp || null);
   if (keysComp) keysComp.set(m.keysComp, m.keysRatio || 2.5, 0.012, 0.18, m.keysMakeup || 1);
   if (drumSatN) drumSatN.set(m.drumSat || 0);
   if (bassSatN) bassSatN.set(m.bassSat || 0);
@@ -6346,7 +6400,7 @@ const FEELS = {
                 → 改後吉他 −11.4;探針記到吉他排在每小節第一拍) */
              padLone: 0.5,
              /* `smp: true`:真管樂(小號 + 長號斷奏,VSCO-2-CE),載不到的聲部退回合成。唱片名單上是真人管樂組(SOURCES C1) */
-             brass: { lvl: 0.06, smp: true, pairs: true, cells: [[6, 10], [10, 14], [6, 14], [10], [14], [3, 6], [11, 14]] },
+             brass: { lvl: 0.06, smp: true, pairs: true, sax: true, saxLvl: 0.8, cells: [[6, 10], [10, 14], [6, 14], [10], [14], [3, 6], [11, 14]] },
              /* 鋪底 −2dB、過 3kHz 低通:盲聽 6 次寫「太尖銳、太突出、要溫暖一點、不夠後面」 */
              keys: "pad", klevel: 0.0125,   /* 0.025 → 0.0125(−6dB):Steven 2026-09-26「City pop的pad超級吵」,配器輪換同比例 */
              /* 連奏鋪底(見 `padLegato`):淡入 0.45 秒、收掉的時間常數 0.35 秒 */
@@ -6382,9 +6436,13 @@ const FEELS = {
        所以每按一次播放換下一組(`applyOrch`,計數存在 localStorage,不是亂數——出問題查得到是哪一組)。
        每一組是**蓋在這個曲風上的覆寫**,寫法跟 render.mjs 的 ovr 一樣 */
     orchs: [
-      /* 1 銅管弦樂型(〈SPARKLE〉〈WINDY LADY〉〈Telephone Number〉〈Tokai〉):銅管每小節、鋪底亮 */
+      /* 1 銅管弦樂型(〈SPARKLE〉〈WINDY LADY〉〈Telephone Number〉〈Tokai〉):銅管每樂句尾(四小節一次,`every: 1` 但 layers 只開 4、8)、鋪底亮;
+         跟 synth 配器的差別:這組每個樂句都有管樂組(真取樣 + 薩克斯),synth 八小節才一次 */
       { name: "brass", parts: { klevel: 0.025, brass: { lvl: 0.075, every: 1 } },   // 銅管約 −6dB(0.115 → 0.06 是 −5.7dB、這組 0.15 → 0.075 是 −6.0dB):Steven「Synthesizer…太大聲」「可能是Pad+lead」。錄影 20–36 秒是 Mixed,銅管在吹,City Pop 唯一的合成 stab 就是它;Sustained 那段的「東一下」另見 `padLone`
-        mix: { padLp: 5500 }, arrange: { layers: { brass: "01110111", keys: "11111111" } } },
+        /* 銅管 "01110111" → "00010001"(Steven 2026-09-27「管樂聽起來很不好」):City Pop 的管樂組是**點綴**——
+           樂句尾巴的 kick / 推拍、進副歌的那一下,不是每小節都吹(**推論**:C1 只說完整管樂組 FOR YOU 只有 3/8 首,是「幾首有」,不是「一首裡幾小節吹」);吹得越滿,
+           只有兩種樂器、一個力度層的取樣越聽得出來是取樣 */
+        mix: { padLp: 5500 }, arrange: { layers: { brass: "00010001", keys: "11111111" } } },
       /* 2 合成器鋪底型(〈Midnight Joke〉〈Midnight Pretenders〉):大片合成器鋪底,銅管很少 */
       { name: "synth", parts: { klevel: 0.0375, glevel: 0.17, brass: { every: 4 } },
         mix: { padLp: 4500 }, arrange: { layers: { keys: "11111111", brass: "00000001" } } },
@@ -6523,7 +6581,7 @@ const FEELS = {
        伴奏是給人在上面唱 / 彈的:**2–5kHz 是主旋律要站的地方**,伴奏要讓出來,不是加亮。
        以前照整首唱片的頻譜比對加的高頻提升(母帶 masterAir、Rhodes keysAir、吉他 gtrAir)全部拿掉,
        吉他 3.2k、Rhodes 2k 各讓 2dB,Rhodes 再小 2dB;鼓與貝斯(backing track 的骨架)不動 */
-    mix: { gtrHp: 150, gtrEq: -2, gtrEqHz: 3200,   /* 1.2 → 0 與下面 gtrAir 4 → 1.5:吉他量到亮度 2100–2590Hz、真歌 770–2230(中位數約 1500) */ gtrComp: -18, gtrRatio: 3, gtrMakeup: 1.0,
+    mix: { gtrHp: 150, gtrEq: -2, gtrEqHz: 3200,   /* 1.2 → 0 與下面 gtrAir 4 → 1.5:吉他量到亮度 2100–2590Hz、真歌 770–2230(中位數約 1500) */ gtrComp: -18, gtrRatio: 3, gtrMakeup: 1.03,   /* 1.0 → 1.03:吉他過音箱(`gtrAmp`)之後單獨量跟改之前差 0.1dB 以內(量法見 tools/realism/cases_timbre.json) */
            padHp: 160,
            /* ── 第二輪:照頻譜與 solo 量出來的四個洞補 ──────────────
               (真的取樣量的;scratchpad 的 `cpan.mjs`)
@@ -6574,6 +6632,12 @@ const FEELS = {
            /* ── 其餘的混音 / 母帶站(Steven 2026-09-27:「所有混音跟母帶的步驟都要加上」)──────
               鍵盤壓縮:Rhodes 強奏的「咬」與弱奏差很大,和弦一直站在同一個位置才撐得住主旋律(2.5:1、12ms 讓音頭過去) */
            keysComp: -22, keysRatio: 2.5, keysMakeup: 1,
+           /* Steven 2026-09-27:「Pad、吉他、管樂聽起來很不好」「一直都不好聽」——三層都是做法離唱片最遠的:
+              鋪底補弦樂機的合奏效果(`mkEnsemble`,docs/SOURCES.md P1);
+              吉他補音箱 + 喇叭箱(`mkAmp`,G2):乾淨音箱推一點、12 吋喇叭 90Hz–5k、挖空心琴的 250Hz 箱鳴、1.2k 單線圈的咬
+              (G2 只寫到「乾淨、有壓縮」;5k / 250Hz / 1.2k 這幾個數字是推論,見 docs/SOURCES.md G2) */
+           padEns: { slow: [0.6, 0.25], fast: [6.2, 0.02], base: 7 },
+           gtrAmp: { drive: 1.2, hp: 110, body: [250, -3], bite: [1200, 2], lp: 5000 },   // bite 1.6k → 1.2k:Q 0.9 的鐘形約 1.5 個八度寬,1.6k 會漏進 2–3k(主旋律的位置)
            /* 鼓與貝斯的 bus 飽和:磁帶 / 前級那種圓,尖峰被磨掉一點、泛音多一點(k 小 = 輕) */
            drumSat: 0.35, bassSat: 0.5,
            /* 鼓的並聯壓縮(紐約壓縮):8:1 壓扁的那份(扣掉瀏覽器自動補的增益之後)跟乾的一樣大墊在下面,
@@ -8172,7 +8236,27 @@ const SRC_BRASS = [
   "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/master/Brass/",
   "https://cdn.jsdelivr.net/gh/sgossner/VSCO-2-CE@master/Brass/",
 ];
+/* 中音薩克斯:Karoryfer Weresax(CC0,github.com/sfzinstruments/karoryfer.weresax),forte 層、電容麥(`cnd`)。
+   唱片上的管樂組有薩克斯(docs/SOURCES.md C1:Plastic Love 次中音 + 上低音、FOR YOU 同一組人),VSCO 沒有,
+   只有小號 + 長號的管樂組少了中間那層簧片的厚度(Steven 2026-09-27「管樂聽起來很不好」)。
+   長音取樣當斷奏用:音頭 15–70ms(`tools/realism/sax_meas.py` 量);e2 / eb2 / f2 音頭 90–300ms 太慢,不收(旁邊的音 ±3 半音內補) */
+const SRC_SAX = [
+  "https://raw.githubusercontent.com/sfzinstruments/karoryfer.weresax/master/",
+  "https://cdn.jsdelivr.net/gh/sfzinstruments/karoryfer.weresax@master/",
+];
 const BRASS_SMP = {
+  sax: { src: SRC_SAX, dir: "Samples/alto/", file: (lab, r) => `${lab}_f_rr${r}_cnd.wav`,
+    notes: [
+            [49, "db2", [0, 0], [-12.9, -10.9]], [50, "d2", [1, 0], [-12.8, -15.3]], [54, "gb2", [0, 0], [-17.0, -16.2]],
+            [55, "g2", [0, 0], [-16.3, -15.4]], [56, "ab2", [0, 0], [-13.8, -14.6]], [57, "a2", [-1, 0], [-13.7, -14.0]],
+            [58, "bb2", [0, 0], [-15.5, -15.6]], [59, "b2", [0, -1], [-15.1, -14.7]], [60, "c3", [-1, -1], [-15.2, -14.3]],
+            [61, "db3", [0, 0], [-15.2, -14.4]], [62, "d3", [0, -1], [-15.1, -14.7]], [63, "eb3", [0, 0], [-14.6, -14.5]],
+            [64, "e3", [0, -1], [-12.6, -11.4]], [65, "f3", [1, 1], [-15.2, -15.1]], [66, "gb3", [0, 1], [-15.7, -15.8]],
+            [67, "g3", [1, 2], [-13.5, -13.6]], [68, "ab3", [1, 0], [-14.2, -12.5]], [69, "a3", [2, 1], [-11.5, -10.9]],
+            [70, "bb3", [1, 0], [-13.4, -12.9]], [71, "b3", [1, 1], [-14.9, -15.1]], [72, "c4", [1, 1], [-12.8, -14.1]],
+            [73, "db4", [0, 0], [-13.9, -13.6]], [74, "d4", [0, 1], [-12.4, -13.2]], [75, "eb4", [0, -1], [-12.6, -12.9]],
+            [76, "e4", [0, 0], [-11.1, -11.6]], [77, "f4", [0, 0], [-13.1, -13.1]], [78, "gb4", [1, 2], [-14.0, -13.3]],
+            [79, "g4", [1, 2], [-11.4, -12.8]], [80, "ab4", [2, 3], [-13.3, -13.7]]] },
   tpt: { dir: "Trumpet/stac/", file: (lab, r) => `Sum_SHTrumpet_stac_${lab}_v2_rr${r}.wav`,
     notes: [[53, "F2", [-2, -1], [-48.4, -46.4]], [57, "A2", [1, -2], [-40.2, -39.7]], [60, "C3", [7, 3], [-41.3, -41.9]],
             [63, "D#3", [0, -4], [-37.4, -37.0]], [65, "F3", [1, 0], [-37.6, -40.8]], [67, "G3", [-1, 3], [-37.9, -38.1]],
@@ -8190,11 +8274,30 @@ const BRASS_SMP = {
 /* 2026-09-27 換 v2 層 + 兩個人 + 自己的 bus 之後,每一下校回跟換之前一樣大(`cases_bcal2.json` → `hits.py`:
    0098349 −33.7 / −32.3,改後未補時 −43.6 / −42.5 → ×3.16) */
 const BRASS_TARGET = -30, BRASS_MAXNORM = 6, BRASS_GAIN = 14.5;
-const brassBufs = { tpt: new Map(), tbn: new Map() }, brassLoading = {}, brassFailed = new Set();
+const brassBufs = { tpt: new Map(), tbn: new Map(), sax: new Map() }, brassLoading = {}, brassFailed = new Set();
 /* 這一聲給誰吹:由上往下數,前兩聲小號;第三聲起在長號音域(≤ 67)就給長號 */
-function brassParts(midis){
+function brassParts(midis, chord){
   const up = midis.slice().sort((a, b) => b - a);
-  return up.map((m, i) => ({ m, ins: i < 2 && m >= 55 ? "tpt" : m <= 67 ? "tbn" : "tpt" }));
+  const parts = up.map((m, i) => ({ m, ins: i < 2 && m >= 55 ? "tpt" : m <= 67 ? "tbn" : "tpt" }));
+  /* `parts.brass.sax`:薩克斯跟**中間那一聲**同音(管樂組的寫法:小號在上、長號在下、薩克斯夾在中間把兩邊黏起來),
+     超出中音薩克斯的音域(C♯3–A♭5)就移八度。它是加上去的一聲,不改原本的和聲。
+     **移完八度會高過頂音就不加**(不然它變成最上面那一聲,卻沒經過頂音守門);所以薩克斯永遠在頂音以下 */
+  const bs = typeof feel === "function" && feel().parts && feel().parts.brass;
+  /* 薩克斯的音色跟銅管不一樣,耳朵會把它單獨聽成一條線 → 它吹的音也要過 `melodyOk`(跟頂音同一個標準):
+     從中間那一聲開始往下找第一顆合規的(屬七的七音、九度都不吹),一顆都沒有就這一下不吹。
+     `chord` 沒給(預載時)就只照中間那一聲挑,多載的那顆背景補,不影響 */
+  if (bs && bs.sax && up.length) {
+    const cand = up.length > 1 ? up.slice(1) : up;
+    for (const c of cand) {
+      if (chord && !melodyOk(chord, c - (typeof transposeOn === "number" ? transposeOn : 0))) continue;
+      let m = c;
+      while (m > 80) m -= 12;
+      while (m < 49) m += 12;
+      if (m <= up[0]) { parts.push({ m, ins: "sax", sax: true }); break; }
+      if (!chord) break;
+    }
+  }
+  return parts;
 }
 /* 最近的一顆取樣,差超過 3 個半音就不拉(拉太多琴身的共振會跟著搬走) */
 function brassEntry(ins, m){
@@ -8209,12 +8312,13 @@ function loadBrassOne(ins, e){
   const path = r => encodeURI(B.dir + B.file(e[1], r)).replace(/#/g, "%23");
   /* **只有 rr1 擋播放**;rr2(同一顆被兩聲用到、或輪流用)等真的開始播了才補(跟鼓同一個 `drumFillGate`),
      一顆一顆排在 `brassQueue` 後面,不跟排程器搶解碼 */
-  brassLoading[key] = fetchDecode(SRC_BRASS, path(1))
+  const src = B.src || SRC_BRASS;
+  brassLoading[key] = fetchDecode(src, path(1))
     .then(b1 => {
       const bufs = [b1];
       brassBufs[ins].set(e[0], bufs);
       brassQueue = brassQueue.then(() => drumFillGate())
-        .then(() => fetchDecode(SRC_BRASS, path(2))).then(b2 => { bufs[1] = b2; }).catch(() => {});
+        .then(() => fetchDecode(src, path(2))).then(b2 => { bufs[1] = b2; }).catch(() => {});
     })
     .catch(() => { brassFailed.add(key); });
   return brassLoading[key];
@@ -8231,19 +8335,24 @@ function ensureBrass(midiSets){
     const e = brassEntry(p.ins, p.m);
     if (e) want.set(p.ins + ":" + e[0], [p.ins, e]);
   }
-  return [...want.values()].reduce((c, [ins, e]) => c.then(() => loadBrassOne(ins, e)), Promise.resolve());
+  /* 薩克斯的長音取樣一顆 0.7–0.9MB(VSCO 斷奏 0.2MB),而且它是加上去的一聲:**不擋播放**,開始播了才在背景補
+     (沒載到那一下就不吹,見 `playBrassSmp`) */
+  const all = [...want.values()], lead = all.filter(([ins]) => ins !== "sax");
+  for (const [ins, e] of all) if (ins === "sax") brassQueue = brassQueue.then(() => drumFillGate()).then(() => loadBrassOne(ins, e));
+  return lead.reduce((c, [ins, e]) => c.then(() => loadBrassOne(ins, e)), Promise.resolve());
 }
 /* 吹得到的聲部用取樣吹,回傳沒有取樣的那幾聲(交給合成銅管,備援) */
-function playBrassSmp(midis, when, dur, gain, pos){
+function playBrassSmp(midis, when, dur, gain, pos, chord){
   const rest = [];
   const SPREAD = [-0.42, 0.06, 0.4];
   const used = new Map();
-  brassParts(midis).forEach((p, i) => {
+  brassParts(midis, chord).forEach((p, i) => {
     const e = brassEntry(p.ins, p.m);
     const bufs = e && brassBufs[p.ins].get(e[0]);
     if (!bufs) {
+      if (p.sax) { if (e && !brassFailed.has(p.ins + ":" + e[0])) brassQueue = brassQueue.then(() => drumFillGate()).then(() => loadBrassOne("sax", e)); return; }   // 薩克斯是加上去的一聲:沒載到就不吹,不拿合成銅管代替
       // 播放中才出現的音(和弦變化換出來的):排在 `brassQueue` 後面背景補,這一下先用合成
-      if (e && !brassFailed.has(p.ins + ":" + e[0])) brassQueue = brassQueue.then(() => drumFillGate()).then(() => ensureBrass([[p.m]]));
+      if (e && !brassFailed.has(p.ins + ":" + e[0])) brassQueue = brassQueue.then(() => drumFillGate()).then(() => loadBrassOne(p.ins, e));
       rest.push(p.m);
       return;
     }
@@ -8251,7 +8360,7 @@ function playBrassSmp(midis, when, dur, gain, pos){
        同一下兩聲撞到同一顆時起點一樣,`used` 加 1 就一定換另一次錄音 */
     const uk = p.ins + ":" + e[0];
     const nb = bufs[1] ? 2 : 1;
-    const r = ((hash01(pos || 0, 190 + e[0] + (p.ins === "tbn" ? 100 : 0)) < 0.5 ? 0 : 1) + (used.get(uk) || 0)) % nb;
+    const r = ((hash01(pos || 0, 190 + e[0] + (p.ins === "tbn" ? 100 : p.ins === "sax" ? 200 : 0)) < 0.5 ? 0 : 1) + (used.get(uk) || 0)) % nb;
     used.set(uk, (used.get(uk) || 0) + 1);
     /* **每一聲兩個人**(`parts.brass.pairs`,沒寫就一個人):Plastic Love 是小號 ×2、長號 ×2 加兩支薩克斯,
        一聲只有一次錄音聽起來又尖又扁(Steven:「銅管聲音很尖 很扁」)。第二個人用**另一次錄音**(rr),
@@ -8263,13 +8372,15 @@ function playBrassSmp(midis, when, dur, gain, pos){
       src.buffer = bufs[rk];
       const cents = k ? (hash01(pos || 0, 200 + i) - 0.5) * 8 : 0;
       src.playbackRate.value = Math.pow(2, (p.m - e[0] - e[2][rk] / 100 + cents / 100) / 12);
-      const norm = BRASS_GAIN * Math.min(BRASS_MAXNORM, Math.pow(10, (BRASS_TARGET - e[3][rk]) / 20)) / Math.sqrt(pairs);
+      const norm = BRASS_GAIN * Math.min(BRASS_MAXNORM, Math.pow(10, (BRASS_TARGET - e[3][rk]) / 20)) / Math.sqrt(pairs)
+                 * (p.sax ? ((feel().parts.brass || {}).saxLvl || 1) : 1);
       const g = ctx.createGain();
       const sp = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
       const t0 = when + (k ? 0.006 + hash01(pos || 0, 210 + i) * 0.008 : 0);
       const out = brassBus || combBus;
       src.connect(g);
-      if (sp) { sp.pan.value = Math.max(-0.8, Math.min(0.8, SPREAD[i % SPREAD.length] + (k ? 0.25 : 0) * (SPREAD[i % SPREAD.length] > 0 ? -1 : 1))); g.connect(sp); sp.connect(out); } else g.connect(out);
+      const sp0 = p.sax ? 0.1 : SPREAD[i % SPREAD.length];   // 薩克斯站中間(夾在小號與長號之間)
+      if (sp) { sp.pan.value = Math.max(-0.8, Math.min(0.8, sp0 + (k ? 0.25 : 0) * (sp0 > 0 ? -1 : 1))); g.connect(sp); sp.connect(out); } else g.connect(out);
       g.gain.setValueAtTime(0.0001, t0);
       g.gain.linearRampToValueAtTime(gain * norm, t0 + 0.0012);
       // 斷奏本身就短;stab 的長度到了再收(真的吹奏者是用舌頭斷音)
@@ -8283,11 +8394,11 @@ function playBrassSmp(midis, when, dur, gain, pos){
   return rest;
 }
 
-function playBrass(midis, when, dur, gain, pos){
+function playBrass(midis, when, dur, gain, pos, chord){
   if (!midis.length || !combBus) return;
   const bsp = (feel().parts && feel().parts.brass) || {};
   if (bsp.smp) {
-    midis = playBrassSmp(brassFold(midis), when, dur, gain * (bsp.smpGain || 1), pos);
+    midis = playBrassSmp(brassFold(midis), when, dur, gain * (bsp.smpGain || 1), pos, chord);
     if (!midis.length) return;
   }
   const bus = ctx.createGain();
@@ -8372,7 +8483,7 @@ function scheduleBrass(spans, barStartBeat, b, transpose, absBar){
     if (!sp || !sp.v) continue;
     const notes = padNotes(sp.v).slice(-3).map(n => n + transpose);
     if (!notes.length) continue;
-    playBrass(notes, slotTime(barStartBeat, idx), spb * 0.3, lvl, absBar * 64 + idx);
+    playBrass(notes, slotTime(barStartBeat, idx), spb * 0.3, lvl, absBar * 64 + idx, sp.chord);
   }
 }
 

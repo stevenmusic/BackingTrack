@@ -1,0 +1,62 @@
+{
+ "_note": "第十五輪音色(鋪底合奏 / 吉他音箱):單獨量各 bus 的音量與亮度。關掉響度對齊(lufs)與三段壓縮(masterMB),不然單獨錄的音量會被對齊掉;orchFix 2 = piano 配器、orchFix 0 = brass 配器(鋪底比較亮,合奏效果的補償跟著變)。改之前 = main 3499c87。\nfor b in padBus combBus padBus,reverbBus combBus,reverbBus; do REALISM_PROBE=tools/realism/probe_solo.js REALISM_SOLO=$b REALISM_SECS=30 REALISM_OUT=/tmp/tb/$b node tools/realism/render.mjs tools/realism/cases_timbre.json; done; /tmp/abx/bin/python tools/realism/bus_cmp.py /tmp/tb",
+ "progressions": {},
+ "cases": [
+  {
+   "version": "3499c87",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "comp_before",
+   "ovr": {
+    "mix": {
+     "lufs": null,
+     "masterMB": null
+    },
+    "orchFix": 2
+   }
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "comp_after",
+   "ovr": {
+    "mix": {
+     "lufs": null,
+     "masterMB": null
+    },
+    "orchFix": 2
+   }
+  },
+  {
+   "version": "3499c87",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "brassorch_before",
+   "ovr": {
+    "mix": {
+     "lufs": null,
+     "masterMB": null
+    },
+    "orchFix": 0
+   }
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "brassorch_after",
+   "ovr": {
+    "mix": {
+     "lufs": null,
+     "masterMB": null
+    },
+    "orchFix": 0
+   }
+  }
+ ]
+}

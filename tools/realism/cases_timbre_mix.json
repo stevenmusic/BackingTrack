@@ -1,0 +1,166 @@
+{
+ "_note": "第十五輪音色:全混(響度對齊開著)的 LUFS / True Peak。REALISM_SECS=30 REALISM_OUT=/tmp/tm node tools/realism/render.mjs tools/realism/cases_timbre_mix.json; /tmp/abx/bin/python tools/realism/lufs.py /tmp/tm",
+ "progressions": {},
+ "cases": [
+  {
+   "version": "3499c87",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "brass_comp_before",
+   "ovr": {
+    "orchFix": 0
+   }
+  },
+  {
+   "version": "3499c87",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "brass_drive_before",
+   "ovr": {
+    "orchFix": 0
+   }
+  },
+  {
+   "version": "3499c87",
+   "feel": "citypop",
+   "style": "pad",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "brass_pad_before",
+   "ovr": {
+    "orchFix": 0
+   }
+  },
+  {
+   "version": "3499c87",
+   "feel": "citypop",
+   "style": "mix",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "brass_mix_before",
+   "ovr": {
+    "orchFix": 0
+   }
+  },
+  {
+   "version": "3499c87",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "piano_comp_before",
+   "ovr": {
+    "orchFix": 2
+   }
+  },
+  {
+   "version": "3499c87",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "piano_drive_before",
+   "ovr": {
+    "orchFix": 2
+   }
+  },
+  {
+   "version": "3499c87",
+   "feel": "citypop",
+   "style": "pad",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "piano_pad_before",
+   "ovr": {
+    "orchFix": 2
+   }
+  },
+  {
+   "version": "3499c87",
+   "feel": "citypop",
+   "style": "mix",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "piano_mix_before",
+   "ovr": {
+    "orchFix": 2
+   }
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "brass_comp_after",
+   "ovr": {
+    "orchFix": 0
+   }
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "brass_drive_after",
+   "ovr": {
+    "orchFix": 0
+   }
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "pad",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "brass_pad_after",
+   "ovr": {
+    "orchFix": 0
+   }
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "mix",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "brass_mix_after",
+   "ovr": {
+    "orchFix": 0
+   }
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "piano_comp_after",
+   "ovr": {
+    "orchFix": 2
+   }
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "piano_drive_after",
+   "ovr": {
+    "orchFix": 2
+   }
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "pad",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "piano_pad_after",
+   "ovr": {
+    "orchFix": 2
+   }
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "mix",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "piano_mix_after",
+   "ovr": {
+    "orchFix": 2
+   }
+  }
+ ]
+}

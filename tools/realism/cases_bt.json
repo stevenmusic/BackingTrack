@@ -1,0 +1,48 @@
+{
+ "_note": "backing track 混音前後(整首)",
+ "progressions": {},
+ "cases": [
+  {
+   "version": "0098349",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "old_comp"
+  },
+  {
+   "version": "0098349",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "old_drive"
+  },
+  {
+   "version": "0098349",
+   "feel": "citypop",
+   "style": "mix",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "old_mix"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "new_comp"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "new_drive"
+  },
+  {
+   "version": "HEAD",
+   "feel": "citypop",
+   "style": "mix",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "new_mix"
+  }
+ ]
+}

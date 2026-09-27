@@ -12,7 +12,8 @@
 
 ## 審查流程
 1. 所有改動一律走**分支 + PR**,**禁止直接推 main**
-2. 每次開 PR 前,先叫審查員(`.claude/agents/reviewer.md`,規則在 `docs/REVIEWER.md`)審一次
+2. **審查員不是每次必送**(Steven 2026-09-27:「如果審查員沒有幫助,就乾脆不要」):只有改到排程邏輯、容易壞的地方
+   (時間順序、包絡、載入流程)才叫 `reviewer`;調數值、混音、文件直接開 PR。叫了審查員才走下面 3–6
 3. 把審查意見**原文**貼進 PR 描述,不得刪改;在後面逐條回應,只能用三種:
    - 【同意】已修,附 commit
    - 【反駁】附程式碼或數據證據
@@ -180,9 +181,12 @@
 - 播放中換曲風,音色在背景跟上,不准 await
 
 ## 混音與母帶
+- **這是 backing track**(Steven 2026-09-27):伴奏是給人在上面唱 / 彈的。**2–5kHz 是主旋律的位置,伴奏要讓出來**,
+  不准再照整首唱片(有人聲)的頻譜去補高頻。改聲音的標準是 Steven 聽得出的進步,不是量尺過關
 - 鏈:`masterGain(TL_IN 0.75)→ 高通 24Hz → 黏著壓縮 → 飽和(x−x³/3)→ outGain(TL_OUT 2.35)→ 看前 5ms 的限幅器 worklet(天花板 0.85)→ 軟削波(保險)`。
   worklet 載不到時退回舊鏈(DynamicsCompressor,outGain 1.08)。**量聲音一定走 http**,`file://` 載不到 worklet
 - 目標:**peak ≤ 0.85、零削波、RMS 約 −11～−14 dBFS**;Swing 偏小聲是本色不硬拉
+- City Pop 真管樂走自己的 `brassBus`(收 5.5k 以上、3k −3dB、殘響 0.35),不跟吉他共用 combBus;每聲兩次錄音(`brass.pairs`)
 - 每條 bus 的處理寫在 `FEELS[x].mix`(高通、EQ、壓縮、chorus、`drumLevel`、`master`…),**沒寫就透明**。
   壓縮器不是拿來加音量的;調變效果先算音高偏移(深度 × 2π × 速率,≤3 音分);頻譜比對只能當方向
 - 側鏈 `FEELS[x].duck`:K-Pop 深、Funk 很淺、Pop 一點點;City Pop 與 acoustic 曲風(Bossa/Swing/Blues)不給

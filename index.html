@@ -6039,10 +6039,10 @@ const FEELS = {
     orchs: [
       /* 1 銅管弦樂型(〈SPARKLE〉〈WINDY LADY〉〈Telephone Number〉〈Tokai〉):銅管每小節、鋪底亮 */
       { name: "brass", parts: { klevel: 0.025, brass: { lvl: 0.075, every: 1 } },   // 銅管約 −6dB(0.115 → 0.06 是 −5.7dB、這組 0.15 → 0.075 是 −6.0dB):Steven「Synthesizer…太大聲」「可能是Pad+lead」。錄影 20–36 秒是 Mixed,銅管在吹,City Pop 唯一的合成 stab 就是它;Sustained 那段的「東一下」另見 `padLone`
-        mix: { padLp: 5500 }, arrange: { layers: { brass: "01110111", keys: "00011111" } } },
+        mix: { padLp: 5500 }, arrange: { layers: { brass: "01110111", keys: "11111111" } } },
       /* 2 合成器鋪底型(〈Midnight Joke〉〈Midnight Pretenders〉):大片合成器鋪底,銅管很少 */
       { name: "synth", parts: { klevel: 0.0375, glevel: 0.17, brass: { every: 4 } },
-        mix: { padLp: 4500 }, arrange: { layers: { keys: "00111111", brass: "00000001" } } },
+        mix: { padLp: 4500 }, arrange: { layers: { keys: "11111111", brass: "00000001" } } },
       /* 3 鋼琴型(〈Plastic Love〉):鋼琴往前,其他照常 */
       { name: "piano", mix: { keysLevel: 0.56 } },    // 1.1 → 0.7 → 0.56:跟 keysLevel 同比例(2026-09-27 −2dB)
       /* 4 雙吉他型(〈Fantasy〉〈STAY BY ME〉):兩把吉他一直都在,鋪底淡 */
@@ -6142,14 +6142,16 @@ const FEELS = {
     arrange: {
       cycle: 8,
       layers: {
-        guitar:  "11110111",
-        guitar2: "00001111",
+        guitar:  "11111111",
+        guitar2: "11111111",
         brass:   "00010001",
         /* 鋪底 8 小節裡只上 4 小節:12 首真歌的「其他」軌只有 39–66% 的時間在響,
            不是從頭鋪到尾(原本 6/8、配器輪換裡還有 8/8) */
-        /* **鋪底要撐過過門**,在下一段第一拍(鼓打 crash 那下)才收(Steven 2026-09-27:「過門的時候 pad 突然停掉,聽起來有點怪」)。
-           原本 00111100 / 00110111 / 01111110 都是在句子中間或過門前後被切掉。現在一律後半段進、撐到第 8 小節結束 */
-        keys:    "00001111",
+        /* **鋪底與兩把吉他一直都在**(Steven 2026-09-27:「第 4、8 小節會消失」「聲音太突兀」)。
+           這是 backing track,給人跟著練的循環:伴奏每幾小節少一件樂器,聽起來是壞掉,不是編曲。
+           原本鋪底 00111100(配器輪換裡還有 00110111 / 01111110)、吉他 11110111、第二把 00001111,
+           每圈配器不同、進出的小節也不同。銅管是點綴(stab),照舊只在幾個小節出現 */
+        keys:    "11111111",
         perc:    "11111111",
       },
       /* 力度也要跟著樂句走:前兩小節收 0.6dB、句尾推 0.5dB。

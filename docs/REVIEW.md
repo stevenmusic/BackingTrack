@@ -815,7 +815,7 @@ Steven 聽完第十五輪與〈Plastic Love〉對照後說「所有樂器都不�
 
 - 對照 `tools/realism/db/ratings.jsonl`:
   - 第三批(bd80000,2026-09-24)City Pop 9 段是 3、3、3、3、3、3、4、3、3。
-  - 第二批(9c7fbb5)3、3、4、3、3。
+  - 第二批(9c7fbb5)3、3、3、4、3。
   - 第一批 3、2、3、2。
   - 「好幾批、打到 3 分」= bd80000。
 - 範圍:問 Steven 之後選「只退聲音」,做法跟第十一輪退回 fd8a1ca 一樣。
@@ -831,12 +831,41 @@ Steven 聽完第十五輪與〈Plastic Love〉對照後說「所有樂器都不�
   - 其餘 70 多筆都是音色、混音、演奏。
 - 驗證:
   - 段落庫 83 組全部解析成功,網頁載入 0 錯誤。
-  - 各曲風錄音對照 bd80000:七種曲風 comp 各 20 秒 + City Pop 四種疏密,RMS 差 ≤ 0.04dB、峰值差 ≤ 0.02、0 錯誤
-    (`/tmp/cases_rv*.json` 同一段進行、`render.mjs`)。
+  - 各曲風錄音對照 bd80000:`tools/realism/cases_revert_bd.json`(`_note` 有指令)。結果見審查回應後的「重跑」。
   - 和弦變化:83 組 × 8 圈 = 664 圈 0 錯誤,拆兩顆 68 次。
   - **搬的時候抓到一個錯**:0c25476 的「經過音只在小節線前接」用到 `endsBar`,它原本定義在 bd80000 之後才有的
     City Pop 貝斯過門裡,City Pop 一播就 `endsBar is not defined`。改成就地定義 `b0 + beats === m.beats`
     (一小節一顆和弦時永遠成立,跟 bd80000 一樣)。
 
+### 第十六輪審查(reviewer,medium)第 1 輪
+
+原文貼在 PR 描述。回應:
+
+- **B1**【同意】
+  - CLAUDE.md 最上面明寫兩條絕對規則(`leadOf`、旋律只准和弦音)目前不成立,是 Steven 要求退回造成的例外,不准自己補回。
+  - 「現在沒有」的清單補齊。
+  - 旋律外音列成下面的 D2。
+- **S1**【同意】拿掉 0c25476 帶過來的配器輪換底座,那幾行回到 bd80000 原文:
+  - `FEELS_BASE` / `orchNow` / `deepMerge` / `applyOrch`
+  - `startPlayback` 的兩行呼叫
+  - `spec.every`、`chopLen`
+- **S2**【同意】CLAUDE.md 把「一顆拆兩顆」與經過音改成「和聲 / 律動上保留的改動」;`scheduleBass` 註解同步。
+- **S3**【同意】「爆音 / 破音」改成第三批 3 則、第二批另 2 則;第二批分數順序修正。
+- **S4**【同意】case 檔進 repo(`tools/realism/cases_revert_bd.json`),多一組一小節兩顆的 City Pop。重跑結果見下。
+- **S5**【同意】CLAUDE.md 註明 `webmix/build.py --check` 目前對 index.html 會報錯。
+- **S6**【同意】半減和弦下的完全五度列成 D3。
+- 需 Steven 聽過:「一顆拆兩顆」與一小節兩顆時少了小節中間的經過音。列在下面。
+
+**重跑**(S1 拿掉配器輪換底座之後,`cases_revert_bd.json`,20 秒,22 段):
+- 全部 0 錯誤,RMS 差 ≤ 0.04dB(一小節兩顆那組 0.06dB,就是拿掉的小節中間經過音)。
+- `mood_check.mjs` 4897 圈,問題 0。
+
 **【待 Steven 決定】**
-- 這一版有 Steven 自己寫過的「爆音 / 破音」。要不要只把限幅器(看前 5ms,天花板 0.85)搬回來?會改變響度,不改音色。
+- **D1 爆音**:第三批 3 則、第二批 2 則寫到「爆音 / 破音」。要不要只把限幅器(看前 5ms,天花板 0.85)搬回來?
+  它會改變響度,不改音色。
+- **D2 旋律外音**:這一版沒有 `melodyOk` / `fixTop`,`harmony.mjs citypop "Fmaj7 - E7 - Am7 - C7"` 量到 9 個
+  (keys 3、gtr 3、pad 1、brass 2)。這一批評分裡「旋律很怪」有 3 則。要不要只搬 `melodyOk` / `fixTop`?
+  它會改頂音,不改音色。
+- **D3 半減和弦的五度**:貝斯在 Bm7♭5 下彈 F♯(應該是 F)。要不要搬 `chordFifth`(cbdb6dc)?
+- **聽過確認**:第二圈起的「一顆拆兩顆」(G7sus4 G7、Gm7 C7…)與一小節兩顆時少了小節中間的經過音,
+  這兩件是 bd80000 那時沒有、現在會出現的。不喜歡就拿掉。

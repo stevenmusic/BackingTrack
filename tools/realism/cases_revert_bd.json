@@ -1,0 +1,160 @@
+{
+ "_note": "第十六輪:聲音退回 bd80000 的驗證。每個曲風 comp + City Pop 四種疏密 + 一小節兩顆的 City Pop,對照 bd80000。\nREALISM_SECS=20 REALISM_OUT=/tmp/rv node tools/realism/render.mjs tools/realism/cases_revert_bd.json",
+ "progressions": {},
+ "cases": [
+  {
+   "version": "bd80000",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "citypop_bd80000"
+  },
+  {
+   "version": "bd80000",
+   "feel": "straight",
+   "style": "comp",
+   "prog": "C - Am - F - G",
+   "label": "straight_bd80000"
+  },
+  {
+   "version": "bd80000",
+   "feel": "latin",
+   "style": "comp",
+   "prog": "Cmaj7 - Am7 - Dm7 - G7",
+   "label": "latin_bd80000"
+  },
+  {
+   "version": "bd80000",
+   "feel": "swing",
+   "style": "comp",
+   "prog": "Dm7 - G7 - Cmaj7 - A7",
+   "label": "swing_bd80000"
+  },
+  {
+   "version": "bd80000",
+   "feel": "funk",
+   "style": "comp",
+   "prog": "E7 - A7",
+   "label": "funk_bd80000"
+  },
+  {
+   "version": "bd80000",
+   "feel": "blues",
+   "style": "comp",
+   "prog": "C7 - F7 - C7 - G7",
+   "label": "blues_bd80000"
+  },
+  {
+   "version": "bd80000",
+   "feel": "kpop",
+   "style": "comp",
+   "prog": "Am - F - C - G",
+   "label": "kpop_bd80000"
+  },
+  {
+   "version": "bd80000",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "citypop_drive_bd80000"
+  },
+  {
+   "version": "bd80000",
+   "feel": "citypop",
+   "style": "pad",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "citypop_pad_bd80000"
+  },
+  {
+   "version": "bd80000",
+   "feel": "citypop",
+   "style": "mix",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "citypop_mix_bd80000"
+  },
+  {
+   "version": "bd80000",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "citypop_2per_bd80000"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "citypop_WORKTREE"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "straight",
+   "style": "comp",
+   "prog": "C - Am - F - G",
+   "label": "straight_WORKTREE"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "latin",
+   "style": "comp",
+   "prog": "Cmaj7 - Am7 - Dm7 - G7",
+   "label": "latin_WORKTREE"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "swing",
+   "style": "comp",
+   "prog": "Dm7 - G7 - Cmaj7 - A7",
+   "label": "swing_WORKTREE"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "funk",
+   "style": "comp",
+   "prog": "E7 - A7",
+   "label": "funk_WORKTREE"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "blues",
+   "style": "comp",
+   "prog": "C7 - F7 - C7 - G7",
+   "label": "blues_WORKTREE"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "kpop",
+   "style": "comp",
+   "prog": "Am - F - C - G",
+   "label": "kpop_WORKTREE"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "drive",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "citypop_drive_WORKTREE"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "pad",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "citypop_pad_WORKTREE"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "mix",
+   "prog": "Fmaj7 - G7 - Em7 - Am7 - Dm7 - G7 - Cmaj7 - C7",
+   "label": "citypop_mix_WORKTREE"
+  },
+  {
+   "version": "WORKTREE",
+   "feel": "citypop",
+   "style": "comp",
+   "prog": "Fmaj7 Em7 | Am7 Dm7 | Fmaj7 Em7 | Dm7 G7",
+   "label": "citypop_2per_WORKTREE"
+  }
+ ]
+}

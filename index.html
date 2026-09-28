@@ -5995,7 +5995,7 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord, span){
        從半音上方或下方滑進去(一半機率)。過門那一小節上面已經接過了,不再重複。
        這是 city pop 貝斯「在唱旋律」的那一半——根音與五音只是骨架 */
     const endIdx = (b0 + beats) * div - 1;
-    const endsBar = b0 + beats === m.beats;       // 這顆和弦一路到小節線(一小節一顆時永遠成立,跟 bd80000 一樣)
+    const endsBar = b0 + beats === m.beats;       // 這顆和弦一路到小節線(一小節一顆時永遠成立 = 跟 bd80000 一樣;一小節兩顆時前一顆不再接經過音,跟 bd80000 不同)
     /* **只在小節線前面接**。一小節裡換和弦(使用者寫的 `C Am |`、和弦變化拆出來的
        `Gm7 C7`)時,小節中間不再多塞一顆經過音:貝斯的律動是整小節的格子(`cell`),
        換和弦只該換音高、不該多一下——量過,拆和弦的小節貝斯多了 0.9 下 */
@@ -6517,8 +6517,7 @@ function scheduleBrass(spans, barStartBeat, b, transpose, absBar){
   const div = divNow();
   const spec = f.parts.brass;
   if (st === "pad") return;                       // 墊底時不吹,那是最安靜的模式
-  const every = spec.every || 2;                  // 幾小節吹一次(預設兩小節、落在第二小節)
-  if (absBar % every !== every - 1) return;
+  if (absBar % 2 !== 1) return;                   // 兩小節一次,落在第二小節
   const lvl = (spec.lvl || 0.1) * p.energy * arcGain(absBar);
   /* 都是切分位置:十六分格的 6(二的後半)、10、14(四的後半)。
      正拍上吹會跟鋼琴與鼓撞在一起,那就不是 stab 是鋪底了 */
@@ -6699,7 +6698,7 @@ function scheduleGuitar(spans, barStartBeat, b, transpose, absBar, isFill){
       if (!sp || !sp.v) continue;
       strum(guitarNotesFor(sp.chord, "chop"), slotTime(barStartBeat, idx),
             base * (hash01(absBar, 122 + idx) < 0.3 ? 0.72 : 1),
-            tone, idx % 4 !== 0, 0.006, f.parts.chopLen || 0.09, transpose);
+            tone, idx % 4 !== 0, 0.006, 0.09, transpose);
     }
     return;
   }
@@ -6932,39 +6931,9 @@ function schedulerTick(){
   }
 }
 
-/* ── 配器輪換 ────────────────────────────────────────────────
-   `FEELS[x].orchs` 是一串覆寫。每按一次播放換下一組:原始設定先存一份(`FEELS_BASE`),
-   每次從原始那份複製再蓋上這一組,不會越蓋越多。
-   `orchFix`(測試用)指定固定用第幾組。計數存 localStorage,讀寫失敗就從 0 開始 */
-const FEELS_BASE = {};
-let orchNow = null;
-function deepMerge(t, x){
-  for (const k in x) {
-    if (x[k] && typeof x[k] === "object" && !Array.isArray(x[k])) { t[k] = t[k] && typeof t[k] === "object" ? t[k] : {}; deepMerge(t[k], x[k]); }
-    else t[k] = x[k];
-  }
-  return t;
-}
-function applyOrch(){
-  const key = feelNow;
-  if (!FEELS_BASE[key]) FEELS_BASE[key] = JSON.parse(JSON.stringify(FEELS[key]));
-  const base = FEELS_BASE[key];
-  orchNow = null;
-  if (!base.orchs || !base.orchs.length) { FEELS[key] = JSON.parse(JSON.stringify(base)); return; }
-  let n = 0;
-  if (base.orchFix != null) n = base.orchFix;
-  else {
-    try { n = parseInt(localStorage.getItem("bt_orch_n") || "0", 10) || 0; localStorage.setItem("bt_orch_n", String(n + 1)); } catch (e) {}
-  }
-  const pick = base.orchs[((n % base.orchs.length) + base.orchs.length) % base.orchs.length];
-  FEELS[key] = deepMerge(JSON.parse(JSON.stringify(base)), pick);
-  orchNow = pick.name || null;
-}
 function startPlayback(){
   if (!parsed.bars.length || parsed.bars.some(b => !b.ok)) return;
   ensureAudio();
-  applyOrch();
-  applyMix();
   resetLap();                       // 每次按播放都從原譜那一圈開始
   last808.midi = -1; last808.at = -99;   // 808 的滑音不要從上一次播放接過來
   voicings = buildVoicings(parsed.bars);

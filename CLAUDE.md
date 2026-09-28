@@ -5,13 +5,25 @@
 評測工具的細節在 `tools/realism/README.md` 與 `KNOWLEDGE.md`。
 
 ## 目前網頁的聲音 = bd80000(2026-09-28 退回,Steven:「退回之前聽好幾批聲音的那次,我有打到 3 分的那時候」)
-- `index.html` 的**聲音**(樂器、音色、混音、編曲、演奏)回到 **bd80000**(2026-09-24 盲聽第三批,City Pop 9 段幾乎全部 3 分)。
-  保留的非聲音改動:英文介面與「組一首」按鈕、網頁描述、和弦變化「一顆拆兩顆」與換情緒節制、貝斯經過音骰子修正、段落庫整理(83 組)
+- `index.html` 的**聲音**(樂器、音色、混音、編曲、演奏)回到 **bd80000**(2026-09-24 盲聽第三批,City Pop 9 段幾乎全部 3 分)
+- 保留的**非聲音**改動:英文介面與「組一首」按鈕、網頁描述、段落庫整理(83 組,跟 main 逐字相同)
+- 保留的**和聲 / 律動**改動(會改變聽到的音):和弦變化「一顆拆兩顆」(第二圈起的 sus4→V、拆 ii-V)與換情緒節制、
+  貝斯經過音只在小節線前接。**一小節一顆、而且沒拆的小節跟 bd80000 一模一樣**;一小節兩顆與拆開的小節不一樣
 - bd80000 的 City Pop:Rhodes(jRhodes3c)、Virtuosity 鼓、電貝斯、tonejs 電吉他(乾淨)、**合成**銅管、合成鋪底
-- **下面很多規則描述的是 bd80000 之後的程式,現在的 `index.html` 沒有**:看前 5ms 的限幅器 worklet、響度對齊 / True Peak、
-  三段壓縮等混音積木(`tools/webmix/` 還在)、`melodyOk` / `fixTop`、SM Drums、Hofner / Weresax / VSCO 真管樂、Rhodes 力度層、
-  hatChoke、bassMono、GrooVAE / GuitarSet 律動、padLegato、合奏效果、吉他音箱…。完整的最後一版是 main 的 e2adf42,要搬回哪一樣**先問 Steven**
-- 已知:這一版 Steven 自己寫過「爆音 / 破音」(第三批 5 則);修它的是 0af735c 的限幅器(跟別的聲音改動綁在一起),要不要單獨搬回先問
+- **以下兩條絕對規則目前不成立**:「任何取樣播放都要 `start(when, leadOf(buffer))`」與整節「旋律只准用和弦音」。
+  這是 Steven 2026-09-28 要求退回造成的例外,**不准自己補回,要先問 Steven**
+  (`harmony.mjs citypop "Fmaj7 - E7 - Am7 - C7"` 量到旋律上的和弦外音 9 個)
+- **下面很多規則描述的是 bd80000 之後的程式,現在的 `index.html` 沒有**(`grep -c` 都是 0):
+  `leadOf`、`melodyOk` / `fixTop`、`chordFifth`、吉他手型 `realShape` / `gtrHand` / `strumNotes`、`compDur`、
+  `chokeOhat` / `hatAcc` / `timing.tie` / hatChoke、`smpNorm` / `SMP_EXT`、`kickHold` / `chopForms`、配器輪換 `orchs`、
+  看前 5ms 的限幅器 worklet、響度對齊 / True Peak、三段壓縮等混音積木、SM Drums、Hofner / Weresax / VSCO 真管樂、
+  Rhodes 力度層、bassMono、GrooVAE / GuitarSet 律動、padLegato、合奏效果、吉他音箱…。
+  完整的最後一版是 main 的 e2adf42,要搬回哪一樣**先問 Steven**
+- `tools/webmix/build.py --check` 目前對 `index.html` 會報錯(積木不在),搬回混音積木之前不要跑;`webmix.js` 本身還能用
+- 已知問題(都待 Steven 決定):
+  - 「爆音 / 破音」:第三批 3 則,第二批另 2 則;修它的是 0af735c 的限幅器
+  - 旋律外音:bd80000 那批評分裡「旋律很怪」3 則
+  - 半減和弦下貝斯彈完全五度:例如 Bm7♭5 下彈 F♯;cbdb6dc 的 `chordFifth` 修過
 - 退回之後聲音的改動照舊:Steven 說不好聽的照他說的退回;不主動調音色
 
 ## 回報方式(使用者要求,每次都照做)

@@ -2258,32 +2258,20 @@ const ALL_FEELS = ["straight", "citypop", "kpop", "latin", "blues", "swing", "fu
    被回報過:City Pop 的 `Fmaj7 - E7 - Am7 - C7` 被換成 `Fmaj7 - B♭7 - Am7 - C7`,
    那是 E7 的三全音代理,理論上對,但 E7 正是丸サ進行的招牌,換掉就不是那首了 */
 const JAZZ_FEELS = ["latin", "swing"];
-/* ── 大七 ↔ 小七是**換情緒**,不是換顏色(`mood`)────────────────────
-   使用者提醒:「Major 7 跟 Minor 7 的替換要很小心,這樣替換會影響歌曲情緒」。
-   三度代理在功能上是同一件事,但 Cmaj7 → Am7 是把明亮的主和弦換成小調的那一顆,
-   聽的人感覺到的是「這首歌忽然憂傷了一下」,不是「換了一個聲位」。
-   所以標成 `mood`,而且分兩種:
-   - `tonic`:動到**主和弦的情緒**(I → vi / iii、vi → I)。那是整首歌的「家」長什麼樣子,
-     **只有爵士系(Bossa / Swing)可以換**——爵士本來就是邊彈邊重配。
-     Pop / City Pop / K-Pop 一律不給
-   - `sub`:下屬功能的兩張臉(IV ↔ ii)。兩顆都是「離開家、準備回來」那一格,
-     換了情緒只偏一點,所以流行系也給,但**一圈最多一次、整圈最後一顆不換**
-     (最後一顆是回到開頭的那一下,情緒一換整句的收尾就變了)
-   兩種都只在中間的格子:第 1 格本來就不動(`subBarsFor`) */
 const SUB_RULES = [
   /* I → vi / iii:最基本的三度代理,同一個功能換一個顏色 */
-  { id: "I→vi",  feels: ["straight", "citypop", "kpop", "latin", "swing"], mood: "tonic",
+  { id: "I→vi",  feels: ["straight", "citypop", "kpop", "latin", "swing"],
     ok: x => x.d === 0 && x.q === "maj" && x.nd !== 9, to: x => nameOf(x.key + 9, "m7") },
-  { id: "I→iii", feels: ["straight", "citypop", "kpop", "latin", "swing"], mood: "tonic",
+  { id: "I→iii", feels: ["straight", "citypop", "kpop", "latin", "swing"],
     ok: x => x.d === 0 && x.q === "maj" && x.nd !== 4, to: x => nameOf(x.key + 4, "m7") },
   /* IV ↔ ii:也是三度代理,下屬功能的兩張臉 */
-  { id: "IV→ii", feels: ["straight", "citypop", "kpop", "latin", "swing"], mood: "sub",
+  { id: "IV→ii", feels: ["straight", "citypop", "kpop", "latin", "swing"],
     ok: x => x.d === 5 && x.q === "maj" && x.nd !== 2, to: x => nameOf(x.key + 2, "m7") },
-  { id: "ii→IV", feels: ["straight", "citypop", "kpop", "latin"], mood: "sub",
+  { id: "ii→IV", feels: ["straight", "citypop", "kpop", "latin"],
     ok: x => x.d === 2 && x.q === "min" && x.nd !== 5, to: x => nameOf(x.key + 5, "maj7") },
   /* vi → I。**這首要真的出現過 I 才給**:`Am - F - G - Am` 的 Am 是主和弦,
      把它換成 Cmaj7 等於把主音抽掉,整段的重心就沒了 */
-  { id: "vi→I",  feels: ["straight", "citypop", "kpop"], mood: "tonic",
+  { id: "vi→I",  feels: ["straight", "citypop", "kpop"],
     ok: x => x.d === 9 && x.q === "min" && x.nd !== 0 && x.hasTonic,
     to: x => nameOf(x.key, "maj7") },
   /* 借用小調的 iv:F → Fm,流行歌最愛的那一下(「借來的憂傷」)。
@@ -2358,29 +2346,6 @@ const SUB_RULES = [
     ok: x => (x.q === "maj" || x.q === "dom") && x.next &&
              ((x.rootPc + 5) % 12) === x.nextRootPc && stepToNext(x, x.rootPc + 10),
     to: x => nameOf(x.rootPc, "7") + "/" + nameOf(x.rootPc + 10) },
-  /* ── 一顆拆兩顆(`split`):同一小節裡在屬七**前面**多放一顆 ──────────
-     被問「重複性太高的和弦進行融合在一起,放進和弦變化」:段落庫裡
-     `Fmaj7 | E7 | Am7 | Gm7 C7` 跟丸サ `Fmaj7 - E7 - Am7 - C7` 只差最後一格拆成 ii-V,
-     `… | G7sus4 G7` 跟 `… - G7` 只差 sus4 掛留——那不是兩組進行,是同一組的兩種彈法。
-     所以把「拆」教給和弦變化,段落庫只留原型。
-     兩條都是**原本那顆屬七原封不動留在後半**(`keepsRoot`):它要解決到的那一格
-     照樣解決得到,丸サ的 C7、藍調的屬七這種招牌也還在,只是前面多了一個預備。
-     只在**這一格只有它一顆、而且沒寫時值**時才拆(`barsForLap` 那邊擋),
-     不然一小節會變成三四顆、或把使用者寫的一拍半吃掉 */
-  /* V7 → V7sus4 + V7:掛留四度再解決到三度。City Pop 與 AOR 的句尾幾乎都這樣彈。
-     掛留是在**同一小節裡**解決掉的(sus4 → 三度),所以不必看下一格往哪裡走:
-     屬七真的往下五度解決,或是整圈的最後一顆(繞回開頭的那一下,
-     `Fmaj7 - Em7 - Dm7 - G7` 的 G7 回到 Fmaj7 也是這樣彈)都給 */
-  { id: "sus→V", feels: ["straight", "citypop", "funk", "latin", "swing"], keepsRoot: true, split: true,
-    ok: x => x.q === "dom" && x.next && (((x.rootPc + 5) % 12) === x.nextRootPc || x.isLast),
-    to: x => nameOf(x.rootPc, "7sus4") + " " + x.full },
-  /* V7 → ii + V7(`C7` → `Gm7 C7`):屬七前面補它自己的 ii。
-     跟爵士那條 `ii-V`(兩格同一顆才換前一格)是同一個手法,但它不必另外有一格可以換,
-     所以 City Pop 也可以用。**前一格已經是它的 ii 就不給**(`Dm7 - G7` 不會變成 `Dm7 - Dm7 G7`) */
-  { id: "拆ii-V", feels: ["citypop", "latin", "swing"], keepsRoot: true, split: true,
-    ok: x => x.q === "dom" && x.next && ((x.rootPc + 5) % 12) === x.nextRootPc &&
-             x.prevRootPc !== (x.rootPc + 7) % 12,
-    to: x => nameOf(x.rootPc + 7, "m7") + " " + x.full },
   /* 墊底的那條:只加色彩音。上面都不成立時至少換個聲位 */
   { id: "加色彩音", feels: ALL_FEELS, ext: true, keepsRoot: true,
     ok: x => !!EXT_TABLE[x.suffix],
@@ -2388,7 +2353,7 @@ const SUB_RULES = [
 ];
 
 /* 這一格可以換成什麼。回傳一串候選,挑哪一個交給亂數 */
-function subCandidates(bars, i, key, pcs, canSplit, noMood){
+function subCandidates(bars, i, key, pcs){
   const bar = bars[i];
   if (!bar || !bar.ok || bar.chord.slash) return [];   // 本來就有轉位就不要再動
   const c = bar.chord;
@@ -2403,8 +2368,6 @@ function subCandidates(bars, i, key, pcs, canSplit, noMood){
     nd: next && next.ok ? ((next.chord.rootPc - key) % 12 + 12) % 12 : -1,
     nq: next && next.ok ? qualOf(next.chord) : "",
     nextSame: !!(next && next.ok && next.chord.text === c.text) && bars.length > 1,
-    prevRootPc: prev && prev.ok && bars.length > 1 ? prev.chord.rootPc : -1,
-    isLast: i === bars.length - 1 && bars.length > 1,
     // 「這一對」後面那一格的根音。ii-V 要靠它判斷那顆屬七是不是真的往下五度解決
     afterRootPc: (() => {
       const a = bars[(i + 2) % bars.length];
@@ -2485,21 +2448,12 @@ function subCandidates(bars, i, key, pcs, canSplit, noMood){
   const clashesNeighbour = (tok) => sameAs(tok, prev) || sameAs(tok, next);
 
   const out = [];
-  const jazz = JAZZ_FEELS.indexOf(feelNow) >= 0;
   for (const r of SUB_RULES) {
     if (r.feels.indexOf(feelNow) < 0) continue;
-    if (r.mood && (x.isLast || noMood)) continue;
-    if (r.mood === "tonic" && !jazz) continue;
     /* 經過和弦(pass° / ♯IV°)不受上面那條保護的限制:它們要求前一格是同一顆,
        和弦本身已經講過一次了,換的是「重複的那一格」,沒有拆掉任何招牌 */
     if (keepRootOnly && !r.keepsRoot && !r.passing) continue;
-    if (r.split && !canSplit) continue;
     if (!r.ok(x)) continue;
-    if (r.split) {
-      const t = r.to(x);
-      if (t && t.split(" ").every(p => parseChord(normalizeSymbol(p)))) out.push(t);
-      continue;
-    }
     if (r.ext) {
       for (const q of EXT_TABLE[x.suffix]) {
         const t = x.text + q;
@@ -2556,32 +2510,18 @@ function barsForLap(lap){
   if (!Object.keys(subs).length) return src;
   const key = keyOf(src), pcs = progPcs(src);
   const out = flat.map(c => ({ ok: c.ok, text: c.text, chord: c.chord }));
-  let didSplit = false, didMood = false;
   for (const k of Object.keys(subs)) {
     const i = +k;
-    /* 一顆拆兩顆只給「這一格只有它、沒寫時值」的:一格兩顆以上再拆就擠了,
-       寫了 `/` `.` 的是使用者自己排好的時值,拆了會把它吃掉 */
-    const home = src[flat[i].bar];
-    const canSplit = home.chords.length === 1 && !(home.chords[0].w && home.chords[0].w !== chordDiv());
-    const cand = subCandidates(out, i, key, pcs, canSplit && !didSplit, didMood);
+    const cand = subCandidates(out, i, key, pcs);
     if (!cand.length) continue;
     const tok = cand[Math.min(cand.length - 1, Math.floor(subs[k] * cand.length))];
-    const parts = tok.split(" ");
-    const cs = parts.map(p => parseChord(normalizeSymbol(p)));
-    if (cs.some(c => !c)) continue;
-    if (parts.length > 1) didSplit = true;     // 一圈最多拆一顆:律動上一圈只多一次換和弦
-    // 一圈最多換一次情緒(大三/大七 ↔ 小三/小七,見 SUB_RULES 上面那段)
-    if (parts.length === 1 && flat[i].chord && (qualOf(cs[0]) === "min") !== (qualOf(flat[i].chord) === "min")) didMood = true;
-    /* 拆出來的那一串掛在 `parts` 上;`chord` 留**後面那一顆**(就是原本那顆屬七),
-       下一格換和弦時看到的前後文才跟原譜一樣 */
-    out[i] = { ok: true, chord: cs[cs.length - 1], text: parts[parts.length - 1],
-               parts: parts.length > 1 ? parts.map((p, j) => ({ ok: true, chord: cs[j], text: p,
-                                                                 added: j < parts.length - 1 })) : null };
+    const c = parseChord(normalizeSymbol(tok));
+    if (c) out[i] = { ok: true, chord: c, text: tok };
   }
-  // 組回小節:結構照原本的,只有和弦換掉(拆開的那一格變成兩顆)
+  // 組回小節:結構照原本的,只有和弦換掉
   let n = 0;
   return src.map(b => {
-    const chords = [].concat(...b.chords.map(() => { const o = out[n++]; return o.parts || [o]; }));
+    const chords = b.chords.map(() => out[n++]);
     return { ok: chords.every(c => c.ok), chords, text: chords.map(c => c.text).join(" "),
              chord: chords[0].chord };
   });
@@ -5992,19 +5932,11 @@ function scheduleBass(chord, barStartBeat, b, absBar, isFill, nextChord, span){
        從半音上方或下方滑進去(一半機率)。過門那一小節上面已經接過了,不再重複。
        這是 city pop 貝斯「在唱旋律」的那一半——根音與五音只是骨架 */
     const endIdx = (b0 + beats) * div - 1;
-    const endsBar = b0 + beats === m.beats;       // 這顆和弦一路到小節線(一小節一顆時永遠成立 = 跟 bd80000 一樣;一小節兩顆時前一顆不再接經過音,跟 bd80000 不同)
-    /* **只在小節線前面接**。一小節裡換和弦(使用者寫的 `C Am |`、和弦變化拆出來的
-       `Gm7 C7`)時,小節中間不再多塞一顆經過音:貝斯的律動是整小節的格子(`cell`),
-       換和弦只該換音高、不該多一下——量過,拆和弦的小節貝斯多了 0.9 下 */
-    if (endsBar && b === last && !isFill && nextChord && cell.indexOf(endIdx) < 0) {
+    if (b === last && !isFill && nextChord && cell.indexOf(endIdx) < 0) {
       const nextPc = pcOf(nextChord.bassPc);
-      /* 骰子只看小節,不看這顆和弦從第幾拍開始(原本是 `193 + b0`):
-         和弦變化把一顆拆成兩顆時,後半那顆的 b0 變 2,同一小節的經過音就換了一次骰子,
-         拆與不拆的小節貝斯會差一下(逐小節量到的唯一差別)。現在只在小節線前接,
-         b0 本來就沒有意義。一格一顆的小節 b0 = 0,跟以前一模一樣 */
-      if (nextPc !== rootPc && hash01(absBar, 193) < 0.5) {
+      if (nextPc !== rootPc && hash01(absBar, 193 + b0) < 0.5) {
         const target = bassMidiFor(nextPc);
-        playBassNote(target + (hash01(absBar, 194) < 0.5 ? 1 : -1),
+        playBassNote(target + (hash01(absBar, 194 + b0) < 0.5 ? 1 : -1),
                      slotTime(barStartBeat, endIdx), slotDur() * 0.8,
                      humanize(absBar, 195, 0.3));
       }

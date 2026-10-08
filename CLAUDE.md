@@ -31,7 +31,9 @@
 - 試聽頁 `styles/index.html`:`sampler.mjs`(取樣樂器)+ `player.mjs`(即時排程與 `renderOffline`);**主網頁 `index.html` 還沒換**
 - **全部用錄音取樣,不准即時合成的音色**(Steven 2026-10-08:「合成音色一定要換成真實取樣樂器,否則就乾脆不要。最少要做到 Band-in-a-Box 的品質」)。
   找不到授權清楚的真樂器取樣 → 那一層拿掉,不准用合成頂替(效果器、調變訊號不算音色)
-- **音色先對,母帶之後做**:混音(各軌音量、EQ、兩種空間、鼓件擺位)照數學檢查調;母帶(響度、限幅)還沒做,只有防削波的保險壓縮
+- **混音與母帶**:混音(各軌音量、EQ、兩種空間、鼓件擺位)照數學檢查調;母帶 = 黏著壓縮 → 各曲風 `master.gainDb` → 預讀限幅器
+  (`styles/limiter.mjs`,−1 dBTP),目標 −14 LUFS;改了聲音就重跑 `tools/mix/solve_loudness.py`
+- **拍號**:`styles/` 的 3/4、6/8 寫在 `meters[拍號].tracks`(12 格);只有 4/4 的曲風不准硬套
 - 取樣清單 `styles/samples.json` 由 `tools/samples/build_manifest.py` 從實際檔案列表產生,手改會被蓋掉;
   量測用 `tools/samples/render_styles.mjs`(離線算 WAV)、`smoke_live.mjs`(即時播放冒煙測試)
 - 規格沒寫死、在這裡做的決定與各樂器來源列在 `styles/README.md`

@@ -269,9 +269,11 @@
       "humanize": { "timingSigmaMs": 6, "velocityRand": 8, "overrides": { "hat": { "velocityRand": 15 }, "kick": { "timingSigmaMs": 8 }, "snare": { "timingSigmaMs": 8 } } },
       "rules": { "crashOnSection": false },
       "effects": [
-        { "type": "pitchDrift", "bus": "keys", "cents": 8, "rateHz": 0.5 },
+        { "type": "pitchDrift", "bus": ["keys", "bass"], "cents": 8, "rateHz": 0.5 },
         { "type": "lowpass", "bus": "keys", "hz": 4500 },
-        { "type": "vinylNoise", "db": -30, "userToggle": true }
+        { "type": "lowpass", "bus": "all", "hz": 6000, "order": 4 },
+        { "type": "saturation", "bus": "all", "drive": 2 },
+        { "type": "vinylNoise", "db": -48, "userToggle": true }
       ],
       "progressions": [
         { "id": "lofi_2516", "roman": "ii9 | V13 | Imaj9 | VI7♭9", "example": "Dm9 | G13 | Cmaj9 | A7♭9", "mode": "major" },

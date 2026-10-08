@@ -178,7 +178,29 @@ export class Player {
   buildBuses(st) {
     const ctx = this.ctx;
     const out = ctx.createGain();
-    out.connect(this.master);
+    // 整首一起過的效果(effects 的 bus: "all",例:Lo-fi 的老錄音):鼓、貝斯、鍵盤、底噪都經過同一條,
+    // 才會像同一張唱片(Steven 2026-10-08:「底噪跟樂器聲音沒有融合在一起,樂器聽起來還是很乾淨」)
+    const allFx = (st.effects ?? []).filter(f => f.bus === "all");
+    let head = out;
+    for (const fx of allFx) {
+      if (fx.type === "lowpass" || fx.type === "highpass") {
+        // order 4 = 兩顆疊(24dB/八度,Linkwitz–Riley):老錄音的高頻是整片收掉,不是緩緩下降
+        for (let k = 0; k < (fx.order === 4 ? 2 : 1); k++) {
+          const f = ctx.createBiquadFilter();
+          f.type = fx.type; f.frequency.value = fx.hz; f.Q.value = BUTTER_Q_DB;
+          head.connect(f); head = f;
+        }
+      }
+      if (fx.type === "saturation") {           // 磁帶飽和:tanh(k·x)/k,小訊號增益 1
+        const pre = ctx.createGain(), ws = ctx.createWaveShaper();
+        pre.gain.value = 0.5; ws.curve = satCurve(fx.drive); ws.oversample = "4x";
+        head.connect(pre).connect(ws); head = ws;
+      }
+    }
+    head.connect(this.master);
+    const sendLP = allFx.find(f => f.type === "lowpass"); // 殘響也要一樣悶:送出之前先過同一個低通(線性,等於整條)
+    const drift = (st.effects ?? []).find(f => f.type === "pitchDrift");
+    this.driftTracks = drift ? [].concat(drift.bus ?? "keys") : [];
     if (this.wetOnly) out.gain.value = 0; // 量測用:只聽殘響
     // 每個空間一條送出;停止時跟 out 一起拉掉
     const sends = {}, wet = [];
@@ -187,7 +209,11 @@ export class Player {
       sends[name].gain.value = this.noReverb ? 0 : 1; // 量測用:看乾的取樣直接相加是什麼樣子
       // 殘響也晚 COMP_LAT:鼓的送出是從壓縮器前面接的,這樣乾聲、鼓、殘響三者對齊
       const d = ctx.createDelay(0.05); d.delayTime.value = COMP_LAT;
-      sends[name].connect(d).connect(cv);
+      if (sendLP) {
+        const f = ctx.createBiquadFilter();
+        f.type = "lowpass"; f.frequency.value = sendLP.hz; f.Q.value = BUTTER_Q_DB;
+        sends[name].connect(f).connect(d).connect(cv);
+      } else sends[name].connect(d).connect(cv);
       wet.push(sends[name]);
     }
     const mix = st.mix ?? {}; // 各曲風的音量校正(dB),由 tools/mix/analyze.py 量完定的
@@ -207,6 +233,14 @@ export class Player {
     drumMakeup.gain.value = 10 ** (-compAutoMakeupDb(drumGroup.threshold.value, drumGroup.knee.value, drumGroup.ratio.value) / 20);
     drumGroup.connect(drumMakeup).connect(out);
     this.drumGroup = drumGroup;
+    if (drift) {
+      // 走音(wow):調變訊號(不是音色),接到 driftTracks 每一顆取樣的 detune;一顆 LFO,大家一起飄
+      const lfo = ctx.createOscillator(), depth = ctx.createGain();
+      lfo.frequency.value = drift.rateHz; depth.gain.value = drift.cents;
+      lfo.connect(depth); lfo.start();
+      this.drift = depth;
+      this.lfo = lfo;
+    }
     for (const [name, b] of Object.entries(BUS)) {
       const g = ctx.createGain(), p = ctx.createStereoPanner();
       g.gain.value = b.gain * 10 ** ((mix[name === "kick" ? "drums" : name] ?? 0) / 20);
@@ -222,19 +256,11 @@ export class Player {
         else { bq.gain.value = x; if (q) bq.Q.value = q; }
         tail.connect(bq); tail = bq;
       }
-      for (const fx of name === "keys" ? st.effects ?? [] : []) {
+      for (const fx of name === "keys" ? (st.effects ?? []).filter(f => f.bus !== "all") : []) {
         if (fx.type === "lowpass") {
           const f = ctx.createBiquadFilter();
           f.type = "lowpass"; f.frequency.value = fx.hz; f.Q.value = BUTTER_Q_DB;
           tail.connect(f); tail = f;
-        }
-        if (fx.type === "pitchDrift") {
-          // 調變訊號(不是音色):接到每一顆取樣的 detune
-          const lfo = ctx.createOscillator(), depth = ctx.createGain();
-          lfo.frequency.value = fx.rateHz; depth.gain.value = fx.cents;
-          lfo.connect(depth); lfo.start();
-          this.drift = depth;
-          this.lfo = lfo;
         }
       }
       tail.connect(p).connect(name === "drums" || name === "kick" ? drumGroup : align);
@@ -345,6 +371,8 @@ export class Player {
     return this.style.instruments[track === "keys2" ? "keys2" : track] ?? this.style.instruments.keys;
   }
   partOn(id, dflt = true) { return this.parts[id] ?? dflt; }
+  /** 這一軌要不要跟著走音(Lo-fi 的 wow):回傳給 sampler.note 的 opt */
+  detuneOpt(track) { return this.drift && this.driftTracks?.includes(track) ? { detune: this.drift } : {}; }
   on(track) {
     const t = this.style.tracks[track];
     return !(t && t.optional) || this.partOn(track, t.default ?? true);
@@ -357,7 +385,8 @@ export class Player {
     if (!b) return null;
     const src = this.ctx.createBufferSource(), g = this.ctx.createGain();
     src.buffer = b; src.loop = true;
-    g.gain.value = 10 ** (fx.db / 20) / Math.max(1e-6, this.sampler.rms(b));
+    // fx.db = 最後輸出(母帶之後)的底噪 RMS(dBFS);母帶會再加 master.gainDb,這裡先扣掉
+    g.gain.value = 10 ** ((fx.db - (this.style.master?.gainDb ?? 0)) / 20) / Math.max(1e-6, this.sampler.rms(b));
     src.connect(g).connect(dest);
     src.start(when);
     return src;
@@ -404,7 +433,7 @@ export class Player {
       if (e.track === "drums") this.sampler.hit(this.style.instruments.drums, e.piece, e.vel, Math.max(when, now), bus);
       else {
         const instr = this.instrOf(e.track, e);
-        const opt = e.track === "keys" && this.drift ? { detune: this.drift } : {};
+        const opt = this.detuneOpt(e.track);
         e.notes.forEach((midi, i) => this.sampler.note(instr, midi, e.noteVel?.[i] ?? e.vel,
           Math.max(when + (e.noteDt?.[i] ?? 0), now), e.dur, bus, opt));
       }
@@ -441,7 +470,7 @@ export class Player {
       const when = e.time + 0.05;
       if (e.track === "drums") p.sampler.hit(st.instruments.drums, e.piece, e.vel, when, (buses["drums:" + e.piece] ?? buses.drums).in);
       else e.notes.forEach((midi, i) => p.sampler.note(p.instrOf(e.track, e), midi, e.noteVel?.[i] ?? e.vel, when + (e.noteDt?.[i] ?? 0),
-        e.dur, buses[e.track].in, e.track === "keys" && p.drift ? { detune: p.drift } : {}));
+        e.dur, buses[e.track].in, p.detuneOpt(e.track)));
     }
     return { buffer: await ctx.startRendering(), meta: r.meta, failed: p.sampler.progress.failed, gr };
   }

@@ -1,7 +1,8 @@
 # 風格規格 v1(styles/)
 
 依「BackingTrack 風格規格書 v1」產生的資料、事件引擎與**真實取樣**播放器。
-試聽頁是 `styles/index.html`(GitHub Pages 上的 `/styles/`);主網頁 `index.html` 還沒換。
+試聽頁是 `styles/index.html`(GitHub Pages 上的 `/styles/`)。**2026-10-08 起主網頁 `index.html` 的聲音也是這個引擎**
+(主網頁保留自己的介面與播放控制,每一圈交給 `render({ barSpans, densities, barBase, meter })` 算,見 `CLAUDE.md` 最上面一節)。
 
 - `styles.json`:9 個風格(pop、mandopop_ballad、jpop、citypop、kpop_dance、kpop_ballad、rnb_neosoul、lofi、reggaeton),
   節奏型字串照規格原樣搬,只多了 `ranges` / `rules` / `optionalSamples` 三個欄位放規格裡用文字寫的規則

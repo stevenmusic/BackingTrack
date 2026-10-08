@@ -227,3 +227,44 @@ test("拍號:3/4、6/8 一小節 12 格;沒寫這個拍號的曲風會講清楚"
   const keysBar0 = r.events.filter(e => e.track === "keys" && e.bar === 0).map(e => e.cell);
   assert.deepEqual(keysBar0, [0, 4, 8]);
 });
+
+test("主網頁的和弦(音程集合)轉成引擎格式;依小節位置直接給和弦", async () => {
+  const { chordFromIntervals } = await import("./engine.mjs");
+  const q = iv => { const c = chordFromIntervals(0, 0, iv); return [c.iv[3], c.iv[5], c.iv[7] ?? null, c.iv[9] ?? null, c.iv[13] ?? null]; };
+  assert.deepEqual(q([0, 4, 7, 11]), [4, 7, 11, null, null]);       // maj7
+  assert.deepEqual(q([0, 3, 6, 10]), [3, 6, 10, null, null]);       // m7♭5
+  assert.equal(chordFromIntervals(0, 0, [0, 3, 6, 10]).quality, "m7♭5");
+  assert.deepEqual(q([0, 3, 6, 9]), [3, 6, 9, null, null]);         // dim7
+  assert.deepEqual(q([0, 4, 7, 10, 15]), [4, 7, 10, 15, null]);     // 7♯9
+  assert.deepEqual(q([0, 4, 7, 9, 14]), [4, 7, null, 14, 9]);       // 6/9
+  assert.deepEqual(q([0, 2, 7]), [2, 7, null, null, null]);         // sus2
+  assert.deepEqual(q([0, 4, 7, 10, 14, 21]), [4, 7, 10, 14, 21]);   // 13
+  // barSpans:一小節三顆(2+1+1 拍)也吃得下;過門照整首的小節編號
+  const C = chordFromIntervals(0, 0, [0, 4, 7]), F = chordFromIntervals(5, 5, [0, 4, 7]), G = chordFromIntervals(7, 7, [0, 4, 7, 10]);
+  const spans = [[{ chord: C, from: 0, to: 8 }, { chord: F, from: 8, to: 12 }, { chord: G, from: 12, to: 16 }]];
+  const r = render(data, "pop", { barSpans: spans, bars: 4, barBase: 4, humanize: false, vary: false, countIn: false, density: "standard" });
+  const keys = r.events.filter(e => e.track === "keys" && e.bar === 0).map(e => e.cell);
+  assert.deepEqual(keys, [0, 4, 8, 12]);
+  assert.ok(r.events.some(e => e.piece === "snare" && e.bar === 3 && e.cell >= 8 && e.cell !== 12), "第 8 小節(barBase 4 + 3)是過門");
+});
+
+test("主網頁 index.html 的 BT_INFO(速度範圍、拍號)跟 styles.json 一致", () => {
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const m = /const BT_INFO = (\{.*?\});/.exec(html);
+  assert.ok(m, "index.html 要有 BT_INFO");
+  const info = JSON.parse(m[1]);
+  for (const id of ids) {
+    const st = resolveStyle(data, id);
+    assert.deepEqual(info[id].bpm, [st.bpm.min, st.bpm.default, st.bpm.max], id);
+    assert.deepEqual(info[id].meters, ["4/4", ...Object.keys(st.meters ?? {})], id);
+  }
+});
+
+test("沒有三度的和弦(C5)維持空五度,不補大三度", async () => {
+  const { chordFromIntervals } = await import("./engine.mjs");
+  const c = chordFromIntervals(0, 0, [0, 7]);
+  assert.equal(c.iv[3], 7);
+  const r = render(data, "pop", { barSpans: [[{ chord: c, from: 0, to: 16 }]], bars: 2, humanize: false, vary: false, countIn: false });
+  // 和聲層不能出現三度(E 或 E♭);add9 聲位加的九度(D)不算
+  for (const e of r.events) if (e.notes && e.track !== "bass") assert.ok(e.notes.every(n => ![3, 4].includes(((n % 12) + 12) % 12)), JSON.stringify(e.notes));
+});

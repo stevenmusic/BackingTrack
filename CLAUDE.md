@@ -271,6 +271,10 @@
 - 和弦名字寧可縮字也不准被切;縮字用 `min(字級, calc(寬 ÷ 字數 ÷ 0.76))`,算時扣掉內距;容器查詢一律取名
 - 小節格一排四格(>12 格且夠寬才八格,門檻 430px),不准六欄;字級低於 8px 就畫點(`fitBarNames`),真的放不下退一排兩格(≤8 小節)
 - 小節編輯條 `#barEdit` 自己一排:點方塊選、拖把手改位置(半拍一步)、＋ 切、× 併;合法性畫的時候就算好;拖的時候只動 CSS
+- **滑方塊改長度**(Steven 2026-10-08,`beSwipe`):方塊左右滑、一次一拍,手指在第幾格就撐到第幾格(最後一顆動左邊緣);
+  橫向 8px 以上且比直的多才算滑,`touch-action:pan-y` 讓直的照樣捲頁面;邊緣落在拍線上那條線亮(`beLight`)+ 觸覺(`beHaptic`:
+  Android `navigator.vibrate`,iPhone 點隱藏的 `<input switch>`)。把手照舊半拍一步(落在拍線上才喀)。驗證 `node tools/samples/swipe_test.mjs`
+- `writeSpans`:不是平分、但一個延長記號都沒有時(一拍 + 三拍),最後一顆的記號要寫出來(`C G / /`),不然讀回來是平分
 - 小節數是下拉(4 的倍數到 40,`LEN_STEP` / `LEN_MAX`),非 4 倍數要插進選項
 - 和弦鍵盤:字母與升降分開;選中是金框淡金底;`:hover` 包在 `@media (hover:hover)`;性質比音程集合(`qualKey`)
 - 移調:文字框留原稿,顯示用 `chordDisplay()`,整段一起決定字母(`transposeSteps`)

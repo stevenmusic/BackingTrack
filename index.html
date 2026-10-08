@@ -514,6 +514,15 @@ main{
 .be-beat{position:relative;z-index:2;border-left:1px solid var(--line);
   opacity:.5;pointer-events:none}
 .be-beat:first-child{border-left:0}
+/* **滑到拍子上那條線發亮**(Steven 2026-10-08):拖的時候邊緣落在哪一拍,那條拍線就亮金色,
+   每換一拍重新閃一下——手指蓋住方塊時,看線就知道現在幾拍 */
+.be-beat.lit{opacity:1;border-left-color:var(--gold)}
+.be-beat.lit::before{
+  content:"";position:absolute;top:0;bottom:0;left:-2px;width:3px;
+  background:var(--gold);box-shadow:0 0 8px 1px var(--gold);
+  animation:beLit .35s ease-out;
+}
+@keyframes beLit{from{box-shadow:0 0 14px 4px var(--gold)}to{box-shadow:0 0 8px 1px var(--gold)}}
 .be-block{
   position:absolute;top:0;bottom:0;border:0;padding:0 4px;cursor:pointer;
   background:var(--card-tint);color:var(--ivory);
@@ -521,7 +530,10 @@ main{
   display:flex;align-items:center;justify-content:center;
   white-space:nowrap;overflow:hidden;border-radius:calc(var(--radius-sm) - 1px);
   transition:background-color .12s,color .12s;
+  /* 左右滑動改長度;**直的還是捲頁面**(pan-y),不然手機上整頁滑不動 */
+  touch-action:pan-y;user-select:none;-webkit-user-select:none;
 }
+.be-block.drag{background:var(--gold);color:var(--bg)}
 .be-block + .be-block{border-left:1px solid var(--line)}
 .be-block.sel{background:var(--gold);color:var(--bg)}
 .be-block.bad{color:var(--danger)}
@@ -1375,7 +1387,7 @@ const I18N = {
     secToggleOpen: "收起段落庫",
     beNumLabel: "正在改第 {n} 小節",
     lenBeats: "{n} 拍",
-    beBlockLabel: "選這一顆({chord},{len}):點下面的鍵盤改它",
+    beBlockLabel: "選這一顆({chord},{len}):點下面的鍵盤改它;左右滑動改長度,滑到幾格就是幾拍",
     beGripLabel: "拖曳:改和弦換在哪裡,一次半拍(拖得到拍子中間,例如一拍半)",
     beGripFixed: "這裡動不了:除了一小節的最後一顆,每一顆至少一拍",
     beAddLabel: "把選到的那一顆切成兩半(一小節最多 {n} 顆)",
@@ -1510,7 +1522,7 @@ const I18N = {
     secToggleOpen: "Hide sections",
     beNumLabel: "Editing bar {n}",
     lenBeats: "{n}",
-    beBlockLabel: "Select {chord} ({len} beats) — change it with the keys below",
+    beBlockLabel: "Select {chord} ({len} beats) — change it with the keys below; swipe left/right to set its length, one beat per cell",
     beGripLabel: "Drag to move where the chord changes, half a beat at a time",
     beGripFixed: "Can't move: every chord but the last in a bar needs a full beat",
     beAddLabel: "Split the selected chord in half (up to {n} per bar)",
@@ -8102,9 +8114,15 @@ function writeSpans(p, lens, texts, selCi){
   /* **最後一顆不寫延長記號**:`spansOf` 本來就讓它去補滿整小節
      (「你只寫你在意的那幾顆,最後一顆負責把小節填滿」),
      寫了只是多兩個看不懂的符號——`C . Am` 比 `C . Am / .` 好讀太多 */
-  g[p.bar] = plain ? texts.slice()
-                   : lens.reduce((acc, L, j) => acc.concat(
-                       j === lens.length - 1 ? [texts[j]] : lenTokens(texts[j], L)), []);
+  let toks = plain ? texts.slice()
+                  : lens.reduce((acc, L, j) => acc.concat(
+                      j === lens.length - 1 ? [texts[j]] : lenTokens(texts[j], L)), []);
+  /* **一個延長記號都沒有就會被讀成平分**:一拍 + 三拍寫成 `C G` 讀回來是 2 + 2。
+     前面幾顆剛好都是一拍(不用記號)時,最後一顆的記號要寫出來(`C G / /`) */
+  if (!plain && !toks.some(t => t === "/" || t === ".")) {
+    toks = toks.slice(0, -1).concat(lenTokens(texts[texts.length - 1], lens[lens.length - 1]));
+  }
+  g[p.bar] = toks;
   pushUndo();
   setGroups(g);
   let flat = 0;
@@ -8169,7 +8187,10 @@ function beGrip(ev, i, sp, p){
   grip.classList.add("drag");
   const move = e2 => {
     const k = Math.round((e2.clientX - rect.left) / rect.width * N);
-    at = Math.max(lo, Math.min(hi, k));
+    const nxt = Math.max(lo, Math.min(hi, k));
+    if (nxt !== at && beLight(lane, nxt)) beHaptic();   // 落在拍線上:亮 + 喀一下(半拍不喀)
+    else if (nxt !== at) beLight(lane, nxt);
+    at = nxt;
     blocks[i - 1].style.width = pct(at - starts[i - 1]);
     blocks[i].style.left = pct(at);
     blocks[i].style.width = pct(end - at);
@@ -8182,6 +8203,7 @@ function beGrip(ev, i, sp, p){
   };
   const up = () => {
     grip.classList.remove("drag");
+    beLight(lane, -1);
     window.removeEventListener("pointermove", move);
     window.removeEventListener("pointerup", up);
     window.removeEventListener("pointercancel", up);
@@ -8194,6 +8216,121 @@ function beGrip(ev, i, sp, p){
   window.addEventListener("pointerup", up);
   window.addEventListener("pointercancel", up);
   ev.preventDefault();
+}
+
+/* ── 觸覺回饋:滑到一拍「喀」一下 ───────────────────────────────
+   Android 用 `navigator.vibrate`;iPhone 的 Safari 沒有這個 API,
+   但 iOS 18 起點一下系統開關(`<input type="checkbox" switch>`)會有觸覺,
+   所以點一顆看不見的開關代替。桌機兩個都沒有,就安靜 */
+let beHapticLabel = null;
+function beHaptic(){
+  try {
+    if (navigator.vibrate) { navigator.vibrate(8); return; }
+    if (!beHapticLabel) {
+      beHapticLabel = document.createElement("label");
+      beHapticLabel.setAttribute("aria-hidden", "true");
+      beHapticLabel.style.display = "none";
+      const sw = document.createElement("input");
+      sw.type = "checkbox"; sw.setAttribute("switch", "");
+      beHapticLabel.appendChild(sw);
+      document.head.appendChild(beHapticLabel);
+    }
+    beHapticLabel.click();
+  } catch (e) { /* 沒有就算了:觸覺只是加分 */ }
+}
+/* 邊緣在第幾格(單位 = chordDiv 的一格):剛好在拍線上就把那條線點亮;
+   不在拍線上(把手拖到半拍)或在小節頭尾就全部熄掉 */
+function beLight(lane, units){
+  const cd = chordDiv(), beats = lane.querySelectorAll(".be-beat");
+  const b = units % cd === 0 ? units / cd : -1;
+  beats.forEach((el, k) => {
+    const on = k === b && k > 0;
+    if (on && el.classList.contains("lit")) return;
+    el.classList.toggle("lit", on);
+    if (on) { el.classList.remove("lit"); void el.offsetWidth; el.classList.add("lit"); } // 每換一拍重新閃
+  });
+  return b > 0 && b < beats.length;
+}
+
+/* ── 滑方塊改長度(Steven 2026-10-08:「左右滑動,滑動到幾格就是幾拍」)──
+   手指放在一顆和弦上左右滑,它的邊緣跟著手指、**一次一拍**,手指在第幾格它就撐到第幾格:
+     不是最後一顆 → 動右邊緣(後面那顆讓出 / 拿回)
+     最後一顆     → 動左邊緣(最後一顆永遠補到小節尾,只有左邊能動)
+   橫向移動 8px 以上、而且比直的多才算滑;先往上下動就是捲頁面,不搶。
+   沒滑就是點(選它),跟以前一樣。半拍要用方塊之間的把手(一次半拍) */
+function beSwipe(ev, i, sp, p){
+  const lane = $("beLane");
+  if (!lane || ev.button > 0 || sp.length < 2) return;
+  const N = chordUnits(), cd = chordDiv(), n = sp.length, beats = beatsInBar();
+  const lens = sp.map(x => x.w), starts = [];
+  let acc = 0;
+  for (const L of lens) { starts.push(acc); acc += L; }
+  const last = i === n - 1;
+  const j = last ? i - 1 : i;                 // 動的是 j 與 j+1 之間的那條邊
+  const lo = starts[j] + minUnits(j, n);
+  const end = starts[j + 1] + lens[j + 1];
+  const hi = end - minUnits(j + 1, n);
+  const snapLo = Math.ceil(lo / cd) * cd, snapHi = Math.floor(hi / cd) * cd;
+  if (snapHi < snapLo) return;                 // 兩邊都已經在下限上:這一顆滑不動
+  const x0 = ev.clientX, y0 = ev.clientY, id = ev.pointerId, btn = ev.currentTarget;
+  const blocks = lane.querySelectorAll(".be-block");
+  const grip = lane.querySelectorAll(".be-grip")[j];
+  const pct = u => (u / N * 100) + "%";
+  let rect = null, at = starts[j + 1], dragging = false, done = false;
+  const show = () => {
+    blocks[j].style.width = pct(at - starts[j]);
+    blocks[j + 1].style.left = pct(at);
+    blocks[j + 1].style.width = pct(end - at);
+    if (grip) grip.style.left = pct(at);
+    blocks[j].textContent = lenLabel(at - starts[j]);
+    blocks[j + 1].textContent = lenLabel(end - at);
+    blocks[j].style.fontSize = blocks[j + 1].style.fontSize = "";
+  };
+  const finish = commit => {
+    if (done) return;
+    done = true;
+    btn.removeEventListener("pointermove", move);
+    btn.removeEventListener("pointerup", up);
+    btn.removeEventListener("pointercancel", cancel);
+    if (!dragging) return;
+    btn.classList.remove("drag");
+    beLight(lane, -1);
+    if (!commit || at === starts[j + 1]) { renderBarEdit(); return; }
+    lens[j] = at - starts[j];
+    lens[j + 1] = end - at;
+    writeSpans(p, lens, sp.map(x => x.text), i);
+  };
+  const move = e2 => {
+    if (e2.pointerId !== id) return;
+    const dx = e2.clientX - x0, dy = e2.clientY - y0;
+    if (!dragging) {
+      if (Math.abs(dy) > 8 && Math.abs(dy) >= Math.abs(dx)) { finish(false); return; } // 在捲頁面
+      if (Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(dy)) return;
+      dragging = true;
+      rect = lane.getBoundingClientRect();
+      try { btn.setPointerCapture(id); } catch (e) {}
+      btn.classList.add("drag");
+      show();
+      beLight(lane, at);
+    }
+    /* 手指在第幾格:不是最後一顆 → 撐到「手指那一格」的右邊;最後一顆 → 從手指那一格的左邊開始 */
+    const cell = Math.max(0, Math.min(beats - 1, Math.floor((e2.clientX - rect.left) / rect.width * beats)));
+    const want = (last ? cell : cell + 1) * cd;
+    const nxt = Math.max(snapLo, Math.min(snapHi, want));
+    if (nxt !== at) {
+      at = nxt;
+      show();
+      if (beLight(lane, at)) beHaptic();
+    }
+    e2.preventDefault();
+  };
+  const up = e2 => { if (e2.pointerId === id) finish(true); };
+  const cancel = e2 => { if (e2.pointerId === id) finish(false); };
+  btn.addEventListener("pointermove", move);
+  btn.addEventListener("pointerup", up);
+  btn.addEventListener("pointercancel", cancel);
+  /* 滑完放開時瀏覽器還是會送一個 click:那一次不要再選(writeSpans 已經選好了) */
+  btn.addEventListener("click", e3 => { if (dragging) { e3.stopImmediatePropagation(); e3.preventDefault(); } }, { capture: true, once: true });
 }
 
 /* 畫編輯條。方塊的寬度是**算完的時值**(`spansOf`)不是寫的權重——
@@ -8249,6 +8386,7 @@ function renderBarEdit(){
     for (let bi = 0; bi < p.bar; bi++) flat += parsed.bars[bi].chords.length;
     const pick = flat + i;
     btn.addEventListener("click", () => selectBar(pick));
+    btn.addEventListener("pointerdown", ev => beSwipe(ev, i, sp, p));
     lane.appendChild(btn);
     if (i > 0) {
       /* **動不動得了要在畫的時候就算好**(跟 ＋ × 同一條規則):

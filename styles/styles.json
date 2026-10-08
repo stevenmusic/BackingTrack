@@ -1,0 +1,281 @@
+{
+  "version": 1,
+  "spec": "backingtrack-styles-spec v1",
+  "styles": [
+    {
+      "id": "pop",
+      "name": { "zh": "現代流行", "en": "Modern Pop" },
+      "bpm": { "default": 104, "min": 95, "max": 120 },
+      "swing": 50,
+      "suggestedKeys": ["C", "G", "D", "E", "F"],
+      "voicing": { "keys": "triad_add9", "keys2": null, "pad": null },
+      "ranges": {},
+      "humanize": { "timingSigmaMs": 6, "velocityRand": 8, "overrides": {} },
+      "rules": {},
+      "effects": [],
+      "progressions": [
+        { "id": "pop_axis", "roman": "I | V | vi | IV", "example": "C | G | Am | F", "mode": "major" },
+        { "id": "pop_sad_axis", "roman": "vi | IV | I | V", "example": "Am | F | C | G", "mode": "major" },
+        { "id": "pop_50s", "roman": "I | vi | IV | V", "example": "C | Am | F | G", "mode": "major" },
+        { "id": "pop_lift", "roman": "IV | I | V | vi", "example": "F | C | G | Am", "mode": "major" }
+      ],
+      "tracks": {
+        "drums": {
+          "low":      { "kick": "X... .... X... ....", "rim": ".... x... .... x..." },
+          "standard": { "kick": "X... .... X.x. ....", "snare": ".... X... .... X...", "hat": "x.x. x.x. x.x. x.x." },
+          "high":     { "kick": "X... ..x. X.x. ....", "snare": ".... X... .... X...", "hat": "xoxo xoxo xoxo xoxo" },
+          "fill":     { "snare": "xxxx xxXX" }
+        },
+        "bass":  { "low": "R--- ---- R--- ----", "standard": "R.R. R.R. R.R. R.R.", "high": "R.R. R.5. R.R. 8.A." },
+        "keys":  { "low": "C--- ---- ---- ----", "standard": "C--- C--- C--- C---", "high": "C--C --C- --C- --C-" },
+        "keys2": null,
+        "pad": null,
+        "guitar": null
+      },
+      "samples": ["piano", "acoustic_kit", "electric_bass"],
+      "optionalSamples": []
+    },
+    {
+      "id": "mandopop_ballad",
+      "name": { "zh": "華語抒情", "en": "Mandopop Ballad" },
+      "bpm": { "default": 72, "min": 60, "max": 80 },
+      "swing": 50,
+      "suggestedKeys": ["C", "D", "E♭", "E", "F", "G"],
+      "voicing": { "keys": "arp5", "keys2": "triad", "pad": "triad" },
+      "ranges": { "pad": [55, 67] },
+      "humanize": { "timingSigmaMs": 6, "velocityRand": 8, "overrides": {} },
+      "rules": { "fillDensities": ["high"] },
+      "effects": [],
+      "progressions": [
+        { "id": "mando_canon", "roman": "I | V/7 | vi | vi/5 | IV | I/3 | ii7 | V7sus4 V7", "example": "C | G/B | Am | Am/G | F | C/E | Dm7 | G7sus4 G7", "mode": "major" },
+        { "id": "mando_15634145", "roman": "I | V | vi | iii | IV | I | IV | V", "example": "C | G | Am | Em | F | C | F | G", "mode": "major" },
+        { "id": "mando_4536251", "roman": "IVmaj7 | V | iii7 | vi7 | ii7 | Vsus4 V | I | I", "example": "Fmaj7 | G | Em7 | Am7 | Dm7 | Gsus4 G | C | C", "mode": "major" }
+      ],
+      "tracks": {
+        "drums": {
+          "low": null,
+          "standard": { "kick": "X... .... ..X. ....", "rim": ".... x... .... x...", "hat": "o.o. o.o. o.o. o.o." },
+          "high":     { "kick": "X... ..x. X... ....", "snare": ".... X... .... X...", "hat": "x.x. x.x. x.x. x.x." },
+          "fill":     { "snare": "..x. xxXX" }
+        },
+        "bass":  { "low": null, "standard": "R--- ---- R--- ----", "high": "R--- --5- R--- ----" },
+        "keys":  { "low": "1.2. 3.4. 5.4. 3.2.", "standard": "1234 5432 1234 5432", "high": "1234 5432 1234 5432" },
+        "keys2": { "low": null, "standard": null, "high": "U--- ---- U--- ----" },
+        "pad":   { "low": null, "standard": null, "high": "C--- ---- ---- ----", "optional": true },
+        "guitar": null
+      },
+      "samples": ["piano", "acoustic_kit", "electric_bass", "string_pad"],
+      "optionalSamples": []
+    },
+    {
+      "id": "jpop",
+      "name": { "zh": "J-pop／動畫", "en": "J-Pop / Anime" },
+      "bpm": { "default": 140, "min": 120, "max": 170 },
+      "swing": 50,
+      "suggestedKeys": ["C", "D", "E", "F", "A♭"],
+      "voicing": { "keys": "triad_add9", "keys2": null, "pad": null },
+      "ranges": {},
+      "humanize": { "timingSigmaMs": 6, "velocityRand": 8, "overrides": {} },
+      "rules": {},
+      "effects": [],
+      "progressions": [
+        { "id": "jpop_royal", "roman": "IVmaj7 | V7 | iii7 | vi", "example": "Fmaj7 | G7 | Em7 | Am", "mode": "major" },
+        { "id": "jpop_royal_ext", "roman": "IVmaj7 | V | iii7 | vi | ii7 | V | I | I", "example": "Fmaj7 | G | Em7 | Am | Dm7 | G | C | C", "mode": "major" },
+        { "id": "jpop_komuro", "roman": "vi | IV | V | I", "example": "Am | F | G | C", "mode": "major" }
+      ],
+      "tracks": {
+        "drums": {
+          "low":      { "kick": "X... .... X... ....", "snare": ".... X... .... X..." },
+          "standard": { "kick": "X... ..x. X.x. ....", "snare": ".... X... .... X...", "hat": "x.x. x.x. x.x. x.x." },
+          "high":     { "kick": "X... ..x. X.x. ....", "snare": ".... X... .... X...", "hat": "x... x... x... x...", "openhat": "..x. ..x. ..x. ..x." },
+          "fill":     { "snare": "xxxx xxXX" }
+        },
+        "bass":  { "low": "R--- ---- R--- ----", "standard": "R.R. R.R. R.R. R.R.", "high": "R.R. 8.R. R.R. 5.A." },
+        "keys":  { "low": "C--- ---- ---- ----", "standard": "C--- --C- ---- --N-", "high": "C--C --C- --C- --N-" },
+        "keys2": null,
+        "pad": null,
+        "guitar": null
+      },
+      "samples": ["piano", "acoustic_kit", "electric_bass"],
+      "optionalSamples": ["distorted_guitar"]
+    },
+    {
+      "id": "citypop",
+      "name": { "zh": "City Pop", "en": "City Pop" },
+      "bpm": { "default": 108, "min": 100, "max": 118 },
+      "swing": 54,
+      "suggestedKeys": ["E♭", "F", "B♭", "D"],
+      "voicing": { "keys": "rootless4", "keys2": null, "pad": null },
+      "ranges": { "keys": [53, 72] },
+      "humanize": { "timingSigmaMs": 6, "velocityRand": 8, "overrides": {} },
+      "rules": { "keysMaxCells": 3, "fillToms": true },
+      "effects": [],
+      "progressions": [
+        { "id": "city_marusa", "roman": "IVmaj7 | III7 | vim7 | vm7 I7", "example": "Fmaj7 | E7 | Am7 | Gm7 C7", "mode": "major" },
+        { "id": "city_2516", "roman": "ii7 | V7 | Imaj7 | vi7", "example": "Dm7 | G7 | Cmaj7 | Am7", "mode": "major" },
+        { "id": "city_desc", "roman": "Imaj7 | viiø7 III7 | vi7 | vm7 I7", "example": "Cmaj7 | Bm7♭5 E7 | Am7 | Gm7 C7", "mode": "major" },
+        { "id": "city_long", "roman": "IVmaj7 | iv7 ♭VII7 | iii7 | VI7 | ii7 | V7sus4 V7 | Imaj7 | Imaj7", "example": "Fmaj7 | Fm7 B♭7 | Em7 | A7 | Dm7 | G7sus4 G7 | Cmaj7 | Cmaj7", "mode": "major" }
+      ],
+      "tracks": {
+        "drums": {
+          "low":      { "kick": "X... .... X... ....", "rim": ".... x... .... x...", "hat": "x.x. x.x. x.x. x.x." },
+          "standard": { "kick": "X... ...x X.x. ....", "snare": ".... X..o .o.. X...", "hat": "xoxo xoxo xoxo xoxo", "openhat": ".... .... .... ..x." },
+          "high":     { "kick": "X... ...x X.x. ....", "snare": ".o.. X..o .o.o X..o", "hat": "xoxo xoxo xoxo xoxo", "openhat": ".... .... .... ..x." },
+          "fill":     { "snare": "x.xx xXxX" }
+        },
+        "bass":  { "low": "R--- ---. R--- ---.", "standard": "R..8 ..R. ..R. 5.A.", "high": "R.8R .8.R .R8. R7.A" },
+        "keys":  { "low": "C--- ---- ---- ----", "standard": "..C- .... ..C- ....", "high": "..C- .C.. ..C- .C.N" },
+        "keys2": null,
+        "pad": null,
+        "guitar": { "low": null, "standard": null, "high": "..x. ..x. ..x. ..x.", "optional": true, "topNotes": 2 }
+      },
+      "samples": ["rhodes", "acoustic_kit", "electric_bass"],
+      "optionalSamples": ["slap_bass", "clean_electric_guitar"]
+    },
+    {
+      "id": "kpop_dance",
+      "name": { "zh": "K-pop 舞曲", "en": "K-Pop Dance" },
+      "bpm": { "default": 120, "min": 100, "max": 128 },
+      "swing": 50,
+      "suggestedKeys": ["Am", "Bm", "C♯m", "F♯m"],
+      "voicing": { "keys": "triad", "keys2": null, "pad": "triad" },
+      "ranges": { "keys": [48, 72], "pad": [52, 67] },
+      "humanize": { "timingSigmaMs": 2, "velocityRand": 8, "overrides": {} },
+      "rules": { "crashOnSection": false },
+      "effects": [],
+      "progressions": [
+        { "id": "kpop_minor_loop", "roman": "i | VI | III | VII", "example": "Am | F | C | G", "mode": "minor" },
+        { "id": "kpop_harmonic", "roman": "i | VI | iv | V7", "example": "Am | F | Dm | E7", "mode": "minor" },
+        { "id": "kpop_rise", "roman": "VI | VII | i | i", "example": "F | G | Am | Am", "mode": "minor" }
+      ],
+      "tracks": {
+        "drums": {
+          "low":      { "kick": "X... .... .... ...." },
+          "standard": { "kick": "X... ..x. ..X. ....", "clap": ".... X... .... X...", "hat": "x.x. x.x. x.x. x.x." },
+          "high":     { "kick": "X... X... X... X...", "clap": ".... X... .... X...", "hat": "xxxx xxxx xxxx xxrr" },
+          "fill":     { "hat": "rrrr rrrr", "clap": ".... x.x." }
+        },
+        "bass":  { "low": "R--- ---- ---- ----", "standard": "R..R ..R. R..R ..R.", "high": "R..R ..R. R..R .8A." },
+        "keys":  { "low": null, "standard": "C..C ..C. ..C. .C..", "high": "C..C ..C. ..C. .C.." },
+        "keys2": null,
+        "pad":   { "low": "C--- ---- ---- ----", "standard": null, "high": "C--- ---- ---- ----" },
+        "guitar": null
+      },
+      "samples": ["electronic_kit", "synth_bass", "pluck", "synth_pad"],
+      "optionalSamples": []
+    },
+    {
+      "id": "kpop_ballad",
+      "inherits": "mandopop_ballad",
+      "name": { "zh": "K-pop 抒情", "en": "K-Pop Ballad" },
+      "bpm": { "default": 70, "min": 60, "max": 80 },
+      "suggestedKeys": ["D", "E♭", "E", "G"],
+      "progressions": [
+        { "id": "kb_secdom", "roman": "IV | V | III7 | vi | ii7 | V | I | I", "example": "F | G | E7 | Am | Dm7 | G | C | C", "mode": "major" },
+        { "id": "kb_lineclich", "roman": "I | I/7 | vi | I7/♭7 | IV | iv | I | V", "example": "C | C/B | Am | C7/B♭ | F | Fm | C | G", "mode": "major" }
+      ]
+    },
+    {
+      "id": "rnb_neosoul",
+      "name": { "zh": "R&B／Neo-soul", "en": "R&B / Neo-Soul" },
+      "bpm": { "default": 80, "min": 65, "max": 90 },
+      "swing": 58,
+      "suggestedKeys": ["E♭", "A♭", "D♭", "F"],
+      "voicing": { "keys": "rootless4", "keys2": null, "pad": null },
+      "ranges": { "keys": [52, 72] },
+      "humanize": { "timingSigmaMs": 6, "velocityRand": 8, "overrides": { "snare": { "offsetMs": 20 }, "hat": { "velocityRand": 12 } } },
+      "rules": {},
+      "effects": [],
+      "progressions": [
+        { "id": "rnb_251", "roman": "ii9 | V13 | Imaj9 | Imaj9", "example": "Dm9 | G13 | Cmaj9 | Cmaj9", "mode": "major" },
+        { "id": "rnb_436", "roman": "IVmaj9 | iii7 | vi9 | vi9", "example": "Fmaj9 | Em7 | Am9 | Am9", "mode": "major" },
+        { "id": "rnb_backdoor", "roman": "Imaj9 | iv9 ♭VII13 | Imaj9 | Imaj9", "example": "Cmaj9 | Fm9 B♭13 | Cmaj9 | Cmaj9", "mode": "major" },
+        { "id": "rnb_two", "roman": "i9 | iv9", "example": "Am9 | Dm9", "mode": "minor" }
+      ],
+      "tracks": {
+        "drums": {
+          "low":      { "kick": "X... .... ..X. ....", "rim": ".... x... .... x..." },
+          "standard": { "kick": "X... ...x ..X. ....", "snare": ".... X... .... X...", "hat": "x.o. x.o. x.o. x.oo" },
+          "high":     { "kick": "X... ...x ..X. ....", "snare": ".... X..o ..o. X.o.", "hat": "x.o. x.o. x.o. x.oo" },
+          "fill":     { "snare": ".o.x .oXx" }
+        },
+        "bass":  { "low": "R--- ---- ---- ----", "standard": "R--- ...5 R-.. ..A.", "high": "R--. .5.7 R-.. .8A." },
+        "keys":  { "low": "C--- ---- ---- ----", "standard": "C--- --C- ---- ---P", "high": "C--. C-.C ---- .C-P" },
+        "keys2": null,
+        "pad": null,
+        "guitar": null
+      },
+      "samples": ["rhodes", "acoustic_kit", "electric_bass"],
+      "optionalSamples": []
+    },
+    {
+      "id": "lofi",
+      "name": { "zh": "Lo-fi Hip-hop", "en": "Lo-fi Hip-hop" },
+      "bpm": { "default": 82, "min": 70, "max": 90 },
+      "swing": 60,
+      "suggestedKeys": ["C", "F", "A♭", "D"],
+      "voicing": { "keys": "rootless4", "keys2": null, "pad": null },
+      "ranges": {},
+      "humanize": { "timingSigmaMs": 6, "velocityRand": 8, "overrides": { "hat": { "velocityRand": 15 }, "kick": { "timingSigmaMs": 8 }, "snare": { "timingSigmaMs": 8 } } },
+      "rules": { "crashOnSection": false },
+      "effects": [
+        { "type": "pitchDrift", "bus": "keys", "cents": 8, "rateHz": 0.5 },
+        { "type": "lowpass", "bus": "keys", "hz": 4500 },
+        { "type": "vinylNoise", "db": -30, "userToggle": true }
+      ],
+      "progressions": [
+        { "id": "lofi_2516", "roman": "ii9 | V13 | Imaj9 | VI7♭9", "example": "Dm9 | G13 | Cmaj9 | A7♭9", "mode": "major" },
+        { "id": "lofi_two", "roman": "Imaj7 | Imaj7 | vi7 | vi7", "example": "Cmaj7 | Cmaj7 | Am7 | Am7", "mode": "major" },
+        { "id": "lofi_desc", "roman": "IVmaj7 | iii7 | ii7 | Imaj7", "example": "Fmaj7 | Em7 | Dm7 | Cmaj7", "mode": "major" },
+        { "id": "lofi_minor", "roman": "vi9 | II9 | Vmaj7 | Imaj7", "example": "Am9 | D9 | Gmaj7 | Cmaj7", "mode": "major" }
+      ],
+      "tracks": {
+        "drums": {
+          "low":      { "kick": "X... .... ..X. ....", "snare": ".... X... .... X..." },
+          "standard": { "kick": "X... ...X ..X. ....", "snare": ".... X... .... X...", "hat": "x.x. x.x. x.x. x.x." },
+          "high":     { "kick": "X... ...X ..X. ....", "snare": ".... X... .... X...", "hat": "xoxo xoxo xoxo xoxo" },
+          "fill":     { "snare": "..x. .xX." }
+        },
+        "bass":  { "low": "R--- ---- ---- ----", "standard": "R--- ---. ..R- 5-..", "high": "R--- --.R ..R- 5.A." },
+        "keys":  { "low": "C--- ---- ---- ----", "standard": "C--- --C- ---- ----", "high": "C--- --C- --.C ----" },
+        "keys2": null,
+        "pad": null,
+        "guitar": null
+      },
+      "samples": ["piano", "boombap_kit", "electric_bass", "vinyl_noise"],
+      "optionalSamples": ["upright_bass"]
+    },
+    {
+      "id": "reggaeton",
+      "name": { "zh": "Reggaeton／Latin", "en": "Reggaeton / Latin" },
+      "bpm": { "default": 95, "min": 88, "max": 100 },
+      "swing": 50,
+      "suggestedKeys": ["Am", "Bm", "Dm", "F♯m"],
+      "voicing": { "keys": "triad", "keys2": null, "pad": null },
+      "ranges": {},
+      "humanize": { "timingSigmaMs": 6, "velocityRand": 8, "overrides": {} },
+      "rules": {},
+      "effects": [],
+      "progressions": [
+        { "id": "reg_loop", "roman": "i | VI | III | VII", "example": "Am | F | C | G", "mode": "minor" },
+        { "id": "reg_andalusian", "roman": "i | VII | VI | V7", "example": "Am | G | F | E7", "mode": "minor" },
+        { "id": "reg_two", "roman": "i | iv", "example": "Am | Dm", "mode": "minor" }
+      ],
+      "tracks": {
+        "drums": {
+          "low":      { "kick": "X... .... X... ....", "snare": "...X ..X. ...X ..X." },
+          "standard": { "kick": "X... X... X... X...", "snare": "...X ..X. ...X ..X.", "hat": "x.x. x.x. x.x. x.x." },
+          "high":     { "kick": "X... X... X... X...", "snare": "...X ..X. ...X ..X.", "hat": "xxxx xxxx xxxx xxxx" },
+          "fill":     { "snare": ".x.x xxXX" }
+        },
+        "bass":  { "low": "R--- ---- R--- ----", "standard": "R... R... R... R...", "high": "R..R ..R. R..R ..R." },
+        "keys":  { "low": "C--- ---- ---- ----", "standard": "...C ..C. ...C ..C.", "high": "C..C ..C. C..C ..C." },
+        "keys2": null,
+        "pad": null,
+        "guitar": null
+      },
+      "samples": ["electronic_kit", "synth_bass", "piano"],
+      "optionalSamples": ["electric_bass", "nylon_guitar"]
+    }
+  ]
+}

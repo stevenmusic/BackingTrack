@@ -97,7 +97,7 @@
     {
       "id": "jpop",
       "space": {"sends": {"drums": {"room": 0, "plate": 0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0.661, "plate": 0.0}, "keys": {"room": 0.2, "plate": 0.233}, "guitar": {"room": 0.611, "plate": 0.175}}, "drumRoomDb": -6},
-      "master": { "gainDb": 4.7 },
+      "master": { "gainDb": 4.8 },
       "name": { "zh": "J-pop／動畫", "en": "J-Pop / Anime" },
       "bpm": { "default": 140, "min": 120, "max": 170 },
       "swing": 50,
@@ -171,7 +171,7 @@
     {
       "id": "kpop_dance",
       "space": {"sends": {"drums": {"room": 1.263, "plate": 0.0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0.698, "plate": 0.0}, "keys": {"room": 0.229, "plate": 0.267}, "pad": {"room": 0.073, "plate": 0.176}}},
-      "master": { "gainDb": 2.9 },
+      "master": { "gainDb": 4.3 },
       "name": { "zh": "K-pop 舞曲", "en": "K-Pop Dance" },
       "bpm": { "default": 120, "min": 100, "max": 128 },
       "swing": 50,
@@ -208,7 +208,7 @@
       "id": "kpop_ballad",
       "mix": {"drums": 0.0, "bass": -7.6, "keys": 4.6, "pad": -3.1, "keys2": 1.4},
       "space": {"sends": {"drums": {"room": 0, "plate": 0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0.568, "plate": 0.0}, "keys": {"room": 0.142, "plate": 0.165}, "keys2": {"room": 0.161, "plate": 0.188}, "pad": {"room": 0.056, "plate": 0.135}}, "drumRoomDb": -6},
-      "master": { "gainDb": 5.0 },
+      "master": { "gainDb": 5.1 },
       "inherits": "mandopop_ballad",
       "name": { "zh": "K-pop 抒情", "en": "K-Pop Ballad" },
       "bpm": { "default": 70, "min": 60, "max": 80 },
@@ -259,7 +259,7 @@
     {
       "id": "lofi",
       "space": {"sends": {"drums": {"room": 0, "plate": 0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0.582, "plate": 0.0}, "keys": {"room": 0.16, "plate": 0.186}}, "drumRoomDb": -6},
-      "master": { "gainDb": 6.4 },
+      "master": { "gainDb": 6.6 },
       "name": { "zh": "Lo-fi Hip-hop", "en": "Lo-fi Hip-hop" },
       "bpm": { "default": 82, "min": 70, "max": 90 },
       "swing": 60,
@@ -302,7 +302,7 @@
     {
       "id": "reggaeton",
       "space": {"sends": {"drums": {"room": 1.294, "plate": 0.0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0.772, "plate": 0.0}, "keys": {"room": 0.235, "plate": 0.274}}},
-      "master": { "gainDb": 2.9 },
+      "master": { "gainDb": 4.2 },
       "name": { "zh": "Reggaeton／Latin", "en": "Reggaeton / Latin" },
       "bpm": { "default": 95, "min": 88, "max": 100 },
       "swing": 50,

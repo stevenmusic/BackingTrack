@@ -28,7 +28,7 @@ await page.route(/cdn\.jsdelivr\.net\/gh\/|raw\.githubusercontent\.com\//, route
 });
 await page.goto(`http://localhost:${server.address().port}/styles/index.html`);
 await page.waitForFunction(() => window.__player);
-const ids = process.argv.slice(2).length ? process.argv.slice(2) : ["pop", "mandopop_ballad", "jpop", "citypop", "kpop_dance", "rnb_neosoul", "lofi", "reggaeton"];
+const ids = process.argv.slice(2).length ? process.argv.slice(2) : ["pop", "mandopop_ballad", "jpop", "citypop", "kpop_dance", "kpop_ballad", "rnb_neosoul", "lofi", "reggaeton"];
 let bad = 0;
 for (const id of ids) {
   const rows = await page.evaluate(async ([id, process_th]) => {

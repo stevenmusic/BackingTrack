@@ -198,7 +198,7 @@ export class Player {
       }
     }
     head.connect(this.master);
-    const sendLP = allFx.find(f => f.type === "lowpass"); // 殘響也要一樣悶:送出之前先過同一個低通(線性,等於整條)
+    const sendLP = allFx.find(f => f.type === "lowpass"); // 殘響也要一樣悶:送出之前先過同一個低通(線性濾波,先後順序不影響)
     const drift = (st.effects ?? []).find(f => f.type === "pitchDrift");
     this.driftTracks = drift ? [].concat(drift.bus ?? "keys") : [];
     if (this.wetOnly) out.gain.value = 0; // 量測用:只聽殘響
@@ -209,11 +209,14 @@ export class Player {
       sends[name].gain.value = this.noReverb ? 0 : 1; // 量測用:看乾的取樣直接相加是什麼樣子
       // 殘響也晚 COMP_LAT:鼓的送出是從壓縮器前面接的,這樣乾聲、鼓、殘響三者對齊
       const d = ctx.createDelay(0.05); d.delayTime.value = COMP_LAT;
-      if (sendLP) {
+      // 跟乾聲同樣的低通(同樣的階數);殘響回送直接進 master,不過 bus "all" 的飽和(殘響本來就小聲,飽和幾乎不作用)
+      let sh = sends[name];
+      for (let k = 0; sendLP && k < (sendLP.order === 4 ? 2 : 1); k++) {
         const f = ctx.createBiquadFilter();
         f.type = "lowpass"; f.frequency.value = sendLP.hz; f.Q.value = BUTTER_Q_DB;
-        sends[name].connect(f).connect(d).connect(cv);
-      } else sends[name].connect(d).connect(cv);
+        sh.connect(f); sh = f;
+      }
+      sh.connect(d).connect(cv);
       wet.push(sends[name]);
     }
     const mix = st.mix ?? {}; // 各曲風的音量校正(dB),由 tools/mix/analyze.py 量完定的

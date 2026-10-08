@@ -167,7 +167,7 @@ function shapesFor(type, c, next) {
     }
     case "arp_rh": {
       // 分解和弦的右手:和弦音(有七度用 3、5、7,沒有用 1、3、5)的三個轉位,只用和弦音
-      const tri = sev != null ? [t[3], t[13] ?? t[5], sev] : [0, t[3], t[5]];
+      const tri = sev != null ? [t[3], t[5], sev] : [0, t[3], t[5]]; // 不用十三度(旋律只用和弦音那條還待 Steven 決定)
       return [[tri, [tri[1], tri[2], tri[0]], [tri[2], tri[0], tri[1]]]];
     }
     default:
@@ -278,6 +278,7 @@ function arp5(c, prev) {
  * 右手:跟方塊和弦同一套 Viterbi,挑離上一顆最近的轉位(55–69),只用和弦音
  * 指型的 1–5 = 這五個音
  */
+const RH_OF = new WeakMap();
 function arpInv(items) {
   const rh = planVoicings("arp_rh", items.map(it => ({ ...it, range: [55, 69] })));
   let prevL = 40;
@@ -287,6 +288,7 @@ function arpInv(items) {
     const lh = cands.sort((a, b) => Math.abs(a - prevL) - Math.abs(b - prevL) || a - b)[0];
     prevL = lh;
     const r = [...rh[i]].sort((a, b) => a - b);
+    RH_OF.set(it, r);
     // 第五個音:左手低音的高八度(抒情鋼琴常見的 1–8–和弦音);右手的頂音就一直是那三個和弦音裡最高的,走向穩
     return [lh, ...[...r, lh + 12].sort((a, b) => a - b)];
   });
@@ -377,7 +379,8 @@ export function render(data, styleId, opt = {}) {
       range: lowCap && densityAt(o, s.bar) === "low" ? [range[0], Math.min(range[1], RANGE.lowKeysMax)] : range,
       fresh: s.from === 0 && (s.bar + base) % 8 === 0,
     }));
-    return planVoicings(type, items).map((notes, i) => ({ bar: slots[i].bar, from: slots[i].from, notes, fresh: items[i].fresh }));
+    return planVoicings(type, items).map((notes, i) => ({ bar: slots[i].bar, from: slots[i].from, notes, fresh: items[i].fresh,
+      ...(RH_OF.has(items[i]) ? { rh: RH_OF.get(items[i]) } : {}) }));
   };
   const kType = st.voicing.keys;
   // 分解和弦(arp_inv)一律踩延音踏板(Steven 2026-10-08:「音跟音之間斷掉了」)
@@ -565,7 +568,8 @@ export function render(data, styleId, opt = {}) {
             // 踩著延音踏板:每個音撐到換和弦;換和弦的那一格左手低音一定要彈(指型那一格不是 1 也補上)
             const sl = slots[idx];
             if (cell === sl.from && !notes.includes(v[0])) notes = [v[0], ...notes];
-            note(track, b, cell, sl.to - cell, notes, { symbol: ch, pedal: true });
+            // 每個音各自一個事件:同音重彈時只停那一個音(左手低音不會被右手重彈連帶停掉)
+            for (const p of notes) note(track, b, cell, sl.to - cell, [p], { symbol: ch, pedal: true });
           } else note(track, b, cell, capKeys(track, n), notes, { symbol: ch });
         });
       }
@@ -628,7 +632,13 @@ export function render(data, styleId, opt = {}) {
     for (let i = 0; i < ks.length; i++) {
       const e = ks[i], end = e.gridTime + e.dur;
       for (let j = i + 1; j < ks.length && ks[j].gridTime < end; j++)
-        if (ks[j].notes.some(p => e.notes.includes(p))) { e.dur = ks[j].gridTime - e.gridTime; break; }
+        if (ks[j].notes.some(p => e.notes.includes(p))) {
+          // dur(秒)與 cells(格)都要改:主網頁照 cells × 現在的拍長算音長(可以中途換速度),只改 dur 的話主網頁會疊音
+          if (ks[j].bar !== e.bar) throw new Error("踏板截斷跨了小節"); // slot 在同一小節裡,不會發生
+          e.dur = ks[j].gridTime - e.gridTime;
+          e.cells = ks[j].cell - e.cell;
+          break;
+        }
     }
   }
 

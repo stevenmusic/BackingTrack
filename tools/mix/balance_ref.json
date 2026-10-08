@@ -1,47 +1,48 @@
 {
- "_說明": "各軌相對鼓的響度(LU,BS.1770,跳過母帶鏈的分軌)。量的是 main 5ec9068(Steven 長期在聽的那一版)的 standard 密度 8 小節;keys2 / pad / guitar 用 high。tools/mix/solve_balance.py 的目標",
+ "_說明": "各軌相對鼓的響度(LU,BS.1770,跳過母帶鏈)。參考版本 5adb7c5(Steven 長期在聽的那一版),high 密度 8 小節,跟 tools/mix/analyze.py 同一種量法。由 tools/mix/make_balance_ref.sh 產生,不要手改",
+ "ref": "5adb7c5",
  "styles": {
   "pop": {
    "bass": 2.4,
    "keys": -2.1
   },
   "mandopop_ballad": {
-   "bass": 8.7,
-   "keys": 5.8,
+   "bass": 4.2,
+   "keys": 0.9,
    "keys2": -2.7,
    "pad": -0.3
   },
   "jpop": {
-   "bass": 1.1,
-   "keys": -4.7
+   "bass": 3.2,
+   "keys": -1.7
   },
   "citypop": {
-   "bass": 2.0,
-   "keys": -8.5,
+   "bass": 2.3,
+   "keys": -7.3,
    "guitar": -6.9
   },
   "kpop_dance": {
-   "bass": 2.2,
-   "keys": -1.4,
+   "bass": 1.3,
+   "keys": -3.7,
    "pad": -3.3
   },
   "kpop_ballad": {
-   "bass": 8.1,
-   "keys": 5.4,
-   "keys2": -2.7,
+   "bass": 3.6,
+   "keys": 0.7,
+   "keys2": -2.2,
    "pad": -0.5
   },
   "rnb_neosoul": {
-   "bass": 2.2,
-   "keys": -8.4
+   "bass": 2.4,
+   "keys": -7.5
   },
   "lofi": {
-   "bass": 2.6,
-   "keys": -2.8
+   "bass": 2.4,
+   "keys": -2.5
   },
   "reggaeton": {
-   "bass": 0.5,
-   "keys": -5.0
+   "bass": 1.2,
+   "keys": -3.6
   }
  }
 }

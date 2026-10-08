@@ -90,11 +90,11 @@ test("4. voice leading:相鄰和弦最高音差 ≤ 4(段落開頭除外;arp5 �
     for (const [track, plan] of Object.entries(r.plans)) {
       if (track === "keysShell") continue;
       if (track === "keys" && st.voicing.keys === "arp5") continue;
-      // arp_inv:看右手的最高音(左手低音的高八度那一顆不算)
-      const topOf = n => track === "keys" && st.voicing.keys === "arp_inv" ? Math.max(...n.slice(1).filter(p => p !== n[0] + 12)) : n.at(-1);
+      
+      const topOf = (n, pl) => pl.rh ? Math.max(...pl.rh) : n.at(-1); // arp_inv:直接比右手計畫的頂音
       for (let i = 1; i < plan.length - 1; i++) {
         if (plan[i].fresh) continue;
-        const d = Math.abs(topOf(plan[i].notes) - topOf(plan[i - 1].notes));
+        const d = Math.abs(topOf(plan[i].notes, plan[i]) - topOf(plan[i - 1].notes, plan[i - 1]));
         assert.ok(d <= 4, `${where} ${track} 第 ${plan[i].bar} 小節 ${plan[i - 1].notes}→${plan[i].notes}`);
       }
     }
@@ -270,4 +270,22 @@ test("沒有三度的和弦(C5)維持空五度,不補大三度", async () => {
   const r = render(data, "pop", { barSpans: [[{ chord: c, from: 0, to: 16 }]], bars: 2, humanize: false, vary: false, countIn: false });
   // 和聲層不能出現三度(E 或 E♭);add9 聲位加的九度(D)不算
   for (const e of r.events) if (e.notes && e.track !== "bass") assert.ok(e.notes.every(n => ![3, 4].includes(((n % 12) + 12) % 12)), JSON.stringify(e.notes));
+});
+
+test("踏板(arp_inv):用 cells 算音長(主網頁的算法),同一個音不准疊;左手低音沒被重彈時撐到換和弦", () => {
+  for (const st of data.styles) {
+    const S = resolveStyle(data, st.id);
+    if (S.voicing.keys !== "arp_inv") continue;
+    for (const meter of ["4/4", ...Object.keys(S.meters ?? {})]) for (const dens of ["low", "standard", "high"]) {
+      const r = render(data, st.id, { density: dens, bars: 8, humanize: false, countIn: false, meter });
+      const ks = r.events.filter(e => e.pedal);
+      const cellsPerBar = r.meta.barSec / r.meta.cellSec;
+      const abs = e => e.bar * cellsPerBar + e.cell;
+      for (const e of ks) for (const f of ks) {
+        if (f === e || f.notes[0] !== e.notes[0] || abs(f) <= abs(e)) continue;
+        assert.ok(abs(e) + e.cells <= abs(f) + 1e-9, `${st.id} ${meter} ${dens} 第 ${e.bar} 小節第 ${e.cell} 格的 ${e.notes} 疊到第 ${f.cell} 格`);
+      }
+      assert.ok(ks.every(e => Math.abs(e.cells * r.meta.cellSec - e.dur) < 1e-6), `${st.id} ${meter} ${dens} cells 與 dur 對不上`);
+    }
+  }
 });

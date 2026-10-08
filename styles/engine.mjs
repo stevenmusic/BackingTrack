@@ -165,6 +165,11 @@ function shapesFor(type, c, next) {
       const A = [t[3], five, seven, nine], B = [seven, nine, t[3], five];
       return [[A, B], [[five, seven, nine, t[3]], [nine, t[3], five, seven]]];
     }
+    case "arp_rh": {
+      // 分解和弦的右手:和弦音(有七度用 3、5、7,沒有用 1、3、5)的三個轉位,只用和弦音
+      const tri = sev != null ? [t[3], t[13] ?? t[5], sev] : [0, t[3], t[5]];
+      return [[tri, [tri[1], tri[2], tri[0]], [tri[2], tri[0], tri[1]]]];
+    }
     default:
       throw new Error(`不支援的聲位類型:${type}`);
   }
@@ -208,6 +213,7 @@ export function planVoicings(type, items) {
     let prev = null;
     return items.map(it => (prev = arp5(it.chord, prev)));
   }
+  if (type === "arp_inv") return arpInv(items);
   const layers = items.map(it => {
     const cs = candidates(type, it.chord, it.next, it.range);
     if (!cs.length) throw new Error(`音域 ${it.range.join("–")} 放不下 ${it.chord.sym}`);
@@ -263,6 +269,27 @@ function arp5(c, prev) {
     return p;
   });
   return [n1, ...rest.sort((a, b) => a - b)];
+}
+
+/**
+ * arp_inv(Steven 2026-10-08:「分解和弦應該找近的位置(轉位,而不是跟著和弦名稱彈原位),而且有 bass 撐住彈低音」):
+ *   [左手低音, 低音高八度 + 右手三個和弦音(由低到高)]
+ * 左手:和弦的低音(斜線和弦就是斜線那個音,和弦名稱不變),36–47 裡離上一顆最近,換和弦時重彈、踩著撐到換和弦
+ * 右手:跟方塊和弦同一套 Viterbi,挑離上一顆最近的轉位(55–69),只用和弦音
+ * 指型的 1–5 = 這五個音
+ */
+function arpInv(items) {
+  const rh = planVoicings("arp_rh", items.map(it => ({ ...it, range: [55, 69] })));
+  let prevL = 40;
+  return items.map((it, i) => {
+    const cands = [];
+    for (let p = 36; p <= 47; p++) if (mod12(p) === it.chord.bass) cands.push(p);
+    const lh = cands.sort((a, b) => Math.abs(a - prevL) - Math.abs(b - prevL) || a - b)[0];
+    prevL = lh;
+    const r = [...rh[i]].sort((a, b) => a - b);
+    // 第五個音:左手低音的高八度(抒情鋼琴常見的 1–8–和弦音);右手的頂音就一直是那三個和弦音裡最高的,走向穩
+    return [lh, ...[...r, lh + 12].sort((a, b) => a - b)];
+  });
 }
 
 // ───────── 亂數 ─────────
@@ -353,7 +380,9 @@ export function render(data, styleId, opt = {}) {
     return planVoicings(type, items).map((notes, i) => ({ bar: slots[i].bar, from: slots[i].from, notes, fresh: items[i].fresh }));
   };
   const kType = st.voicing.keys;
-  const kRange = st.ranges?.keys ?? (kType === "arp5" ? RANGE.arp : RANGE.keys);
+  // 分解和弦(arp_inv)一律踩延音踏板(Steven 2026-10-08:「音跟音之間斷掉了」)
+  const PEDAL = kType === "arp_inv";
+  const kRange = st.ranges?.keys ?? (kType === "arp5" || kType === "arp_inv" ? RANGE.arp : RANGE.keys);
   if (T.keys || T.guitar) {
     plans.keys = plan(kType, kRange, true);
     plans.keysShell = plan("shell", kRange, true);
@@ -415,7 +444,7 @@ export function render(data, styleId, opt = {}) {
   const progScale = Math.min(1, (hz.timingSigmaMs ?? 6) / 6); // 程式打的曲風(K-pop 舞曲)變化少
   const kickAdds = {};
   const pushAt = {};
-  if (vary && F.keys?.anticipation && st.voicing.keys !== "arp5") {
+  if (vary && F.keys?.anticipation && !st.voicing.keys.startsWith("arp")) {
     const A = F.keys.anticipation, at = BAR - Math.max(1, Math.round(A.beatsEarly * 4 / 2) * 2);
     for (let b = 0; b + 1 < o.bars; b++) {
       if ((b + base) % 8 === 7) continue; // 過門小節不搶
@@ -532,7 +561,12 @@ export function render(data, styleId, opt = {}) {
           else if (ch === "S") notes = plans.keysShell[idx].notes;
           else if (ch === "U") notes = v.slice(-3);
           else notes = [v[Math.min(+ch, v.length) - 1]];
-          note(track, b, cell, capKeys(track, n), notes, { symbol: ch });
+          if (PEDAL && track === "keys") {
+            // 踩著延音踏板:每個音撐到換和弦;換和弦的那一格左手低音一定要彈(指型那一格不是 1 也補上)
+            const sl = slots[idx];
+            if (cell === sl.from && !notes.includes(v[0])) notes = [v[0], ...notes];
+            note(track, b, cell, sl.to - cell, notes, { symbol: ch, pedal: true });
+          } else note(track, b, cell, capKeys(track, n), notes, { symbol: ch });
         });
       }
     }
@@ -586,6 +620,16 @@ export function render(data, styleId, opt = {}) {
       lanes.openhat = oh.join(""); lanes.hat = hh.join("");
     }
     return adds;
+  }
+
+  // 踏板下同一個音再彈:前一顆在新的那一下停(真的鋼琴是同一根弦重敲,不會兩顆疊在一起越來越大聲)
+  if (PEDAL) {
+    const ks = events.filter(e => e.pedal).sort((a, b) => a.gridTime - b.gridTime);
+    for (let i = 0; i < ks.length; i++) {
+      const e = ks[i], end = e.gridTime + e.dur;
+      for (let j = i + 1; j < ks.length && ks[j].gridTime < end; j++)
+        if (ks[j].notes.some(p => e.notes.includes(p))) { e.dur = ks[j].gridTime - e.gridTime; break; }
+    }
   }
 
   /*

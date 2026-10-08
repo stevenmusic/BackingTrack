@@ -79,6 +79,7 @@ test("3. 音域:bass 28–48、keys ≤ 72(low ≤ 69)、pad ≤ 67", () => {
         assert.ok(hi <= max, `${where} ${e.track} ${e.notes} > ${max} @${e.bar}:${e.cell}`);
       }
       if (e.track === "keys" && st.voicing.keys === "arp5") assert.ok(lo >= RANGE.arp[0] - 3 && hi <= RANGE.arp[1], `${where} arp ${e.notes}`);
+      if (e.track === "keys" && st.voicing.keys === "arp_inv") assert.ok(lo >= 36 && hi <= RANGE.lowKeysMax, `${where} arp_inv ${e.notes}`);
       if (e.track === "pad") assert.ok(hi <= RANGE.pad[1] && lo >= RANGE.pad[0], `${where} pad ${e.notes}`);
     }
   }
@@ -89,9 +90,11 @@ test("4. voice leading:相鄰和弦最高音差 ≤ 4(段落開頭除外;arp5 �
     for (const [track, plan] of Object.entries(r.plans)) {
       if (track === "keysShell") continue;
       if (track === "keys" && st.voicing.keys === "arp5") continue;
+      // arp_inv:看右手的最高音(左手低音的高八度那一顆不算)
+      const topOf = n => track === "keys" && st.voicing.keys === "arp_inv" ? Math.max(...n.slice(1).filter(p => p !== n[0] + 12)) : n.at(-1);
       for (let i = 1; i < plan.length - 1; i++) {
         if (plan[i].fresh) continue;
-        const d = Math.abs(plan[i].notes.at(-1) - plan[i - 1].notes.at(-1));
+        const d = Math.abs(topOf(plan[i].notes) - topOf(plan[i - 1].notes));
         assert.ok(d <= 4, `${where} ${track} 第 ${plan[i].bar} 小節 ${plan[i - 1].notes}→${plan[i].notes}`);
       }
     }

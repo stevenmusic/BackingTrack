@@ -64,7 +64,7 @@
       "bpm": { "default": 72, "min": 60, "max": 80 },
       "swing": 50,
       "suggestedKeys": ["C", "D", "E♭", "E", "F", "G"],
-      "voicing": { "keys": "arp5", "keys2": "triad", "pad": "triad" },
+      "voicing": { "keys": "arp_inv", "keys2": "triad", "pad": "triad" },
       "ranges": { "pad": [55, 67] },
       "humanize": { "timingSigmaMs": 6, "velocityRand": 8, "overrides": {} },
       "rules": { "fillDensities": ["high"] },

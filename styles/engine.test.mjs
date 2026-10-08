@@ -7,6 +7,7 @@ import {
 } from "./engine.mjs";
 
 const data = JSON.parse(readFileSync(new URL("./styles.json", import.meta.url), "utf8"));
+data.feel = JSON.parse(readFileSync(new URL("./feel.json", import.meta.url), "utf8"));
 const ids = data.styles.map(s => s.id);
 const DENS = ["low", "standard", "high"];
 
@@ -112,13 +113,13 @@ test("6. 同一個 seed 兩次完全相同,換 seed 會變", () => {
   }
 });
 
-test("6b. 人性化時間偏移 ≤ ±15ms(加上風格的固定偏移)", () => {
+test("6b. 人性化時間偏移:整團漂移 ±15 + 位置偏差 + 抖動 ±15(加上風格的固定偏移)", () => {
   for (const id of ids) {
     const st = resolveStyle(data, id);
     for (const e of render(data, id, { seed: 7 }).events) {
       const off = st.humanize.overrides?.[e.piece ?? e.track]?.offsetMs ?? 0;
       if (e.gridTime === 0 && e.time === 0) continue;
-      assert.ok(Math.abs((e.time - e.gridTime) * 1000 - off) <= 15 + 1e-9, `${id} ${e.track}`);
+      assert.ok(Math.abs((e.time - e.gridTime) * 1000 - off) <= 40, `${id} ${e.track}`);
     }
   }
 });
@@ -166,4 +167,42 @@ test("自己輸入和弦:常見寫法都吃得下,看不懂的要講出是哪一
     for (const id of ids) assert.ok(render(data, id, { chords: c, bars: 8 }).events.length > 0, `${id} ${c}`);
   assert.throws(() => render(data, "pop", { chords: "C | Hm" }), /Hm/);
   assert.throws(() => render(data, "pop", { chords: "C | Cxyz" }), /Cxyz/);
+});
+
+test("人性化有結構:同一小節所有樂器一起飄;hi-hat 正拍比反拍大聲(Groove MIDI)", () => {
+  const r = render(data, "pop", { density: "standard", bars: 16, seed: 3 });
+  const dev = (bar, pred) => r.events.filter(e => e.bar === bar && pred(e)).map(e => (e.time - e.gridTime) * 1000);
+  const mean = xs => xs.reduce((a, x) => a + x, 0) / xs.length;
+  // 每小節:鼓與貝斯平均偏差的相關要明顯為正(共用漂移)
+  const a = [], b = [];
+  for (let bar = 0; bar < 16; bar++) { a.push(mean(dev(bar, e => e.track === "drums"))); b.push(mean(dev(bar, e => e.track === "bass"))); }
+  const ma = mean(a), mb = mean(b);
+  const corr = a.reduce((s, x, i) => s + (x - ma) * (b[i] - mb), 0) /
+    Math.sqrt(a.reduce((s, x) => s + (x - ma) ** 2, 0) * b.reduce((s, y) => s + (y - mb) ** 2, 0));
+  assert.ok(corr > 0.5, `鼓與貝斯的漂移相關 ${corr.toFixed(2)}`);
+  const hat = r.events.filter(e => e.piece === "hat");
+  const on = mean(hat.filter(e => e.cell % 4 === 0).map(e => e.vel)), off = mean(hat.filter(e => e.cell % 4 === 2).map(e => e.vel));
+  assert.ok(on > off + 5, `正拍 ${on.toFixed(1)} 反拍 ${off.toFixed(1)}`);
+});
+
+test("每小節的變化:不是只有過門才變,但大鼓第一拍與小鼓 2、4 拍不動", () => {
+  for (const id of ["pop", "citypop", "rnb_neosoul", "lofi"]) {
+    const r = render(data, id, { density: "high", bars: 32, seed: 5, humanize: false });
+    const bars = [];
+    for (let b = 0; b < 32; b++) {
+      if (b % 8 === 7) continue;
+      bars.push(r.events.filter(e => e.track === "drums" && e.bar === b && e.piece !== "crash").map(e => e.piece + e.cell).sort().join());
+      const has = (pc, c) => r.events.some(e => e.bar === b && e.piece === pc && e.cell === c);
+      assert.ok(has("kick", 0), `${id} 第 ${b} 小節大鼓第一拍`);
+      if (r.events.some(e => e.bar === b && e.piece === "snare" && e.vel >= 100))
+        assert.ok(has("snare", 4) && has("snare", 12), `${id} 第 ${b} 小節小鼓 2、4 拍`);
+    }
+    assert.ok(new Set(bars).size >= 4, `${id} 一般小節只有 ${new Set(bars).size} 種`);
+  }
+});
+
+test("關掉變化(vary:false)就完全照規格的節奏型", () => {
+  const r = render(data, "pop", { density: "standard", bars: 8, vary: false, humanize: false });
+  const kicks = r.events.filter(e => e.piece === "kick" && e.bar === 2).map(e => e.cell);
+  assert.deepEqual(kicks, [0, 8, 10]);
 });

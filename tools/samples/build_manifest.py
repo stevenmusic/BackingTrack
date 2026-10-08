@@ -39,21 +39,25 @@ def vel_split(n):
 
 out = {}
 
-# ── 平台鋼琴:Salamander Grand Piano V3(CC BY 3.0),16 層取 5 層 ──
-layers = [4, 7, 10, 13, 16]
+# ── 平台鋼琴:Salamander Grand Piano V3(CC BY 3.0),16 層全收,力度分界照原作者 sfz ──
+sfz = show("SalamanderGrandPiano", "Data/notes.txt")  # 16 組力度分界寫在這裡,主 sfz 只是 #include
+vel_edges = [[int(a), int(b)] for a, b in re.findall(r'vel_\d+\.txt" lovel=(\d+) hivel=(\d+)', sfz)][:16]
 files = {p.split("/")[-1] for p in tree("SalamanderGrandPiano", "Samples")}
-zones = []
+zones, rel = [], []
 for f in sorted(files):
     m = re.fullmatch(r"([A-G]#?)(\d)v(\d+)\.flac", f)
-    if not m or int(m.group(3)) not in layers:
-        continue
-    zones.append({"key": note(m.group(1) + m.group(2), 1), "layer": layers.index(int(m.group(3))), "files": [f]})
+    if m:
+        zones.append({"key": note(m.group(1) + m.group(2), 1), "layer": int(m.group(3)) - 1, "files": [f]})
+    m = re.fullmatch(r"rel(\d+)\.flac", f)
+    if m:  # 放鍵的制音聲:hammer.txt 的 key = 20 + n、volume −37dB、amp_veltrack 82
+        rel.append({"key": 20 + int(m.group(1)), "layer": 0, "files": [f]})
 out["piano"] = {"src": src("sfzinstruments/SalamanderGrandPiano", "master", "Samples/"),
-                "vel": vel_split(len(layers)), "release": 0.35, "zones": zones,
+                "vel": vel_edges, "veltrack": 0.73, "release": 1.0, "zones": zones,
+                "releaseNoise": {"db": -37, "veltrack": 0.82, "zones": sorted(rel, key=lambda z: z["key"])},
                 "license": "CC BY 3.0 — Salamander Grand Piano V3 by Alexander Holm"}
 
 # ── Rhodes:jRhodes3c(散布取樣 CC BY-NC-SA 4.0,上架前要換),照原作者 sfz 的力度分界 ──
-sfz = show("jr", "jRhodes3c-looped-flac-sfz/_jRhodes-mono-looped.sfz")
+sfz = show("jr", "jRhodes3c-looped-flac-sfz/_jRhodes-stereo-looped.sfz")  # 立體聲版(原作者也有錄)
 regions = re.split(r"<region>", sfz)[1:]
 vel_edges, zones = [], []
 for r in regions:

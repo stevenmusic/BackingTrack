@@ -11,6 +11,9 @@ export const TRACK_VEL = { bass: 100, keys: 84, keys2: 76, pad: 64, guitar: 70 }
 const MELODIC = ["bass", "keys", "keys2", "pad", "guitar"];
 const MAX_LEAP = 4;
 const HUMANIZE_CAP_MS = 15;
+const VARY_SCALE = 0.5;                           // 搶拍:POP909 的比例打五折(伴奏要穩)
+const DENS_VARY = { low: 0.3, standard: 0.6, high: 1 }; // 密度越高變化越多
+
 
 /** 去掉空白與 `|`,回傳有效字元 */
 export const cells = s => s.replace(/[\s|]/g, "");
@@ -345,9 +348,9 @@ export function render(data, styleId, opt = {}) {
     push({ track, bar, cell, gridTime: t0, dur: gridAt(bar, cell + len) - t0, cells: len,
       notes, vel: TRACK_VEL[track], ...extra });
   };
-  const hit = (piece, bar, cell, vel, sub = 0) => {
+  const hit = (piece, bar, cell, vel, sub = 0, acc = 1) => {
     const t0 = gridAt(bar, cell + sub / 2);
-    push({ track: "drums", piece, bar, cell, sub, gridTime: t0, dur: cellSec / (sub ? 2 : 1), vel });
+    push({ track: "drums", piece, bar, cell, sub, gridTime: t0, dur: cellSec / (sub ? 2 : 1), vel, acc });
   };
 
   // 預備拍:hi-hat 四下四分音符
@@ -356,6 +359,28 @@ export function render(data, styleId, opt = {}) {
   const fillOn = dens => !rules.fillDensities || rules.fillDensities.includes(dens);
   const carry = {}; // N 延到下一小節:carry[track] = 被吃掉的那一小節
   let lastBass = null;
+
+  // 每小節的變化(資料:styles/feel.json,由 Groove MIDI / POP909 統計而來)
+  const hz = st.humanize ?? {};
+  const F = o.feel ?? data.feel?.styles?.[st.id] ?? null;
+  const vary = o.vary !== false && F;
+  const vrng = mulberry32((o.seed ^ 0x5bd1e995) >>> 0);
+  const progScale = Math.min(1, (hz.timingSigmaMs ?? 6) / 6); // 程式打的曲風(K-pop 舞曲)變化少
+  const kickAdds = {};
+  const pushAt = {};
+  if (vary && F.keys?.anticipation && st.voicing.keys !== "arp5") {
+    const A = F.keys.anticipation, at = CELLS - Math.max(1, Math.round(A.beatsEarly * 4 / 2) * 2);
+    for (let b = 0; b + 1 < o.bars; b++) {
+      if (b % 8 === 7) continue; // 過門小節不搶
+      const cur = laneOf(st, "keys", densityAt(o, b)), nx = laneOf(st, "keys", densityAt(o, b + 1));
+      if (!cur || !nx || !"CSU".includes(cells(nx)[0])) continue;
+      const tail = cells(cur).slice(at);
+      if (![...tail].every(ch => ch === "." || ch === "-")) continue;
+      // 樂句加權:Groove MIDI 鼓手在第幾小節最常變化(各鼓件平均),第 4 小節最常推進下一句
+      const ph = Object.values(F.drums.phrase).reduce((a, w) => a + w[b % 4], 0) / Object.keys(F.drums.phrase).length;
+      if (vrng() < A.rate * VARY_SCALE * DENS_VARY[densityAt(o, b)] * ph) pushAt[b] = at;
+    }
+  }
 
   for (let b = 0; b < o.bars; b++) {
     const dens = densityAt(o, b);
@@ -368,18 +393,35 @@ export function render(data, styleId, opt = {}) {
         for (const [piece, f] of Object.entries(st.tracks.drums.fill))
           lanes[piece] = (lanes[piece] ?? ".".repeat(CELLS)).slice(0, FILL_CELLS) + cells(f);
       if (b % 8 === 0 && rules.crashOnSection !== false) hit("crash", b, 0, DRUM_VEL.X);
-      for (const [piece, s] of Object.entries(lanes))
+      if (vary && b % 8 !== 7) kickAdds[b] = varyDrums(lanes, b, dens);
+      for (const [piece, s] of Object.entries(lanes)) {
+        // 資料的強弱只在「同一種符號」之間分(規格的 X / x / o 層級保留,不重複壓)
+        const A = F?.drums.accent[piece === "clap" ? "snare" : piece];
+        const mean = {};
+        if (A) for (const sym of new Set(s)) {
+          const cs = [...s].map((ch, c) => (ch === sym ? A[c] : null)).filter(x => x != null);
+          mean[sym] = cs.reduce((a, x) => a + x, 0) / cs.length;
+        }
         [...s].forEach((ch, c) => {
-          if (ch === "r") DRUM_VEL.r.forEach((v, k) => hit(piece, b, c, v, k));
-          else if (DRUM_VEL[ch]) hit(piece, b, c, DRUM_VEL[ch]);
+          const acc = A ? A[c] / mean[ch] : 1;
+          if (ch === "r") DRUM_VEL.r.forEach((v, k) => hit(piece, b, c, v, k, acc));
+          else if (DRUM_VEL[ch]) hit(piece, b, c, DRUM_VEL[ch], 0, acc);
         });
+      }
     }
 
     // 旋律軌
     for (const track of MELODIC) {
       const lane = laneOf(st, track, dens);
       if (!lane) continue;
-      const s = cells(lane);
+      let s = cells(lane);
+      if (track === "keys" && pushAt[b] != null) // 搶拍:下一顆和弦提早一個八分音符進來
+        s = s.slice(0, pushAt[b]) + "N" + "-".repeat(CELLS - pushAt[b] - 1);
+      if (track === "bass" && kickAdds[b]?.length) { // 鼓手多踩的大鼓,貝斯跟著彈根音
+        const arr = [...s];
+        for (const c of kickAdds[b]) if (arr[c] === ".") arr[c] = "R";
+        s = arr.join("");
+      }
       for (let c = 0; c < CELLS; c++) {
         const ch = s[c];
         if (ch === "-" || ch === ".") continue;
@@ -420,7 +462,7 @@ export function render(data, styleId, opt = {}) {
           }
           const held = capKeys(track, n);
           if (held > CELLS - c) carry[track] = b + 1; // 真的延進下一小節才吃掉那一下
-          note(track, b, c, held, plans.keys[si + 1].notes, { symbol: "N" });
+          note(track, b, c, held, plans.keys[si + 1].notes, { symbol: pushAt[b] === c && track === "keys" ? "push" : "N" });
           continue;
         }
         if (ch === "P") {
@@ -461,22 +503,102 @@ export function render(data, styleId, opt = {}) {
     return track === "keys" && rules.keysMaxCells ? Math.min(n, rules.keysMaxCells) : n;
   }
 
-  // 人性化:時間高斯(上限 ±15ms)+ 固定偏移、力度均勻;順序固定,同 seed 同結果
+  /**
+   * 鼓的每小節變化:照 Groove MIDI 同曲風的真人鼓手,在哪些位置常多打、常省略(feel.drums.add / drop),
+   * 依樂句第幾小節加權(phrase)。大鼓第一拍、小鼓 2 4 拍、重音 X 不動。回傳多踩的大鼓位置(貝斯跟著彈)
+   */
+  function varyDrums(lanes, b, dens) {
+    const D = F.drums, scale = DENS_VARY[dens] * progScale, adds = [];
+    const keep = (pc, c, ch) => ch === "X" || ch === "r" || (pc === "kick" && c === 0) ||
+      (["snare", "clap", "rim"].includes(pc) && (c === 4 || c === 12));
+    for (const [pc, s0] of Object.entries(lanes)) {
+      const key = pc === "clap" ? "snare" : pc;
+      if (!D.add[key] || pc === "openhat") continue;
+      const ph = D.phrase[key]?.[b % 4] ?? 1, arr = [...s0];
+      for (let c = 0; c < CELLS; c++) {
+        const r = vrng();
+        if (arr[c] === ".") {
+          if (r < D.add[key][c] * scale * ph) {
+            arr[c] = key === "snare" ? "o" : D.accent[key][c] >= 0.8 ? "x" : "o";
+            if (pc === "kick") adds.push(c);
+          }
+        } else if (!keep(pc, c, arr[c]) && r < D.drop[key][c] * scale * ph) arr[c] = ".";
+      }
+      lanes[pc] = arr.join("");
+    }
+    // 開放 hi-hat:換掉那一下閉合的(只在有 hi-hat 的段落)
+    if (lanes.hat && D.add.openhat) {
+      const oh = [...(lanes.openhat ?? ".".repeat(CELLS))], hh = [...lanes.hat];
+      const ph = D.phrase.openhat?.[b % 4] ?? 1;
+      for (let c = 0; c < CELLS; c++)
+        if (hh[c] !== "." && oh[c] === "." && vrng() < D.add.openhat[c] * scale * ph) { oh[c] = "x"; hh[c] = "."; }
+      lanes.openhat = oh.join(""); lanes.hat = hh.join("");
+    }
+    return adds;
+  }
+
+  /*
+   * 人性化(取代規格 2.6 的「每一下獨立高斯 + 力度均勻亂數」):
+   * - 整團一起飄:每小節一個共同偏移,AR(1)(feel.drums.drift),所有樂器共用,不會彼此打架
+   * - 每個位置的系統偏差與強弱:鼓照 Groove MIDI(sysRel / accent),鍵盤照 POP909,貝斯跟大鼓
+   * - 每一下自己的抖動:各鼓件的比例照資料,整體大小錨在規格的 σ(timingSigmaMs)
+   * - 和弦不同時落下(POP909 spread),頂音較大聲;吉他照 GuitarSet 下刷 / 上刷的先後
+   * 有 swing 的曲風,奇數格的系統偏差交給 swing,不重複加
+   */
   const rnd = mulberry32(o.seed);
   const gauss = () => {
     const u = 1 - rnd(), v = rnd();
     return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
   };
-  const hz = st.humanize ?? {};
+  const clampMs = (x, cap = HUMANIZE_CAP_MS) => Math.max(-cap, Math.min(cap, x));
+  const K0 = hz.timingSigmaMs ?? 6;
+  const DR = F?.drums;
+  const drift = new Map();
+  {
+    const phi = DR?.drift.phi ?? 0, sd = (DR?.drift.sdRel ?? 0) * K0;
+    let d = 0;
+    for (let b = -1; b <= o.bars; b++) {
+      d = phi * d + Math.sqrt(1 - phi * phi) * gauss() * sd;
+      drift.set(b, clampMs(d));
+    }
+  }
+  const KEYS_LIKE = ["keys", "keys2", "pad", "guitar"];
   for (const e of events) {
     const ov = hz.overrides?.[e.piece ?? e.track] ?? {};
-    const sigma = ov.timingSigmaMs ?? hz.timingSigmaMs ?? 6;
     const vr = ov.velocityRand ?? hz.velocityRand ?? 8;
-    if (o.humanize) {
-      const j = Math.max(-HUMANIZE_CAP_MS, Math.min(HUMANIZE_CAP_MS, gauss() * sigma)) + (ov.offsetMs ?? 0);
-      e.time = Math.max(0, e.gridTime + j / 1000);
-      e.vel = Math.max(1, Math.min(127, e.vel + Math.round((rnd() * 2 - 1) * vr)));
-    } else e.time = e.gridTime;
+    if (!o.humanize) { e.time = e.gridTime; continue; }
+    const k = ov.timingSigmaMs ?? K0;
+    const odd = e.cell % 2 === 1 && o.swing > 50;
+    let sys = 0, jit = 1, acc = 1;
+    const dk = e.track === "drums" ? (e.piece === "clap" ? "snare" : e.piece) : e.track === "bass" ? "kick" : null;
+    if (DR && dk && DR.jitterRel[dk] != null) {
+      jit = DR.jitterRel[dk];
+      sys = odd ? 0 : DR.sysRel[dk][e.cell] * K0;
+      acc = e.track === "drums" ? e.acc ?? 1 : DR.accent.hat ? DR.accent.hat[e.cell] ** 0.5 : 1;
+    } else if (F?.keys && KEYS_LIKE.includes(e.track)) {
+      sys = odd ? 0 : F.keys.sysRel[e.cell] * K0;
+      acc = e.track === "pad" ? 1 : F.keys.accent[e.cell] ** 0.6;
+    }
+    const j = drift.get(e.bar) + sys + clampMs(gauss() * jit * k) + (ov.offsetMs ?? 0);
+    e.time = Math.max(0, e.gridTime + j / 1000);
+    e.vel = Math.max(1, Math.min(127, Math.round(e.vel * acc + clampMs(gauss() * vr / 2, vr))));
+    // 和弦裡各音的先後與頂音
+    if (e.notes && e.notes.length > 1 && F) {
+      const n = e.notes.length;
+      let dt, lowFirst;
+      if (e.track === "guitar" && F.guitar) {
+        lowFirst = e.cell % 2 === 0; // 偶數格下刷(低弦先)、奇數格上刷
+        dt = (F.guitar.spreadMs.median / 5) * (0.6 + 0.8 * rnd());
+      } else if (e.track !== "pad" && F.keys) {
+        lowFirst = rnd() < F.keys.lowFirstShare;
+        dt = (F.keys.spreadMs.median / (n - 1)) * (0.5 + rnd());
+      } else continue;
+      const order = e.notes.map((p, i) => i).sort((a, b) => (lowFirst ? e.notes[a] - e.notes[b] : e.notes[b] - e.notes[a]));
+      e.noteDt = e.notes.map(() => 0);
+      order.forEach((i, r) => { e.noteDt[i] = (r * dt) / 1000; });
+      const topI = e.notes.indexOf(Math.max(...e.notes));
+      e.noteVel = e.notes.map((p, i) => Math.max(1, Math.min(127, e.vel + (i === topI ? (F.keys?.topVel ?? 0) : 0))));
+    }
   }
   events.sort((a, b) => a.gridTime - b.gridTime);
 

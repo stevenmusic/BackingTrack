@@ -45,3 +45,29 @@
 `node tools/samples/render_styles.mjs <輸出資料夾> style[:進行[:密度[:小節[:只算哪幾軌]]]] ...`
 用無頭 Chromium 離線算成 WAV、印 peak / RMS;取樣從 `/tmp/smp` 的 blobless clone 現抓(先照 `tools/samples/build_manifest.py` 開頭的說明 clone)。
 需要 playwright:`ln -s /opt/node-tools/node_modules tools/samples/node_modules`(已在 .gitignore)
+
+## 彈法:人性化與每小節變化(`feel.json`,Steven 2026-10-08:「讓彈奏更人性化,不要只有過門才變化」)
+`feel.json` 由 `tools/feel/build_feel.py` 從三個資料庫的統計產生(出處與量到的數字見 `docs/SOURCES.md` R1)。
+**規格 2.6 的人性化改掉了**(資料證明模型錯):
+- 規格:每一下獨立高斯 σ6ms、力度 ±8 均勻亂數
+- 現在:①整團一起飄(每小節共同偏移,AR(1))②每個位置的系統偏差與強弱(鼓照 Groove MIDI、鍵盤力度照 POP909)
+  ③每一下自己的抖動(各鼓件比例照資料)。整體大小錨在規格的 σ(Groove MIDI 是即興、電子鼓錄的,量到的約大一倍)
+- 強弱只在「同一種符號」之間分(規格的 X / x / o 層級保留)
+- 和弦各音不同時落下(Goebl 2001:頂音先、全距約 10ms、頂音 +6);吉他切音照 GuitarSet:偶數格下刷、奇數格上刷、各弦相差約 4ms
+
+每小節的變化(不是只有過門):
+- 鼓:Groove MIDI 同曲風鼓手在每個位置「多打 / 省略」的機率 × 35%,依樂句第幾小節加權;
+  大鼓第一拍、小鼓 2 4 拍、重音 X、過門小節不動;密度 low / standard / high 乘 0.3 / 0.6 / 1;K-pop 舞曲(程式打的)再乘 1/3
+- 貝斯:鼓手多踩的大鼓,貝斯在那一格跟著彈根音
+- 鍵盤:POP909 的搶拍比例(2.8%)× 50%,下一顆和弦提早一個八分音符進來(分解和弦的曲風不做)
+- `render(..., { vary: false })` 完全照規格的節奏型
+
+鋼琴取樣改成 16 層力度(照原作者 sfz 的分界)、力度對音量照 `amp_veltrack 73`、放鍵加原作者錄的制音聲(−37dB);
+所有取樣播放跳過起音前的空白(`leadOf`)
+
+## 混音的數學檢查(`tools/mix/analyze.py`,Steven 2026-10-08:「取樣通常很乾,直接加在一起不一定是好事,你要幫我檢查」)
+1. 響度:ITU-R BS.1770-4(K-weighting、400ms 區塊、−70 / −10 門檻),各軌相對全混音幾 LU
+2. 頻率飽滿:1/3 八度頻帶,對 63Hz–8kHz 擬合斜線,偏離 > ±6dB 的頻帶列出來;2–5kHz 要在斜線以下(讓給主旋律)
+3. 互相蓋住:同一頻帶兩軌都占全混音 ≥ 30%
+4. 空間:左右相關(目標 0.3–0.9)、單聲道損失、殘響/乾(同一組事件有殘響減掉沒殘響)
+音量校正用 `tools/mix/solve_balance.py` 算(目標寫在檔頭),結果寫進 `styles.json` 的 `mix`(dB)

@@ -19,6 +19,20 @@ function fetchDecode(ctx, bases, path, onDone) {
   }).finally(onDone);
 }
 
+/** 起音前的空白:第一個超過峰值 1%(−40dB)的位置往前 1ms;每個 buffer 算一次 */
+const LEAD = new WeakMap();
+export function leadOf(b) {
+  if (LEAD.has(b)) return LEAD.get(b);
+  const d = b.getChannelData(0);
+  let peak = 0;
+  for (let i = 0; i < d.length; i++) peak = Math.max(peak, Math.abs(d[i]));
+  let i = 0;
+  while (i < d.length && Math.abs(d[i]) < peak * 0.01) i++;
+  const lead = Math.max(0, i / b.sampleRate - 0.001);
+  LEAD.set(b, lead);
+  return lead;
+}
+
 const layerOf = (vel, edges) => {
   const i = edges.findIndex(([lo, hi]) => vel >= lo && vel <= hi);
   return i < 0 ? edges.length - 1 : i;
@@ -39,11 +53,11 @@ export class Sampler {
   }
 
   // ── 挑取樣 ──
-  zoneFor(instr, midi, vel) {
+  zoneFor(instr, midi, vel, zones) {
     const I = this.m[instr];
-    const layer = layerOf(vel, I.vel);
+    const layer = layerOf(vel, I.vel ?? [[1, 127]]);
     let best = null, bd = Infinity;
-    for (const z of I.zones) {
+    for (const z of zones ?? I.zones) {
       const d = Math.abs(z.key - midi) * 10 + Math.abs(z.layer - layer); // 音高優先,力度層其次
       if (d < bd) { bd = d; best = z; }
     }
@@ -63,7 +77,11 @@ export class Sampler {
     };
     for (const n of notes) {
       if (n.piece) { const l = this.pieceLayer(n.instr, n.piece, n.vel); if (l) add(n.instr, l); }
-      else add(n.instr, this.zoneFor(n.instr, n.midi, n.vel).files);
+      else {
+        add(n.instr, this.zoneFor(n.instr, n.midi, n.vel).files);
+        const RN = this.m[n.instr].releaseNoise;
+        if (RN) add(n.instr, this.zoneFor(n.instr, n.midi, n.vel, RN.zones).files);
+      }
     }
     for (const k of first.keys()) rest.delete(k);
     return { first: [...first.values()], rest: [...rest.values()] };
@@ -113,7 +131,10 @@ export class Sampler {
     src.playbackRate.value = 2 ** ((midi - z.key + (I.tune ?? 0)) / 12);
     if (opt.detune) opt.detune.connect(src.detune);
     const g = ctx.createGain();
-    const peak = (this.trims[instr] ?? 1) * (0.25 + 0.75 * (vel / 127) ** 1.6);
+    const v = vel / 127;
+    // 力度對音量:有原作者的 amp_veltrack 就照它(sfz 預設曲線 = 力度平方),否則用通用曲線
+    const vt = I.veltrack;
+    const peak = (this.trims[instr] ?? 1) * (vt != null ? 1 - vt + vt * v * v : 0.25 + 0.75 * v ** 1.6);
     const atk = I.attack ?? 0.002;
     g.gain.setValueAtTime(0, when);
     g.gain.linearRampToValueAtTime(peak, when + atk);
@@ -122,8 +143,22 @@ export class Sampler {
     g.gain.setValueAtTime(peak, off);
     g.gain.setTargetAtTime(0, off, rel / 3);
     src.connect(g).connect(dest);
-    src.start(when);
-    src.stop(Math.min(off + rel * 2.5, when + b.duration / src.playbackRate.value));
+    const lead = leadOf(b);
+    src.start(when, lead);
+    src.stop(Math.min(off + rel * 2.5, when + (b.duration - lead) / src.playbackRate.value));
+    // 放鍵的制音聲(Salamander 的 rel 取樣,照 hammer.txt:−37dB、amp_veltrack 82、按越久越小聲 2dB/秒)
+    const RN = I.releaseNoise;
+    if (RN) {
+      const rz = this.zoneFor(instr, midi, vel, RN.zones);
+      const rb = rz && rz.key === midi && this.ready(instr, rz.files);
+      if (rb) {
+        const rs = ctx.createBufferSource(), rg = ctx.createGain();
+        rs.buffer = rb;
+        rg.gain.value = (this.trims[instr] ?? 1) * 10 ** ((RN.db - 2 * Math.max(dur, 0)) / 20) * (1 - RN.veltrack + RN.veltrack * v * v);
+        rs.connect(rg).connect(dest);
+        rs.start(off);
+      }
+    }
     return true;
   }
 
@@ -147,7 +182,7 @@ export class Sampler {
       }
       this.chokes.set(kit, piece === "openhat" ? { g, until: when + b.duration } : null);
     }
-    src.start(when);
+    src.start(when, leadOf(b));
     return true;
   }
 }

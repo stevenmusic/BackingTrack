@@ -59,17 +59,17 @@ function wav(chs, sr) {
 }
 
 for (const job of jobs) {
-  const [style, progression, density = "auto", bars = "16", only] = job.split(":");
-  const r = await page.evaluate(async ({ style, progression, density, bars, only }) => {
+  const [style, progression, density = "auto", bars = "16", only, flag] = job.split(":");
+  const r = await page.evaluate(async ({ style, progression, density, bars, only, flag }) => {
     const p = window.__player;
-    const o = { density, ...(progression ? { progression } : {}), ...(only ? { only: only.split(",") } : {}) };
+    const o = { density, seed: 7, ...(progression ? { progression } : {}), ...(only ? { only: only.split(",") } : {}), ...(flag === "dry" ? { noReverb: true } : {}) };
     const { buffer, meta, failed } = await p.renderOffline(style, o, +bars);
     const chs = [buffer.getChannelData(0), buffer.getChannelData(1)];
     let peak = 0, ss = 0, clip = 0;
     for (const c of chs) for (const x of c) { const a = Math.abs(x); if (a > peak) peak = a; ss += x * x; if (a >= 0.999) clip++; }
     return { peak, rms: Math.sqrt(ss / (2 * chs[0].length)), clip, failed, sr: buffer.sampleRate,
       bpm: meta.bpm, l: Array.from(chs[0]), r: Array.from(chs[1]) };
-  }, { style, progression, density, bars, only });
+  }, { style, progression, density, bars, only, flag });
   const name = job.replace(/[:,]/g, "_");
   writeFileSync(join(out, name + ".wav"), wav([r.l, r.r], r.sr));
   console.log(`${name.padEnd(36)} bpm ${r.bpm}  peak ${r.peak.toFixed(3)}  rms ${(20 * Math.log10(r.rms)).toFixed(1)} dBFS  clip ${r.clip}  載不到 ${r.failed}`);

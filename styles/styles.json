@@ -99,12 +99,12 @@
         "keys":  { "low": "C--- ---- ---- ----", "standard": "C--- --C- ---- --N-", "high": "C--C --C- --C- --N-" },
         "keys2": null,
         "pad": null,
-        "guitar": null
+        "guitar": { "low": null, "standard": null, "high": "x.x. x.x. x.x. x.x.", "optional": true, "default": false, "voicing": "power" }
       },
       "mix": {"drums": 0.0, "bass": -2.8, "keys": 2.7},
-      "instruments": { "keys": "piano", "bass": "electric_bass", "drums": "acoustic_kit" },
+      "instruments": { "keys": "piano", "bass": "electric_bass", "drums": "acoustic_kit", "guitar": "di_guitar" },
       "samples": ["piano", "acoustic_kit", "electric_bass"],
-      "optionalSamples": []
+      "optionalSamples": ["di_guitar"]
     },
     {
       "id": "citypop",
@@ -137,9 +137,10 @@
         "guitar": { "low": null, "standard": null, "high": "..x. ..x. ..x. ..x.", "optional": true, "topNotes": 2 }
       },
       "mix": {"drums": 0.0, "bass": -2.6, "keys": -3.0, "guitar": -0.5},
+      "alternatives": [{ "id": "slap", "track": "bass", "instr": "slap_bass", "densities": ["high"], "default": false, "label": { "zh": "slap 貝斯(只在 high)", "en": "Slap bass (high only)" } }],
       "instruments": { "keys": "rhodes", "bass": "electric_bass", "drums": "acoustic_kit", "guitar": "clean_guitar" },
       "samples": ["rhodes", "acoustic_kit", "electric_bass"],
-      "optionalSamples": ["clean_guitar"]
+      "optionalSamples": ["slap_bass", "clean_guitar"]
     },
     {
       "id": "kpop_dance",
@@ -234,7 +235,8 @@
       "rules": { "crashOnSection": false },
       "effects": [
         { "type": "pitchDrift", "bus": "keys", "cents": 8, "rateHz": 0.5 },
-        { "type": "lowpass", "bus": "keys", "hz": 4500 }
+        { "type": "lowpass", "bus": "keys", "hz": 4500 },
+        { "type": "vinylNoise", "db": -30, "userToggle": true }
       ],
       "progressions": [
         { "id": "lofi_2516", "roman": "ii9 | V13 | Imaj9 | VI7♭9", "example": "Dm9 | G13 | Cmaj9 | A7♭9", "mode": "major" },
@@ -256,9 +258,10 @@
         "guitar": null
       },
       "mix": {"drums": 0.0, "bass": -2.3, "keys": 3.0},
+      "alternatives": [{ "id": "upright", "track": "bass", "instr": "upright_bass", "default": false, "label": { "zh": "低音提琴", "en": "Upright bass" } }],
       "instruments": { "keys": "piano", "bass": "electric_bass", "drums": "acoustic_kit" },
       "samples": ["piano", "acoustic_kit", "electric_bass"],
-      "optionalSamples": []
+      "optionalSamples": ["upright_bass", "vinyl_noise"]
     },
     {
       "id": "reggaeton",
@@ -291,9 +294,10 @@
       },
       "sends": { "drums": { "room": 1.3, "plate": 0.15 } },
       "mix": {"drums": 0.0, "bass": -2.5, "keys": 1.8},
+      "alternatives": [{ "id": "nylon", "track": "keys", "instr": "nylon_guitar", "default": false, "label": { "zh": "尼龍吉他(取代鋼琴)", "en": "Nylon guitar (instead of piano)" } }],
       "instruments": { "keys": "piano", "bass": "electric_bass", "drums": "electronic_kit" },
       "samples": ["piano", "electronic_kit", "electric_bass"],
-      "optionalSamples": []
+      "optionalSamples": ["nylon_guitar"]
     }
   ]
 }

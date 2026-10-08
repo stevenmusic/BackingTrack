@@ -2,7 +2,9 @@
 
 整理日期 2026-09-26。授權原文是從各倉庫的 LICENSE / readme 直接抄的(2026-09-26 clone 的版本);
 網站被這個雲端環境擋住、沒辦法讀原文的,另外標出來。
-**這份不是法律意見**。上架付費 App 之前,「不確定」那幾項要自己或請律師再確認一次。
+**這份不是法律意見**。
+**不做 App(Steven 2026-10-08:「我沒有要上架 app」)**:這是免費、公開的網站,非商用授權(CC BY-NC / BY-NC-SA)可以用,
+但要署名(試聽頁頁尾有列)。「付費 App」那一欄留著當參考,將來真的要收費再看。
 
 ## 總表
 
@@ -10,6 +12,12 @@
 | --- | --- | --- | --- | --- |
 | 鋼琴(全曲風,Funk、City Pop 以外) | Salamander Grand Piano v3(Alexander Holm) | CC BY 3.0 | ✅ 可以 | 要署名 + 附授權連結 |
 | 電鋼琴(Funk、City Pop) | jRhodes3c(Jeff Learman) | 散布取樣要 **CC BY-NC 4.0**;商用要另外取得授權 | ❌ **不行**(除非作者另外授權) | 署名 |
+| 電鋼琴(`styles/` 的 City Pop、R&B) | jRhodes3d 完整長度立體聲版(Jeff Learman) | 取樣 CC BY-NC 4.0;用它做音樂 CC0 | ❌(免費網站可以) | 署名 |
+| 尼龍吉他(`styles/` Reggaeton 可選) | Philharmonia Orchestra 古典吉他(ScrollScore `guitar/classical/` 處理版) | CC BY-SA 3.0 | ✅ 可以 | 署名 + 同授權 |
+| slap 貝斯(`styles/` City Pop high 可選) | Project16 Rickenbacker 4001(Olivier Loiseau) | CC BY-NC-SA 3.0,作者另外允許用在音樂作品、不准做成取樣庫 | ❌(免費網站可以) | 署名 |
+| 低音提琴(`styles/` Lo-fi 可選) | Meatbass(Karoryfer,D. Smolken) | CC0 1.0 | ✅ 可以 | 不要求 |
+| 破音吉他的乾聲(`styles/` J-pop high 可選,經音箱模擬) | Emilyguitar(Karoryfer,D. Smolken) | CC0 1.0 | ✅ 可以 | 不要求 |
+| 黑膠底噪(`styles/` Lo-fi) | Record Fuzzies micro pack(Ben Burnes / Abstraction,收在 lavenderdotpet/CC0-Public-Domain-Sounds) | CC0 1.0 | ✅ 可以 | 不要求(作者歡迎署名) |
 | 鼓(大部分曲風) | Virtuosity Drums(Versilian Studios × Karoryfer) | CC0 1.0 | ✅ 可以 | 不要求(建議仍署名) |
 | 鼓(City Pop 的大鼓、小鼓、hi-hat) | SM Drums(Scott McLean、Tod Stillwell、Suleiman Ali) | 作者網站聲明免費、免版稅、任何用途;**倉庫裡沒有 LICENSE 檔** | ⚠️ 大概可以,待確認 | 不明 |
 | 鼓(K-Pop 808) | tidalcycles/Dirt-Samples 的 `808*` 資料夾 | **倉庫沒有標授權**,取樣原始出處不明 | ⚠️ **不確定** | 不明 |
@@ -32,7 +40,7 @@
 風琴、合成器鋪底、銅管、K-Pop 的 pluck / supersaw / 808 低音、打擊小物(沙鈴、鈴鼓、cabasa)、
 殘響都是程式即時合成的,沒有外部授權問題。
 
-## 上架付費 App 之前要處理的
+## 如果將來要上架付費 App 才要處理的(目前不做 App)
 
 1. **jRhodes3c 一定要換或取得授權**。它是 Funk 與 City Pop 的鍵盤(`FEELS.funk.piano`、`FEELS.citypop.piano`)。
    City Pop 依 Steven 2026-09-26 指定不回平台鋼琴,所以 City Pop 的選項只有:寫信給作者(LICENSE 裡的信箱,原文寫

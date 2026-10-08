@@ -74,7 +74,7 @@
   每一項的決定與理由寫進 `docs/REVIEW.md`;Steven 主動說不好聽的,照他說的退回
 
 ## 產品方向(2026-09-26 使用者定的)
-- **公開網站給其他人用,暫時不做 App**
+- **公開網站給其他人用,不做 App**(Steven 2026-10-08 再確認:「我沒有要上架 app」)。免費網站可以用非商用授權的取樣,但要署名
 - **暫時只專注 City Pop**(2026-09-26):其他曲風先不動,除非是修壞掉的東西
 - **每次生成不能有額外費用**,前置費用可以。不接按次計費的 API
 - **繼續用現在的引擎**;音色照唱片名單可以換(見「音源與音色」,Steven 2026-09-26)。原本使用者說音色庫 OK、問題在**風格特徵不夠像**。網頁程式已退回 fd8a1ca 的版本(見「真人片段庫」)。
@@ -211,7 +211,9 @@
   SM Drums、Black And Blue Basses(`darkblack` mf)、dsmolken 低音提琴(`pizz/`)、Black And Green Guitars(Gretsch stac / Hofner ord)、
   nbrosowsky tonejs-instruments(鋼弦/尼龍/電吉他 mp3)、tidalcycles Dirt-Samples 808(WAV)、VSCO-2-CE 管樂斷奏(`Brass/…/stac`,v3 力度層)。
   VCSL 是管弦打擊樂,不准拿來當爵士鼓
-- **新增音源 / 資料集只收 CC0、CC BY、MIT 這一類可商用的**,加進 `docs/LICENSES.md`;非商業授權(jRhodes3c 那種)要上架前換掉
+- **新增音源 / 資料集優先 CC0、CC BY、MIT**;非商用授權(jRhodes、Rickenbacker 那種)免費網站可以用,但要署名,加進 `docs/LICENSES.md`
+- **取樣太少的不用**(Steven 2026-10-08):相鄰取樣音高差 ≤ 4 半音、力度 ≥ 2 層或 round robin ≥ 3、鼓與貝斯 round robin ≥ 2;
+  `python3 tools/samples/audit.py` 檢查。唯一例外是 jRhodes(找不到更密的免費 Rhodes,F4–B4 之間最多移調 3 半音)
 - 每個檔都走 `fetchDecode()` 多來源(jsDelivr → raw.githubusercontent,鋼琴多 tonejs.github.io)。新增音源照這個模式
 - 取樣表照真的檔案列,不准照公式推(Rhodes 兩層拼、吉他有洞、tonejs 的 G5 指錯檔不收);換撥弦取樣先量音頭音準(`SMP_EXT[x].tune`)與音量(`smpNorm`)
 - 合成的(刻意不換):Hammond(`PeriodicWave`)、K-Pop 的 pluck/supersaw/808 低音、City Pop 鋪底(唱片也有 KORG Λ 弦樂機)。

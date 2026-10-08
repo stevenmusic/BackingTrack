@@ -27,17 +27,26 @@
 | 樂器 | 取樣庫 | 用在 |
 | --- | --- | --- |
 | 平台鋼琴 | Salamander Grand Piano V3,16 層力度取 5 層 | pop、華語、K-pop 抒情、J-pop、lofi、K-pop 舞曲、reggaeton |
-| 電鋼琴 | jRhodes3c,5 層力度(照原作者 sfz) | City Pop、R&B(**非商用授權,上架前要換**) |
+| 電鋼琴 | jRhodes3d 完整長度立體聲版,5 層力度(照原作者 sfz) | City Pop、R&B(非商用授權;免費網站可用) |
 | 原聲鼓 | Virtuosity Drums 近麥,多力度層 × round robin | 電子鼓以外全部 |
 | 電子鼓 | TR-808 實機取樣(Dirt-Samples) | K-pop 舞曲、reggaeton |
 | 電貝斯 | Black And Blue Basses darkblack,4 層力度 × 4 round robin,半音一個取樣 | 全部 |
 | 弦樂 | VSCO-2-CE 小提琴 / 中提琴 / 大提琴聲部 | 鋪底(pad) |
 | 乾淨電吉他 | Black And Green Guitars green staccato | City Pop 切音(high,可關) |
+| 破音吉他 | Emilyguitar 乾聲(DI)→ 音箱模擬(re-amp) | J-pop high power chord(可選,預設關) |
+| slap 貝斯 | Project16 Rickenbacker 4001 Slap1 + Slap2(兩組當 round robin) | City Pop high(可選,預設關) |
+| 低音提琴 | Meatbass pizz,4 層力度 × 4 round robin | Lo-fi(可選,預設關) |
+| 尼龍吉他 | Philharmonia 古典吉他(ScrollScore 處理版),每個半音、2 層力度 | Reggaeton(可選,取代鋼琴) |
+| 黑膠底噪 | Record Fuzzies(CC0 唱片底噪錄音),−30dB 循環 | Lo-fi(可關) |
+
+取樣夠不夠(Steven 2026-10-08:「只要取樣數量太少,就不要用」):`tools/samples/audit.py`。
+Rhodes 是唯一例外(每 4 個白鍵一個取樣):量過移調 3 半音的泛音差 4.8–7.1 dB,跟鋼琴移調 3 半音(5.2–8.0 dB)差不多,
+但鋼琴實際最多只移 1.5 半音,所以 F4–B4 之間的 Rhodes 會比鋼琴差一點;要完全解決只能委託錄音
 
 規格裡寫「合成」的部分改成真樂器(Steven 2026-10-08:「合成音色一定要換成真實取樣樂器,否則就乾脆不要」):
 - K-pop 舞曲的 pluck → 平台鋼琴短音;pad → 弦樂;synth bass → 電貝斯
 - reggaeton 的 synth bass → 電貝斯
-- lofi 的黑膠底噪:找不到授權清楚的錄音,**拿掉**(低通、音高飄移是效果,保留)
+- lofi 的黑膠底噪:2026-10-08 找到 CC0 的唱片底噪錄音,加回來(可關)
 
 混音只做到「聽得清楚、不削波」(各軌音量、殘響送出、−3dB 的保險壓縮),母帶之後再做。
 

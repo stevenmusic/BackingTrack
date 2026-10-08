@@ -12,6 +12,8 @@ const chunkBarsFor = len => { const l = (len * 16) / gcd(len, 16); return l * Ma
 // 各樂器的電平校正:讓同一個力度在不同取樣庫大約一樣大(2026-10-08 分軌量 RMS 定的,見 README)
 export const TRIMS = {
   piano: 0.75, rhodes: 0.45, electric_bass: 1.25, strings: 6.5, clean_guitar: 1.6,
+  // 2026-10-08 新增:替代樂器跟它取代的那件同響度(BS.1770 量的);破音吉他在鋼琴下面 4 LU
+  slap_bass: 1.05, upright_bass: 0.66, nylon_guitar: 0.84, di_guitar: 1,
   acoustic_kit: 1, "acoustic_kit.hat": 0.55, "acoustic_kit.openhat": 0.45, "acoustic_kit.crash": 0.45,
   "acoustic_kit.rim": 0.8, "acoustic_kit.clap": 0.7,
   electronic_kit: 0.8, "electronic_kit.hat": 0.45, "electronic_kit.openhat": 0.4, "electronic_kit.crash": 0.35,
@@ -121,6 +123,7 @@ export class Player {
       g.gain.value = b.gain * 10 ** ((mix[name === "kick" ? "drums" : name] ?? 0) / 20);
       p.pan.value = b.pan;
       let tail = g;
+      if (name === "guitar" && st.instruments.guitar === "di_guitar") tail = this.amp(tail); // 乾聲吉他 → 音箱模擬
       const eqo = st.eq?.[name] ?? {}; // 曲風的 EQ 覆寫(例:分解和弦的鋼琴本身就在低音區,低切要放低)
       for (const [type, f0, x, q] of b.eq) {
         const f = eqo[type] ?? f0;
@@ -164,6 +167,28 @@ export class Player {
     return { out, wet, buses };
   }
 
+  /**
+   * 吉他音箱模擬(re-amp):錄音室的破音吉他就是把乾聲(DI)送進音箱。
+   * 前級 EQ → 失真(tanh 曲線,4 倍超取樣)→ 音箱喇叭的頻寬(80Hz–5kHz)與中頻
+   */
+  amp(input) {
+    const ctx = this.ctx, chain = [];
+    const pre = ctx.createBiquadFilter(); pre.type = "peaking"; pre.frequency.value = 800; pre.gain.value = 6; pre.Q.value = 0.7;
+    const drive = ctx.createGain(); drive.gain.value = 18;
+    const ws = ctx.createWaveShaper();
+    const n = 2048, curve = new Float32Array(n), k = 2.5;
+    for (let i = 0; i < n; i++) { const x = (i / (n - 1)) * 2 - 1; curve[i] = Math.tanh(k * x) / Math.tanh(k); }
+    ws.curve = curve; ws.oversample = "4x";
+    const hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 80; hp.Q.value = BUTTER_Q_DB;
+    const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 5000; lp.Q.value = BUTTER_Q_DB;
+    const mid = ctx.createBiquadFilter(); mid.type = "peaking"; mid.frequency.value = 2500; mid.gain.value = -3; mid.Q.value = 1;
+    const post = ctx.createGain(); post.gain.value = 0.055;
+    for (const nd of [pre, drive, ws, hp, lp, mid, post]) chain.push(nd);
+    input.connect(chain[0]);
+    for (let i = 0; i < chain.length - 1; i++) chain[i].connect(chain[i + 1]);
+    return post;
+  }
+
   /** opt 同 engine.render;另外 parts: { pad: bool, guitar: bool } 控制可選聲部 */
   async start(styleId, opt) {
     this.setupAudio();
@@ -184,6 +209,7 @@ export class Player {
     this.chunkEvents = first.events;
     this.meta = first.meta;
     this.t0 = this.ctx.currentTime + 0.25;
+    this.session.vinyl = await this.vinyl(this.t0, this.session.out);
     this.idx = 0;
     this.lastBar = -1;
     this.pending = null;
@@ -199,7 +225,8 @@ export class Player {
     if (this.session) {
       const t = this.ctx.currentTime, { out, wet } = this.session, lfo = this.lfo;
       for (const g of [out.gain, ...wet.map(w => w.gain)]) { g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(0, t + 0.06); }
-      setTimeout(() => { out.disconnect(); wet.forEach(w => w.disconnect()); if (lfo) lfo.stop(); }, 3000);
+      const vinyl = this.session.vinyl;
+      setTimeout(() => { out.disconnect(); wet.forEach(w => w.disconnect()); if (lfo) lfo.stop(); if (vinyl) vinyl.stop(); }, 3000);
       this.session = null;
       this.lfo = null;
     }
@@ -207,12 +234,29 @@ export class Player {
     this.onState("stopped");
   }
 
-  instrOf(track) {
+  /** 這一下用哪一件樂器:勾了替代樂器(slap 貝斯、低音提琴、尼龍吉他…)而且密度符合就換 */
+  instrOf(track, e) {
+    for (const a of this.style.alternatives ?? [])
+      if (a.track === track && this.partOn(a.id, a.default) && (!a.densities || !e || a.densities.includes(e.dens))) return a.instr;
     return this.style.instruments[track === "keys2" ? "keys2" : track] ?? this.style.instruments.keys;
   }
+  partOn(id, dflt = true) { return this.parts[id] ?? dflt; }
   on(track) {
     const t = this.style.tracks[track];
-    return !(t && t.optional && this.parts[track] === false);
+    return !(t && t.optional) || this.partOn(track, t.default ?? true);
+  }
+  /** lofi 的黑膠底噪:CC0 的唱片底噪錄音循環播放,−30dB,不進殘響 */
+  async vinyl(when, dest) {
+    const fx = (this.style.effects ?? []).find(f => f.type === "vinylNoise");
+    if (!fx || !this.partOn("vinyl", true)) return null;
+    const b = await this.sampler.loopBuffer("vinyl_noise");
+    if (!b) return null;
+    const src = this.ctx.createBufferSource(), g = this.ctx.createGain();
+    src.buffer = b; src.loop = true;
+    g.gain.value = 10 ** (fx.db / 20) / Math.max(1e-6, this.sampler.rms(b));
+    src.connect(g).connect(dest);
+    src.start(when);
+    return src;
   }
 
   needs(events) {
@@ -220,7 +264,7 @@ export class Player {
     for (const e of events) {
       if (!this.on(e.track)) continue;
       if (e.track === "drums") out.push({ instr: this.style.instruments.drums, piece: e.piece, vel: e.vel });
-      else for (const midi of e.notes) out.push({ instr: this.instrOf(e.track), midi, vel: e.vel });
+      else for (const midi of e.notes) out.push({ instr: this.instrOf(e.track, e), midi, vel: e.vel });
     }
     return out;
   }
@@ -255,7 +299,7 @@ export class Player {
       const bus = (this.buses["drums:" + e.piece] ?? this.buses[e.track]).in;
       if (e.track === "drums") this.sampler.hit(this.style.instruments.drums, e.piece, e.vel, Math.max(when, now), bus);
       else {
-        const instr = this.instrOf(e.track);
+        const instr = this.instrOf(e.track, e);
         const opt = e.track === "keys" && this.drift ? { detune: this.drift } : {};
         e.notes.forEach((midi, i) => this.sampler.note(instr, midi, e.noteVel?.[i] ?? e.vel,
           Math.max(when + (e.noteDt?.[i] ?? 0), now), e.dur, bus, opt));
@@ -278,12 +322,13 @@ export class Player {
     const only = opt.only; // 只算某幾軌(分軌量測)
     await p.sampler.ensure(p.needs(r.events));
     await p.sampler.background;
-    const { buses } = p.buildBuses(st);
+    const session = p.buildBuses(st), { buses } = session;
+    if (!only) await p.vinyl(0, session.out);
     for (const e of r.events) {
       if (!p.on(e.track) || (only && !only.includes(e.track))) continue;
       const when = e.time + 0.05;
       if (e.track === "drums") p.sampler.hit(st.instruments.drums, e.piece, e.vel, when, (buses["drums:" + e.piece] ?? buses.drums).in);
-      else e.notes.forEach((midi, i) => p.sampler.note(p.instrOf(e.track), midi, e.noteVel?.[i] ?? e.vel, when + (e.noteDt?.[i] ?? 0),
+      else e.notes.forEach((midi, i) => p.sampler.note(p.instrOf(e.track, e), midi, e.noteVel?.[i] ?? e.vel, when + (e.noteDt?.[i] ?? 0),
         e.dur, buses[e.track].in, e.track === "keys" && p.drift ? { detune: p.drift } : {}));
     }
     return { buffer: await ctx.startRendering(), meta: r.meta, failed: p.sampler.progress.failed };

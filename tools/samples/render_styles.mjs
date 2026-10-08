@@ -12,7 +12,10 @@ const SMP = process.env.SMP ?? "/tmp/smp";
 const REPO_DIR = {
   "sfzinstruments/SalamanderGrandPiano": "SalamanderGrandPiano", "sgossner/VSCO-2-CE": "VSCO-2-CE",
   "sfzinstruments/virtuosity_drums": "virtuosity_drums", "sfzinstruments/karoryfer.black-and-green-guitars": "karoryfer.black-and-green-guitars",
-  "sfzinstruments/karoryfer.black-and-blue-basses": "bb", "sfzinstruments/jlearman.jRhodes3c": "jr", "tidalcycles/Dirt-Samples": "Dirt-Samples",
+  "sfzinstruments/karoryfer.black-and-blue-basses": "bb", "sfzinstruments/jlearman.jRhodes3c": "jr", "sfzinstruments/jlearman.jRhodes3d": "jr3d", "tidalcycles/Dirt-Samples": "Dirt-Samples",
+  "freepats/spanish-classical-guitar": "spanish-classical-guitar", "sfzinstruments/Project16Rickenbacker4001": "Project16Rickenbacker4001",
+  "sfzinstruments/karoryfer.meatbass": "karoryfer.meatbass", "sfzinstruments/karoryfer.emilyguitar": "karoryfer.emilyguitar",
+  "lavenderdotpet/CC0-Public-Domain-Sounds": "cc0sounds", "stevenmusic/ScrollScore": process.env.SCROLLSCORE ?? "/home/user/stevenmusic/scrollscore",
 };
 const out = process.argv[2] ?? "/tmp/render";
 mkdirSync(out, { recursive: true });
@@ -40,7 +43,7 @@ await page.route(/cdn\.jsdelivr\.net\/gh\/|raw\.githubusercontent\.com\//, route
     const m = u.pathname.match(/^\/([^/]+\/[^/]+)\/[^/]+\/(.*)$/); repo = m[1]; path = m[2];
   }
   try {
-    const body = execFileSync("git", ["-C", join(SMP, REPO_DIR[repo]), "show", "HEAD:" + decodeURIComponent(path)], { maxBuffer: 1 << 28, stdio: ["ignore", "pipe", "ignore"] });
+    const body = execFileSync("git", ["-C", REPO_DIR[repo].startsWith("/") ? REPO_DIR[repo] : join(SMP, REPO_DIR[repo]), "show", "HEAD:" + decodeURIComponent(path)], { maxBuffer: 1 << 28, stdio: ["ignore", "pipe", "ignore"] });
     route.fulfill({ status: 200, body, headers: { "access-control-allow-origin": "*" } });
   } catch { missing++; route.fulfill({ status: 404 }); }
 });
@@ -62,7 +65,8 @@ for (const job of jobs) {
   const [style, progression, density = "auto", bars = "16", only, flag] = job.split(":");
   const r = await page.evaluate(async ({ style, progression, density, bars, only, flag }) => {
     const p = window.__player;
-    const o = { density, seed: 7, ...(progression ? { progression } : {}), ...(only ? { only: only.split(",") } : {}), ...(flag === "dry" ? { noReverb: true } : {}) };
+    const o = { density, seed: 7, ...(progression ? { progression } : {}), ...(only ? { only: only.split(",") } : {}), ...(flag === "dry" ? { noReverb: true } : {}),
+      ...(flag?.startsWith("on=") ? { parts: Object.fromEntries(flag.slice(3).split("+").map(k => [k, true])) } : {}) };
     const { buffer, meta, failed } = await p.renderOffline(style, o, +bars);
     const chs = [buffer.getChannelData(0), buffer.getChannelData(1)];
     let peak = 0, ss = 0, clip = 0;

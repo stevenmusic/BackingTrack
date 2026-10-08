@@ -7,7 +7,9 @@ import { join, extname } from "node:path";
 const ROOT = new URL("../../", import.meta.url).pathname, SMP = process.env.SMP ?? "/tmp/smp";
 const DIR = { SalamanderGrandPiano: "SalamanderGrandPiano", "VSCO-2-CE": "VSCO-2-CE", virtuosity_drums: "virtuosity_drums",
   "karoryfer.black-and-green-guitars": "karoryfer.black-and-green-guitars", "karoryfer.black-and-blue-basses": "bb",
-  "jlearman.jRhodes3c": "jr", "Dirt-Samples": "Dirt-Samples" };
+  "jlearman.jRhodes3c": "jr", "jlearman.jRhodes3d": "jr3d", "Dirt-Samples": "Dirt-Samples",
+  "Project16Rickenbacker4001": "Project16Rickenbacker4001", "karoryfer.meatbass": "karoryfer.meatbass", "karoryfer.emilyguitar": "karoryfer.emilyguitar",
+  "CC0-Public-Domain-Sounds": "cc0sounds", "ScrollScore": "/home/user/stevenmusic/scrollscore" };
 const server = createServer((q, s) => { try { const p = join(ROOT, decodeURIComponent(q.url.split("?")[0]));
   s.writeHead(200, { "content-type": { ".html": "text/html", ".mjs": "text/javascript", ".json": "application/json" }[extname(p)] ?? "application/octet-stream" });
   s.end(readFileSync(p)); } catch { s.writeHead(404); s.end(); } }).listen(0);
@@ -17,7 +19,7 @@ const errors = [];
 page.on("pageerror", e => errors.push(e.message));
 await page.route(/cdn\.jsdelivr\.net\/gh\//, r => {
   const m = new URL(r.request().url()).pathname.match(/^\/gh\/[^/]+\/([^@]+)@[^/]+\/(.*)$/);
-  try { r.fulfill({ status: 200, body: execFileSync("git", ["-C", join(SMP, DIR[m[1]]), "show", "HEAD:" + decodeURIComponent(m[2])], { maxBuffer: 1 << 28, stdio: ["ignore", "pipe", "ignore"] }) }); }
+  try { r.fulfill({ status: 200, body: execFileSync("git", ["-C", DIR[m[1]].startsWith("/") ? DIR[m[1]] : join(SMP, DIR[m[1]]), "show", "HEAD:" + decodeURIComponent(m[2])], { maxBuffer: 1 << 28, stdio: ["ignore", "pipe", "ignore"] }) }); }
   catch { r.fulfill({ status: 404 }); }
 });
 await page.goto(`http://localhost:${server.address().port}/styles/index.html`);

@@ -118,6 +118,20 @@ export class Sampler {
     return loaded[i % loaded.length];
   }
 
+  /** 循環用的長取樣(例:黑膠底噪) */
+  async loopBuffer(instr) {
+    const I = this.m[instr];
+    if (!I?.loop) return null;
+    await this.loadFiles([[I.src, I.loop]]);
+    const b = this.buf.get(I.src[0] + I.loop);
+    return b instanceof AudioBuffer ? b : null;
+  }
+  rms(b) {
+    let s = 0, n = 0;
+    for (let c = 0; c < b.numberOfChannels; c++) { const d = b.getChannelData(c); for (let i = 0; i < d.length; i += 4) { s += d[i] * d[i]; n++; } }
+    return Math.sqrt(s / n);
+  }
+
   // ── 發聲 ──
   /** 旋律樂器:midi、vel(1–127)、when、dur(秒)、dest */
   note(instr, midi, vel, when, dur, dest, opt = {}) {
@@ -128,7 +142,7 @@ export class Sampler {
     const ctx = this.ctx;
     const src = ctx.createBufferSource();
     src.buffer = b;
-    src.playbackRate.value = 2 ** ((midi - z.key + (I.tune ?? 0)) / 12);
+    src.playbackRate.value = 2 ** ((midi - z.key + (z.tune ?? 0) + (I.tune ?? 0)) / 12); // z.tune:那一個取樣量到的音準偏差
     if (opt.detune) opt.detune.connect(src.detune);
     const g = ctx.createGain();
     const v = vel / 127;

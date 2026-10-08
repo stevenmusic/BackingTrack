@@ -55,63 +55,67 @@ def bands(x, sr):
 
 def db(x): return 10 * np.log10(np.maximum(x, 1e-20))
 
-RESULT = {}
-for style in sys.argv[2:]:
-    D = sys.argv[1]
-    base = os.path.join(D, f"{style}__high_8")
-    mix, sr = load(base + ".wav")
-    dry, _ = load(base + "__dry.wav")
-    stems = {}
-    for t in ["drums", "bass", "keys", "keys2", "pad", "guitar"]:
-        p = f"{base}_{t}.wav"
-        if os.path.exists(p):
-            x, _ = load(p)
-            if np.abs(x).max() > 1e-4: stems[t] = x
-    L = lufs(mix, sr)
-    print(f"\n=== {style}  全混音 {L:.1f} LUFS  peak {np.abs(mix).max():.2f}")
-    print("  各軌(相對全混音):", "  ".join(f"{t} {lufs(x, sr) - L:+.1f}" for t, x in stems.items()))
-    B = bands(mix, sr); Bd = db(B)
-    fc = np.array(CENTERS); sel = (fc >= 63) & (fc <= 8000)
-    k, c0 = np.polyfit(np.log2(fc[sel]), Bd[sel], 1)
-    dev = Bd - (k * np.log2(fc) + c0)
-    print(f"  頻譜斜率 {k:+.1f} dB/八度(粉紅雜訊 = −3;用 1/3 八度頻帶能量算)")
-    # 200Hz 以下用一個八度寬判斷:貝斯的基頻是離散的音(例如 C 調多半落在 65Hz 與 98Hz),
-    # 1/3 八度那一格剛好沒有音就會像一個洞,其實低頻並不缺
-    lowdev = []
-    for lo, hi in [(40, 80), (80, 160)]:
-        m = (fc >= lo) & (fc < hi)
-        e = db(B[m].sum()) - db((10 ** ((k * np.log2(fc[m]) + c0) / 10)).sum())
-        lowdev.append((f"{lo}–{hi}Hz", round(float(e), 1)))
-    print("  低頻(一個八度寬)相對斜線:", lowdev)
-    holes = [(round(c), round(d, 1)) for c, d, s in zip(CENTERS, dev, sel) if s and c >= 200 and abs(d) > 6]
-    holes += [(n, d) for n, d in lowdev if abs(d) > 6]
-    print("  偏離斜線 >6dB 的頻帶:", holes or "沒有")
-    mid = (fc >= 2000) & (fc <= 5000)
-    print(f"  2–5kHz 相對斜線 {dev[mid].mean():+.1f} dB")
-    # 遮蔽
-    SB = {t: bands(x, sr) for t, x in stems.items()}
-    loud = Bd > Bd.max() - 30
-    pairs = []
-    names = list(SB)
-    for i in range(len(names)):
-        for j in range(i + 1, len(names)):
-            a, b = names[i], names[j]
-            hit = [round(c) for n, c in enumerate(CENTERS) if loud[n] and SB[a][n] / B[n] >= 0.3 and SB[b][n] / B[n] >= 0.3]
-            if hit: pairs.append(f"{a}×{b} {hit[0]}–{hit[-1]}Hz({len(hit)} 帶)")
-    print("  互相蓋住:", pairs or "沒有")
-    l, r = mix
-    corr = np.corrcoef(l, r)[0, 1]
-    # 低頻照慣例放中間(大鼓、貝斯是單聲道),全頻段的相關會被它拉高;寬度另外看 200Hz 以上
-    sos = signal.butter(4, 200, "highpass", fs=sr, output="sos")
-    hl, hr = signal.sosfilt(sos, l), signal.sosfilt(sos, r)
-    corr_hi = np.corrcoef(hl, hr)[0, 1]
-    mono = db(np.mean(((l + r) / 2) ** 2)) - db((np.mean(l ** 2) + np.mean(r ** 2)) / 2)
-    wet = np.mean((mix - dry) ** 2)  # 同一組事件、同一個種子:相減就是殘響本身
-    print(f"  左右相關 {corr:.2f}(200Hz 以上 {corr_hi:.2f})  單聲道損失 {mono:+.1f} dB  殘響/乾 {db(wet / np.mean(dry ** 2)):+.1f} dB")
-    print("  乾的左右相關 {:.2f}".format(np.corrcoef(*dry)[0, 1]))
-    RESULT[style] = {"lufs": L, "stems": {t: lufs(x, sr) - L for t, x in stems.items()}, "slope": k,
-                     "dev": dict(zip([round(c) for c in CENTERS], [round(float(d), 1) for d in dev])),
-                     "mid2to5": float(dev[mid].mean()), "corr": float(corr), "corrHi": float(corr_hi), "mono": float(mono),
-                     "wet": float(db(wet / np.mean(dry ** 2)))}
-import json
-json.dump(RESULT, open(os.path.join(sys.argv[1], "analysis.json"), "w"), indent=1)
+def main():
+    RESULT = {}
+    for style in sys.argv[2:]:
+        D = sys.argv[1]
+        base = os.path.join(D, f"{style}__high_8")
+        mix, sr = load(base + ".wav")
+        dry, _ = load(base + "__dry.wav")
+        stems = {}
+        for t in ["drums", "bass", "keys", "keys2", "pad", "guitar"]:
+            p = f"{base}_{t}.wav"
+            if os.path.exists(p):
+                x, _ = load(p)
+                if np.abs(x).max() > 1e-4: stems[t] = x
+        L = lufs(mix, sr)
+        print(f"\n=== {style}  全混音 {L:.1f} LUFS  peak {np.abs(mix).max():.2f}")
+        print("  各軌(相對全混音):", "  ".join(f"{t} {lufs(x, sr) - L:+.1f}" for t, x in stems.items()))
+        B = bands(mix, sr); Bd = db(B)
+        fc = np.array(CENTERS); sel = (fc >= 63) & (fc <= 8000)
+        k, c0 = np.polyfit(np.log2(fc[sel]), Bd[sel], 1)
+        dev = Bd - (k * np.log2(fc) + c0)
+        print(f"  頻譜斜率 {k:+.1f} dB/八度(粉紅雜訊 = −3;用 1/3 八度頻帶能量算)")
+        # 200Hz 以下用一個八度寬判斷:貝斯的基頻是離散的音(例如 C 調多半落在 65Hz 與 98Hz),
+        # 1/3 八度那一格剛好沒有音就會像一個洞,其實低頻並不缺
+        lowdev = []
+        for lo, hi in [(40, 80), (80, 160)]:
+            m = (fc >= lo) & (fc < hi)
+            e = db(B[m].sum()) - db((10 ** ((k * np.log2(fc[m]) + c0) / 10)).sum())
+            lowdev.append((f"{lo}–{hi}Hz", round(float(e), 1)))
+        print("  低頻(一個八度寬)相對斜線:", lowdev)
+        holes = [(round(c), round(d, 1)) for c, d, s in zip(CENTERS, dev, sel) if s and c >= 200 and abs(d) > 6]
+        holes += [(n, d) for n, d in lowdev if abs(d) > 6]
+        print("  偏離斜線 >6dB 的頻帶:", holes or "沒有")
+        mid = (fc >= 2000) & (fc <= 5000)
+        print(f"  2–5kHz 相對斜線 {dev[mid].mean():+.1f} dB")
+        # 遮蔽
+        SB = {t: bands(x, sr) for t, x in stems.items()}
+        loud = Bd > Bd.max() - 30
+        pairs = []
+        names = list(SB)
+        for i in range(len(names)):
+            for j in range(i + 1, len(names)):
+                a, b = names[i], names[j]
+                hit = [round(c) for n, c in enumerate(CENTERS) if loud[n] and SB[a][n] / B[n] >= 0.3 and SB[b][n] / B[n] >= 0.3]
+                if hit: pairs.append(f"{a}×{b} {hit[0]}–{hit[-1]}Hz({len(hit)} 帶)")
+        print("  互相蓋住:", pairs or "沒有")
+        l, r = mix
+        corr = np.corrcoef(l, r)[0, 1]
+        # 低頻照慣例放中間(大鼓、貝斯是單聲道),全頻段的相關會被它拉高;寬度另外看 200Hz 以上
+        sos = signal.butter(4, 200, "highpass", fs=sr, output="sos")
+        hl, hr = signal.sosfilt(sos, l), signal.sosfilt(sos, r)
+        corr_hi = np.corrcoef(hl, hr)[0, 1]
+        mono = db(np.mean(((l + r) / 2) ** 2)) - db((np.mean(l ** 2) + np.mean(r ** 2)) / 2)
+        wet = np.mean((mix - dry) ** 2)  # 同一組事件、同一個種子:相減就是殘響本身
+        print(f"  左右相關 {corr:.2f}(200Hz 以上 {corr_hi:.2f})  單聲道損失 {mono:+.1f} dB  殘響/乾 {db(wet / np.mean(dry ** 2)):+.1f} dB")
+        print("  乾的左右相關 {:.2f}".format(np.corrcoef(*dry)[0, 1]))
+        RESULT[style] = {"lufs": L, "stems": {t: lufs(x, sr) - L for t, x in stems.items()}, "slope": k,
+                         "dev": dict(zip([round(c) for c in CENTERS], [round(float(d), 1) for d in dev])),
+                         "mid2to5": float(dev[mid].mean()), "corr": float(corr), "corrHi": float(corr_hi), "mono": float(mono),
+                         "wet": float(db(wet / np.mean(dry ** 2)))}
+    import json
+    json.dump(RESULT, open(os.path.join(sys.argv[1], "analysis.json"), "w"), indent=1)
+
+if __name__ == "__main__":
+    main()

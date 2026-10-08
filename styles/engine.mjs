@@ -346,7 +346,7 @@ export function render(data, styleId, opt = {}) {
   const note = (track, bar, cell, len, notes, extra = {}) => {
     const t0 = gridAt(bar, cell);
     push({ track, bar, cell, gridTime: t0, dur: gridAt(bar, cell + len) - t0, cells: len,
-      notes, vel: TRACK_VEL[track], ...extra });
+      notes, vel: TRACK_VEL[track], dens: densityAt(o, bar), ...extra });
   };
   const hit = (piece, bar, cell, vel, sub = 0, acc = 1) => {
     const t0 = gridAt(bar, cell + sub / 2);
@@ -476,7 +476,11 @@ export function render(data, styleId, opt = {}) {
           const pl = track === "guitar" ? plans.keys : plans[track];
           const v = pl[idx].notes;
           let notes;
-          if (track === "guitar") notes = v.slice(-(st.tracks.guitar.topNotes ?? 2));
+          if (track === "guitar" && st.tracks.guitar.voicing === "power") {
+            // power chord:根音、五度、八度,根音放在吉他低音區 40–51(E2–D♯3)
+            const c = slots[idx].chord, r = 40 + mod12(c.root - 40);
+            notes = [r, r + 7, r + 12];
+          } else if (track === "guitar") notes = v.slice(-(st.tracks.guitar.topNotes ?? 2));
           else if (ch === "C") notes = v;
           else if (ch === "S") notes = plans.keysShell[idx].notes;
           else if (ch === "U") notes = v.slice(-3);

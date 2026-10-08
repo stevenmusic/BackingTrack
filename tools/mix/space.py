@@ -115,6 +115,10 @@ def main():
             k0 = (sends0["room"] / BASE[t][0]) if BASE[t][0] else 1.0
             ew = parts(wet, sr)[2] / max(k0, 1e-9) ** 2      # k = 1 時殘響的能量
             # 電子鼓(808)比真鼓近 3dB(鼓機本來就沒有房間,舞曲的鼓要緊);大鼓不送殘響(低頻留乾、留中間,跟貝斯同一條規則)
+            if stage[t].get("dry"):                   # 貝斯不送殘響(低頻樂器留乾、留近;Steven 2026-10-08「bass 聲音很扁」)
+                sp["sends"][t] = {"room": 0, "plate": 0}
+                rows.append((t, db(d, r), db(d, r), float("nan"), "不送殘響(stage.dry)"))
+                continue
             tgt = A + stage["drums_electronic" if t == "drums" else t]["rel"]
             T = 10 ** (tgt / 10)
             k = float(np.sqrt(max(d / T - r, 0) / ew)) if ew > 0 else 0.0

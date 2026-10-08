@@ -3,7 +3,7 @@
       (資料夾裡是 render_styles.mjs 算的 <style>__auto_16.wav)
 
 逐項(全部先把兩邊都對齊到 −14 LUFS,比的是「同樣大聲時」聽起來的差別):
-1. 壞掉的東西(一定要 0):削波、爆音(線性預測殘差裡孤立的尖峰:鼓的瞬態是一整串,爆音是一兩個取樣)、
+1. 壞掉的東西(一定要 0):削波、爆音(線性預測殘差裡孤立的尖峰,> 12σ 且 > −40dBFS:鼓的瞬態是一整串,爆音是一兩個取樣)、
    中途斷音(50ms 低於 −50dBFS)
 2. 頻率:低頻 40–80 / 80–160Hz、悶(200–500Hz)、刺(2–5kHz,伴奏要讓給主旋律)相對整體斜線
 3. 空間:左右相關(200Hz 以上)、單聲道損失、殘響尾巴長度(最後一個音之後掉 30dB 要多久)
@@ -35,7 +35,8 @@ def clicks(x, sr):
             except np.linalg.LinAlgError: continue
             e = f[16:] - np.array([f[k - 16:k][::-1] @ a for k in range(16, hop)])
             s = e.std() + 1e-12
-            big = np.where(np.abs(e) > 8 * s)[0]
+            # 聽得到的才算:尖峰本身要 > −40dBFS(安靜處 1e-4 的數值雜訊不算),而且 12σ 以上
+            big = np.where((np.abs(e) > 12 * s) & (np.abs(e) > 0.01))[0]
             for k in big:
                 nb = np.r_[e[max(0, k - 3):k], e[k + 1:k + 4]]
                 if len(nb) and np.abs(nb).max() < 3 * s: n += 1

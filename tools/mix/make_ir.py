@@ -5,7 +5,11 @@
 room  = Arroyo House Living Room Mid A(真實房間,RT60 ≈ 0.6 秒,跟 Virtuosity 鼓的房間麥同一個衰減長度)
 plate = Conner Plate I(真實的板式殘響)。原檔左右很不對稱(T20 左 1.77 秒、右 3.59 秒,能量差 3dB;板子兩個拾音點位置不同),
         不修的話殘響尾巴會飄到右邊。**每個聲道各自**照指數修衰減,迭代到兩聲道的 T20 都是 1.8 秒(±0.03),再把兩聲道能量拉平
-兩個都:拿掉直達聲之前的空白與直達聲本身(送出式殘響只要反射)、轉 44.1kHz、能量正規化、16-bit
+兩個都:拿掉直達聲之前的空白與直達聲本身(送出式殘響只要反射)、轉 44.1kHz、**頻譜拉平**、能量正規化、16-bit。
+頻譜拉平(2026-10-08,自動聆聽檢查抓到的):真的房間 / 板子有自己的共振——room 在 250Hz +4.6dB、8kHz +7dB,
+plate 在 1kHz +12dB——送出去之後整個混音的 314–396Hz 與 1kHz 多了 3–5dB(悶、鼻音)。原本的雜訊 IR 是平的,沒有這個問題。
+做法:每個聲道量 1/3 八度的能量,對平坦(白)的目標算出修正量(±15dB 封頂,150Hz 以下與 12kHz 以上不修),
+做成線性相位 FIR 再轉最小相位(不會在反射之前多出預回音),跟 IR 卷積。反射的時間結構與衰減不變,只拿掉音色
 """
 import sys, os, subprocess, io, numpy as np, soundfile as sf
 from scipy import signal
@@ -17,6 +21,27 @@ FILES = {
     "room": ("Rooms/Residential/Arroyo House/Arroyo House Living Room Mid A.wav", None),
     "plate": ("Plates/Conner Plate I/Conner Plate I Sweeps/Conner Plate I 1s -42.wav", 1.8),
 }
+
+def flatten(x, sr):
+    """每個聲道的 1/3 八度頻譜拉平(最小相位 FIR,2048 階)"""
+    cs = 1000 * 2 ** (np.arange(-13, 12) / 3)
+    n = 1 << 16
+    fr = np.fft.rfftfreq(n, 1 / sr)
+    out = np.zeros_like(x)
+    for c in range(x.shape[1]):
+        X = np.abs(np.fft.rfft(x[:, c], n)) ** 2
+        lv = np.array([10 * np.log10(X[(fr >= f / 2 ** (1 / 6)) & (fr < f * 2 ** (1 / 6))].mean() + 1e-30) for f in cs])
+        ref = lv[(cs >= 300) & (cs <= 3000)].mean()
+        corr = np.clip(ref - lv, -15, 15)
+        corr[cs < 150] = corr[np.argmax(cs >= 150)]; corr[cs > 12000] = corr[np.argmax(cs > 12000) - 1]
+        taps = 2049
+        gf = np.interp(np.log2(np.maximum(np.linspace(0, sr / 2, 4097), 1)), np.log2(cs), corr)
+        # minimum_phase(homomorphic)出來的大小是原本的平方根,所以這裡先給平方(dB 加倍)
+        lin = signal.firwin2(taps, np.linspace(0, 1, 4097), 10 ** (gf / 10))
+        mp = signal.minimum_phase(lin, method="homomorphic", n_fft=1 << 16)
+        out[:, c] = signal.lfilter(mp, 1, x[:, c])
+    return out
+
 
 def rt60(x, sr):
     e = np.cumsum((x ** 2)[::-1])[::-1]; L = 10 * np.log10(e / e[0] + 1e-20)
@@ -33,6 +58,7 @@ for name, (path, target) in FILES.items():
     x = x[pk + int(0.0025 * SR):]                    # 直達聲之後 2.5ms 開始(只留反射)
     x[: int(0.001 * SR)] *= np.linspace(0, 1, int(0.001 * SR))[:, None]
     rt0 = [rt60(x[:, c], SR) for c in range(2)]
+    x = flatten(x, SR)                               # 先拉平音色,再修衰減(反過來的話拉平會把衰減弄歪)
     if target:                                       # 每個聲道指數修衰減,迭代到量起來等於目標(Schroeder 不是線性的)
         t = np.arange(len(x)) / SR
         for c in range(2):

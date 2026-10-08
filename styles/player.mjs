@@ -85,6 +85,19 @@ function loadIR(ctx, file) {
     .catch(e => { IR_CACHE.delete(file); throw e; }));
   return IR_CACHE.get(file).then(b => normalizeIR(ctx, b));
 }
+/**
+ * Web Audio 的 DynamicsCompressor 會自己補增益:makeup = (1 / 0dBFS 進去的輸出)^0.6(規格與 Chromium 的實作)。
+ * 照 Chromium 的 knee 曲線(線性域指數曲線,k 讓膝點斜率 = 1/ratio)算出來,補償回去:壓縮器不是拿來加音量的
+ */
+export function compAutoMakeupDb(T, K, R) {
+  const lt = 10 ** (T / 20), kt = 10 ** ((T + K) / 20);
+  const curve = (x, k) => lt + (1 - Math.exp(-k * (x - lt))) / k;
+  const slope = k => { const e = 1e-6; return (20 * Math.log10(curve(kt * (1 + e), k)) - 20 * Math.log10(curve(kt, k))) / (20 * Math.log10(1 + e)); };
+  let lo = 0.1, hi = 1e4;                     // slope 隨 k 遞減:二分法
+  for (let i = 0; i < 80; i++) { const m = Math.sqrt(lo * hi); if (slope(m) > 1 / R) lo = m; else hi = m; }
+  const out0 = 20 * Math.log10(curve(kt, Math.sqrt(lo * hi))) + (0 - (T + K)) / R;
+  return -out0 * 0.6;
+}
 /** 飽和曲線:y = tanh(k·x)/k(小訊號增益 1、0dBFS 約 −0.7dB、奇次諧波),輸入範圍 ±2 */
 function satCurve(k) {
   const n = 4096, c = new Float32Array(n);
@@ -176,8 +189,9 @@ export class Player {
     const drumGroup = ctx.createDynamicsCompressor();
     drumGroup.threshold.value = DC.threshold ?? -24; drumGroup.knee.value = DC.knee ?? 6; drumGroup.ratio.value = DC.ratio ?? 4;
     drumGroup.attack.value = DC.attack ?? 0.01; drumGroup.release.value = DC.release ?? 0.12;
-    // Web Audio 的壓縮器會自己補一個固定增益;它是常數,由 tools/mix/solve_balance.py 重解各軌音量時一起扣掉
-    drumGroup.connect(out);
+    const drumMakeup = ctx.createGain(); // 扣掉壓縮器自己補的增益
+    drumMakeup.gain.value = 10 ** (-compAutoMakeupDb(drumGroup.threshold.value, drumGroup.knee.value, drumGroup.ratio.value) / 20);
+    drumGroup.connect(drumMakeup).connect(out);
     this.drumGroup = drumGroup;
     for (const [name, b] of Object.entries(BUS)) {
       const g = ctx.createGain(), p = ctx.createStereoPanner();
@@ -403,9 +417,9 @@ export class Player {
     p.loud.gain.value = opt.noMaster ? 1 : 10 ** ((st.master?.gainDb ?? 0) / 20);
     if (opt.raw) { p.master.disconnect(); p.master.connect(ctx.destination); } // 量測用:跳過母帶鏈,分軌才能線性相加
     const session = p.buildBuses(st), { buses } = session;
-    // 量測用:每 50ms 讀一次鼓組壓縮與黏著壓縮壓了幾 dB
+    // 量測用:每 10ms 讀一次鼓組壓縮與黏著壓縮壓了幾 dB
     const gr = { drums: [], glue: [] };
-    if (opt.probe) for (let t = 0.5; t < len / sampleRate - 0.1; t += 0.05)
+    if (opt.probe) for (let t = 0.5; t < len / sampleRate - 0.1; t += 0.01)
       ctx.suspend(t).then(() => { gr.drums.push(p.drumGroup.reduction); gr.glue.push(p.glue.reduction); ctx.resume(); });
     if (!only) await p.vinyl(0, session.out);
     for (const e of r.events) {

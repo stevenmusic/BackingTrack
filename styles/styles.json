@@ -14,7 +14,7 @@
       "pad":    { "rel": -3,  "predelay": 0.005 }
     },
     "drumRoomDb": -6,
-    "drumComp": { "threshold": -24, "knee": 6, "ratio": 4, "attack": 0.01, "release": 0.12 },
+    "drumComp": { "threshold": -16, "knee": 6, "ratio": 4, "attack": 0.01, "release": 0.12 },
     "saturation": 0.5
   },
   "styles": [
@@ -50,7 +50,7 @@
         "pad": null,
         "guitar": null
       },
-      "mix": {"drums": 0.0, "bass": -3.4, "keys": 1.5},
+      "mix": {"drums": 0.0, "bass": -12.2, "keys": -3.8},
       "instruments": { "keys": "piano", "bass": "electric_bass", "drums": "acoustic_kit" },
       "meters": {"3/4": {"tracks": {"keys2": null, "pad": null, "guitar": null, "drums": {"low": {"kick": "X... .... ....", "rim": ".... x... x..."}, "standard": {"kick": "X... .... ..x.", "snare": ".... X... x...", "hat": "x.x. x.x. x.x."}, "high": {"kick": "X... ..x. ..x.", "snare": ".... X... X...", "hat": "xoxo xoxo xoxo"}, "fill": {"snare": "xxxxXX"}}, "bass": {"low": "R--- ---- ----", "standard": "R--- ---- 5---", "high": "R-.. 5-.. 8.A."}, "keys": {"low": "C--- ---- ----", "standard": "C--- C--- C---", "high": "C--C --C- --C-"}}}, "6/8": {"tracks": {"keys2": null, "pad": null, "guitar": null, "drums": {"low": {"kick": "X..... ......", "rim": "...... x....."}, "standard": {"kick": "X..... ....x.", "snare": "...... X.....", "hat": "x.x.x. x.x.x."}, "high": {"kick": "X...x. ....x.", "snare": "...... X...o.", "hat": "x.x.x. x.x.x."}, "fill": {"snare": "x.xxXX"}}, "bass": {"low": "R----- ------", "standard": "R----- 5-----", "high": "R---5- R---A."}, "keys": {"low": "C----- ------", "standard": "C-C-C- C-C-C-", "high": "C-C-C- C-C-C-"}}}},
       "samples": ["piano", "acoustic_kit", "electric_bass"],
@@ -88,7 +88,7 @@
         "guitar": null
       },
       "eq": { "keys": { "highpass": 60 } },
-      "mix": {"drums": 0.0, "bass": -1.0, "keys": 5.5, "pad": -0.8, "keys2": 5.0},
+      "mix": {"drums": 0.0, "bass": -12.3, "keys": -0.4, "pad": -9.2, "keys2": -5.0},
       "instruments": { "keys": "piano", "keys2": "piano", "pad": "strings", "bass": "electric_bass", "drums": "acoustic_kit" },
       "meters": {"3/4": {"tracks": {"keys2": {"low": null, "standard": null, "high": "U--- ---- ----"}, "pad": {"low": null, "standard": null, "high": "C--- ---- ----", "optional": true}, "guitar": null, "drums": {"low": null, "standard": {"kick": "X... .... ....", "rim": ".... x... x...", "hat": "o.o. o.o. o.o."}, "high": {"kick": "X... .... ..x.", "snare": ".... X... x...", "hat": "x.x. x.x. x.x."}, "fill": {"snare": "..xxXX"}}, "bass": {"low": null, "standard": "R--- ---- ----", "high": "R--- ---- 5---"}, "keys": {"low": "1.2. 3.4. 5.3.", "standard": "1234 5432 1234", "high": "1234 5432 1234"}}}, "6/8": {"tracks": {"keys2": {"low": null, "standard": null, "high": "U----- ------"}, "pad": {"low": null, "standard": null, "high": "C----- ------", "optional": true}, "guitar": null, "drums": {"low": null, "standard": {"kick": "X..... ......", "rim": "...... x.....", "hat": "o.o.o. o.o.o."}, "high": {"kick": "X..... ....x.", "snare": "...... X.....", "hat": "x.x.x. x.x.x."}, "fill": {"snare": "x.x.XX"}}, "bass": {"low": null, "standard": "R----- ------", "high": "R----- 5-----"}, "keys": {"low": "1.2.3. 5.3.2.", "standard": "1.2.3. 5.3.2.", "high": "1.2.3. 5.4.3."}}}},
       "samples": ["piano", "acoustic_kit", "electric_bass", "strings"],
@@ -125,7 +125,7 @@
         "pad": null,
         "guitar": { "low": null, "standard": null, "high": "x.x. x.x. x.x. x.x.", "optional": true, "default": false, "voicing": "power" }
       },
-      "mix": {"drums": 0.0, "bass": -2.8, "keys": 2.7},
+      "mix": {"drums": 0.0, "bass": -11.1, "keys": -3.0},
       "instruments": { "keys": "piano", "bass": "electric_bass", "drums": "acoustic_kit", "guitar": "di_guitar" },
       "samples": ["piano", "acoustic_kit", "electric_bass"],
       "optionalSamples": ["di_guitar"]
@@ -162,7 +162,7 @@
         "pad": null,
         "guitar": { "low": null, "standard": null, "high": "..x. ..x. ..x. ..x.", "optional": true, "topNotes": 2 }
       },
-      "mix": {"drums": 0.0, "bass": -2.6, "keys": -3.0, "guitar": -0.5},
+      "mix": {"drums": 0.0, "bass": -11.3, "keys": -4.7, "guitar": -8.1},
       "alternatives": [{ "id": "slap", "track": "bass", "instr": "slap_bass", "densities": ["high"], "default": false, "label": { "zh": "slap 貝斯(只在 high)", "en": "Slap bass (high only)" } }],
       "instruments": { "keys": "rhodes", "bass": "electric_bass", "drums": "acoustic_kit", "guitar": "clean_guitar" },
       "samples": ["rhodes", "acoustic_kit", "electric_bass"],
@@ -199,13 +199,14 @@
         "pad":   { "low": "C--- ---- ---- ----", "standard": null, "high": "C--- ---- ---- ----" },
         "guitar": null
       },
-      "mix": {"drums": 0.0, "bass": -3.4, "keys": 2.4, "pad": -1.0},
+      "mix": {"drums": 0.0, "bass": -11.5, "keys": -3.3, "pad": -8.8},
       "instruments": { "keys": "piano", "pad": "strings", "bass": "electric_bass", "drums": "electronic_kit" },
       "samples": ["piano", "electronic_kit", "electric_bass", "strings"],
       "optionalSamples": []
     },
     {
       "id": "kpop_ballad",
+      "mix": {"drums": 0.0, "bass": -10.8, "keys": -5.8, "pad": -7.8, "keys2": -8.3},
       "space": {"sends": {"drums": {"room": 0, "plate": 0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0.644, "plate": 0.0}, "keys": {"room": 0.178, "plate": 0.207}, "keys2": {"room": 0.207, "plate": 0.242}, "pad": {"room": 0.075, "plate": 0.18}}, "drumRoomDb": -6},
       "master": { "gainDb": 2.9 },
       "inherits": "mandopop_ballad",
@@ -249,7 +250,7 @@
         "pad": null,
         "guitar": null
       },
-      "mix": {"drums": 0.0, "bass": -2.5, "keys": -4.9},
+      "mix": {"drums": 0.0, "bass": -11.9, "keys": -6.4},
       "instruments": { "keys": "rhodes", "bass": "electric_bass", "drums": "acoustic_kit" },
       "meters": {"6/8": {"tracks": {"keys2": null, "pad": null, "guitar": null, "drums": {"low": {"kick": "X..... ......", "rim": "...... x....."}, "standard": {"kick": "X...x. ......", "snare": "...... X.....", "hat": "x.x.x. x.x.x."}, "high": {"kick": "X...x. ....x.", "snare": "...... X...o.", "hat": "x.x.x. x.x.x."}, "fill": {"snare": ".o.xXx"}}, "bass": {"low": "R----- ------", "standard": "R---5- R-----", "high": "R---5- R--.A."}, "keys": {"low": "C----- ------", "standard": "C----- --C---", "high": "C--.C- C-.C-P"}}}},
       "samples": ["rhodes", "acoustic_kit", "electric_bass"],
@@ -291,7 +292,7 @@
         "pad": null,
         "guitar": null
       },
-      "mix": {"drums": 0.0, "bass": -2.3, "keys": 3.0},
+      "mix": {"drums": 0.0, "bass": -12.8, "keys": -2.9},
       "alternatives": [{ "id": "upright", "track": "bass", "instr": "upright_bass", "default": false, "label": { "zh": "低音提琴", "en": "Upright bass" } }],
       "instruments": { "keys": "piano", "bass": "electric_bass", "drums": "acoustic_kit" },
       "meters": {"3/4": {"tracks": {"keys2": null, "pad": null, "guitar": null, "drums": {"low": {"kick": "X... .... ....", "snare": ".... .... X..."}, "standard": {"kick": "X... ...X ....", "snare": ".... .... X...", "hat": "x.x. x.x. x.x."}, "high": {"kick": "X... ...X ....", "snare": ".... .... X...", "hat": "xoxo xoxo xoxo"}, "fill": {"snare": "..x.X."}}, "bass": {"low": "R--- ---- ----", "standard": "R--- ---. 5---", "high": "R--- --.R 5.A."}, "keys": {"low": "C--- ---- ----", "standard": "C--- --C- ----", "high": "C--- --C- --.C"}}}},
@@ -329,7 +330,7 @@
         "pad": null,
         "guitar": null
       },
-      "mix": {"drums": 0.0, "bass": -2.5, "keys": 1.8},
+      "mix": {"drums": 0.0, "bass": -9.6, "keys": -3.1},
       "alternatives": [{ "id": "nylon", "track": "keys", "instr": "nylon_guitar", "default": false, "label": { "zh": "尼龍吉他(取代鋼琴)", "en": "Nylon guitar (instead of piano)" } }],
       "instruments": { "keys": "piano", "bass": "electric_bass", "drums": "electronic_kit" },
       "samples": ["piano", "electronic_kit", "electric_bass"],

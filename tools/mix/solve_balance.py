@@ -28,19 +28,14 @@ for style, r in A.items():
 if "--write" in sys.argv:
     txt = open(P).read()
     for style, off in new.items():
-        i = txt.index(f'"id": "{style}"')
-        nxt = txt.find('"id": "', i + 1)
-        j = txt.find('"instruments":', i)
-        if j < 0 or (nxt > 0 and j > nxt):
-            print(style, "是繼承的風格,沿用上層的 mix(要分開調就在它自己的區塊加 instruments)")
-            continue
-        block = txt[i:j]
-        line = '"mix": ' + json.dumps(off) + ',\n      '
-        if '"mix":' in block:
-            k = txt.index('"mix":', i); e = txt.index('\n', k) + 1
-            txt = txt[:k] + line.rstrip(' ') .rstrip('\n') + '\n' + txt[e:]
+        i = txt.index(f'\n      "id": "{style}"')
+        nxt = txt.find('\n      "id": "', i + 1); nxt = nxt if nxt > 0 else len(txt)
+        line = '      "mix": ' + json.dumps(off) + ',\n'
+        m = re.compile(r'      "mix": .*,\n').search(txt, i, nxt)
+        if m: txt = txt[:m.start()] + line + txt[m.end():]
         else:
-            txt = txt[:j] + line + txt[j:]
+            e = txt.index('\n', i + 1) + 1                 # id 那一行的下一行
+            txt = txt[:e] + line + txt[e:]
     open(P, "w").write(txt)
     json.loads(txt)
     print("寫入", P)

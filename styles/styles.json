@@ -4,6 +4,7 @@
   "styles": [
     {
       "id": "pop",
+      "master": { "gainDb": 4.1 },
       "name": { "zh": "現代流行", "en": "Modern Pop" },
       "bpm": { "default": 104, "min": 95, "max": 120 },
       "swing": 50,
@@ -34,11 +35,13 @@
       },
       "mix": {"drums": 0.0, "bass": -3.4, "keys": 1.5},
       "instruments": { "keys": "piano", "bass": "electric_bass", "drums": "acoustic_kit" },
+      "meters": {"3/4": {"tracks": {"keys2": null, "pad": null, "guitar": null, "drums": {"low": {"kick": "X... .... ....", "rim": ".... x... x..."}, "standard": {"kick": "X... .... ..x.", "snare": ".... X... x...", "hat": "x.x. x.x. x.x."}, "high": {"kick": "X... ..x. ..x.", "snare": ".... X... X...", "hat": "xoxo xoxo xoxo"}, "fill": {"snare": "xxxxXX"}}, "bass": {"low": "R--- ---- ----", "standard": "R--- ---- 5---", "high": "R-.. 5-.. 8.A."}, "keys": {"low": "C--- ---- ----", "standard": "C--- C--- C---", "high": "C--C --C- --C-"}}}, "6/8": {"tracks": {"keys2": null, "pad": null, "guitar": null, "drums": {"low": {"kick": "X..... ......", "rim": "...... x....."}, "standard": {"kick": "X..... ....x.", "snare": "...... X.....", "hat": "x.x.x. x.x.x."}, "high": {"kick": "X...x. ....x.", "snare": "...... X...o.", "hat": "x.x.x. x.x.x."}, "fill": {"snare": "x.xxXX"}}, "bass": {"low": "R----- ------", "standard": "R----- 5-----", "high": "R---5- R---A."}, "keys": {"low": "C----- ------", "standard": "C-C-C- C-C-C-", "high": "C-C-C- C-C-C-"}}}},
       "samples": ["piano", "acoustic_kit", "electric_bass"],
       "optionalSamples": []
     },
     {
       "id": "mandopop_ballad",
+      "master": { "gainDb": 2.6 },
       "name": { "zh": "華語抒情", "en": "Mandopop Ballad" },
       "bpm": { "default": 72, "min": 60, "max": 80 },
       "swing": 50,
@@ -69,11 +72,13 @@
       "eq": { "keys": { "highpass": 60 } },
       "mix": {"drums": 0.0, "bass": -1.0, "keys": 5.5, "pad": -0.8, "keys2": 5.0},
       "instruments": { "keys": "piano", "keys2": "piano", "pad": "strings", "bass": "electric_bass", "drums": "acoustic_kit" },
+      "meters": {"3/4": {"tracks": {"keys2": {"low": null, "standard": null, "high": "U--- ---- ----"}, "pad": {"low": null, "standard": null, "high": "C--- ---- ----", "optional": true}, "guitar": null, "drums": {"low": null, "standard": {"kick": "X... .... ....", "rim": ".... x... x...", "hat": "o.o. o.o. o.o."}, "high": {"kick": "X... .... ..x.", "snare": ".... X... x...", "hat": "x.x. x.x. x.x."}, "fill": {"snare": "..xxXX"}}, "bass": {"low": null, "standard": "R--- ---- ----", "high": "R--- ---- 5---"}, "keys": {"low": "1.2. 3.4. 5.3.", "standard": "1234 5432 1234", "high": "1234 5432 1234"}}}, "6/8": {"tracks": {"keys2": {"low": null, "standard": null, "high": "U----- ------"}, "pad": {"low": null, "standard": null, "high": "C----- ------", "optional": true}, "guitar": null, "drums": {"low": null, "standard": {"kick": "X..... ......", "rim": "...... x.....", "hat": "o.o.o. o.o.o."}, "high": {"kick": "X..... ....x.", "snare": "...... X.....", "hat": "x.x.x. x.x.x."}, "fill": {"snare": "x.x.XX"}}, "bass": {"low": null, "standard": "R----- ------", "high": "R----- 5-----"}, "keys": {"low": "1.2.3. 5.3.2.", "standard": "1.2.3. 5.3.2.", "high": "1.2.3. 5.4.3."}}}},
       "samples": ["piano", "acoustic_kit", "electric_bass", "strings"],
       "optionalSamples": []
     },
     {
       "id": "jpop",
+      "master": { "gainDb": 3.6 },
       "name": { "zh": "J-pop／動畫", "en": "J-Pop / Anime" },
       "bpm": { "default": 140, "min": 120, "max": 170 },
       "swing": 50,
@@ -108,6 +113,7 @@
     },
     {
       "id": "citypop",
+      "master": { "gainDb": 4.6 },
       "name": { "zh": "City Pop", "en": "City Pop" },
       "bpm": { "default": 108, "min": 100, "max": 118 },
       "swing": 54,
@@ -144,6 +150,7 @@
     },
     {
       "id": "kpop_dance",
+      "master": { "gainDb": 3.6 },
       "name": { "zh": "K-pop 舞曲", "en": "K-Pop Dance" },
       "bpm": { "default": 120, "min": 100, "max": 128 },
       "swing": 50,
@@ -179,6 +186,7 @@
     },
     {
       "id": "kpop_ballad",
+      "master": { "gainDb": 2.9 },
       "inherits": "mandopop_ballad",
       "name": { "zh": "K-pop 抒情", "en": "K-Pop Ballad" },
       "bpm": { "default": 70, "min": 60, "max": 80 },
@@ -190,6 +198,7 @@
     },
     {
       "id": "rnb_neosoul",
+      "master": { "gainDb": 5.7 },
       "name": { "zh": "R&B／Neo-soul", "en": "R&B / Neo-Soul" },
       "bpm": { "default": 80, "min": 65, "max": 90 },
       "swing": 58,
@@ -220,11 +229,13 @@
       },
       "mix": {"drums": 0.0, "bass": -2.5, "keys": -4.9},
       "instruments": { "keys": "rhodes", "bass": "electric_bass", "drums": "acoustic_kit" },
+      "meters": {"6/8": {"tracks": {"keys2": null, "pad": null, "guitar": null, "drums": {"low": {"kick": "X..... ......", "rim": "...... x....."}, "standard": {"kick": "X...x. ......", "snare": "...... X.....", "hat": "x.x.x. x.x.x."}, "high": {"kick": "X...x. ....x.", "snare": "...... X...o.", "hat": "x.x.x. x.x.x."}, "fill": {"snare": ".o.xXx"}}, "bass": {"low": "R----- ------", "standard": "R---5- R-----", "high": "R---5- R--.A."}, "keys": {"low": "C----- ------", "standard": "C----- --C---", "high": "C--.C- C-.C-P"}}}},
       "samples": ["rhodes", "acoustic_kit", "electric_bass"],
       "optionalSamples": []
     },
     {
       "id": "lofi",
+      "master": { "gainDb": 5.0 },
       "name": { "zh": "Lo-fi Hip-hop", "en": "Lo-fi Hip-hop" },
       "bpm": { "default": 82, "min": 70, "max": 90 },
       "swing": 60,
@@ -260,11 +271,13 @@
       "mix": {"drums": 0.0, "bass": -2.3, "keys": 3.0},
       "alternatives": [{ "id": "upright", "track": "bass", "instr": "upright_bass", "default": false, "label": { "zh": "低音提琴", "en": "Upright bass" } }],
       "instruments": { "keys": "piano", "bass": "electric_bass", "drums": "acoustic_kit" },
+      "meters": {"3/4": {"tracks": {"keys2": null, "pad": null, "guitar": null, "drums": {"low": {"kick": "X... .... ....", "snare": ".... .... X..."}, "standard": {"kick": "X... ...X ....", "snare": ".... .... X...", "hat": "x.x. x.x. x.x."}, "high": {"kick": "X... ...X ....", "snare": ".... .... X...", "hat": "xoxo xoxo xoxo"}, "fill": {"snare": "..x.X."}}, "bass": {"low": "R--- ---- ----", "standard": "R--- ---. 5---", "high": "R--- --.R 5.A."}, "keys": {"low": "C--- ---- ----", "standard": "C--- --C- ----", "high": "C--- --C- --.C"}}}},
       "samples": ["piano", "acoustic_kit", "electric_bass"],
       "optionalSamples": ["upright_bass", "vinyl_noise"]
     },
     {
       "id": "reggaeton",
+      "master": { "gainDb": 4.8 },
       "name": { "zh": "Reggaeton／Latin", "en": "Reggaeton / Latin" },
       "bpm": { "default": 95, "min": 88, "max": 100 },
       "swing": 50,

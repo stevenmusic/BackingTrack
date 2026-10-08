@@ -9,6 +9,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gmd_stats import notes
 
 ROOT = sys.argv[1]
+# 第二個參數:拍號(4-4 / 3-4 / 6-8);三拍的一小節是 12 個十六分(6/8 = 六個八分 = 12 格)
+TS = sys.argv[2] if len(sys.argv) > 2 else "4-4"
+BAR = {"4-4": 16, "3-4": 12, "6-8": 12}[TS]
 MAIN = ["kick", "snare", "hat", "openhat", "rim"]
 acc = defaultdict(lambda: {"drift": [], "driftLag1": [], "jit": defaultdict(list), "sys": defaultdict(list),
                            "vel": defaultdict(list), "add": defaultdict(lambda: [0, 0]), "drop": defaultdict(lambda: [0, 0]),
@@ -20,16 +23,16 @@ def lag1(xs):
     return sum((xs[i] - m) * (xs[i + 1] - m) for i in range(len(xs) - 1)) / v if v else None
 
 for row in csv.DictReader(open(os.path.join(ROOT, "info.csv"))):
-    if row["beat_type"] != "beat" or row["time_signature"] != "4-4":
+    if row["beat_type"] != "beat" or row["time_signature"] != TS:
         continue
-    g = acc[row["style"].split("/")[0]]
+    g = acc[row["style"].split("/")[0] if TS == "4-4" else TS]  # 三拍資料少,所有曲風併在一起
     bpm = float(row["bpm"]); ms16 = 60000 / bpm / 4
     ns = notes(os.path.join(ROOT, row["midi_filename"]), bpm)
     if len(ns) < 20: continue
     hits = []
     for beat, piece, vel in ns:
         x = beat * 4; slot = round(x)
-        hits.append((slot // 16, slot % 16, piece, vel, (x - slot) * ms16))
+        hits.append((slot // BAR, slot % BAR, piece, vel, (x - slot) * ms16))
     fmean = stt.mean(h[4] for h in hits)
     nb = max(h[0] for h in hits) + 1
     if nb < 4: continue
@@ -59,7 +62,7 @@ for row in csv.DictReader(open(os.path.join(ROOT, "info.csv"))):
         for b, m in enumerate(masks):
             diff = m != mode
             g["phrase"][f"{pc}:{b % 4}"][0] += diff; g["phrase"][f"{pc}:{b % 4}"][1] += 1
-            for pos in range(16):
+            for pos in range(BAR):
                 inmode = mode >> pos & 1; on = m >> pos & 1
                 if inmode: g["drop"][f"{pc}:{pos}"][0] += (not on); g["drop"][f"{pc}:{pos}"][1] += 1
                 else: g["add"][f"{pc}:{pos}"][0] += on; g["add"][f"{pc}:{pos}"][1] += 1

@@ -2,6 +2,7 @@
 // setInterval 只負責「來看一下」。混音只做到「聽得清楚、不削波」,母帶之後再做。
 import { render, resolveStyle, mulberry32, progressionBars } from "./engine.mjs";
 import { Sampler } from "./sampler.mjs";
+import { makeLimiter } from "./limiter.mjs";
 
 const LOOKAHEAD = 0.2, TICK_MS = 25, MIN_CHUNK = 64;
 const BUTTER_Q_DB = -3.01; // Web Audio 的 highpass / lowpass Q 單位是 dB;Butterworth = −3.01
@@ -80,13 +81,24 @@ export class Player {
     const ctx = this.ctx = given ?? new (window.AudioContext || window.webkitAudioContext)({ latencyHint: "playback" });
     this.sampler = new Sampler(ctx, this.manifest, TRIMS);
     this.sampler.onProgress = p => this.onProgress(p);
-    // 母帶之前的保險:只防削波,不拿來加音量
+    // 母帶:黏著壓縮(2:1,慢起音,只壓 1–2dB)→ 各曲風響度校正到 −14 LUFS(styles.json 的 master.gainDb)
+    // → 預讀限幅器(−1 dBTP,AudioWorklet);worklet 不能用時退回 DynamicsCompressor
     const master = this.master = ctx.createGain();
     master.gain.value = 0.8;
-    const safety = ctx.createDynamicsCompressor();
-    safety.threshold.value = -3; safety.knee.value = 0; safety.ratio.value = 20;
-    safety.attack.value = 0.002; safety.release.value = 0.1;
-    master.connect(safety).connect(ctx.destination);
+    const glue = ctx.createDynamicsCompressor();
+    glue.threshold.value = -18; glue.knee.value = 6; glue.ratio.value = 2;
+    glue.attack.value = 0.03; glue.release.value = 0.25;
+    const loud = this.loud = ctx.createGain();
+    const fallback = this.fallback = ctx.createDynamicsCompressor();
+    fallback.threshold.value = -2; fallback.knee.value = 0; fallback.ratio.value = 20;
+    fallback.attack.value = 0.002; fallback.release.value = 0.1;
+    master.connect(glue).connect(loud).connect(fallback).connect(ctx.destination);
+    this.limiterReady = makeLimiter(ctx, -1).then(lim => {
+      if (!lim) return false;
+      loud.disconnect(); loud.connect(lim).connect(ctx.destination);
+      this.limiter = lim;
+      return true;
+    });
     // 兩個空間:room(0.5 秒,讓乾的取樣像在同一個房間)與 plate(1.6 秒,鍵盤、弦樂)
     this.verbs = {};
     for (const [name, sec, seed, early, ret] of [["room", 0.5, 4321, true, 2.0], ["plate", 1.6, 1234, false, 1.8]]) {
@@ -203,6 +215,8 @@ export class Player {
     const first = render(this.data, styleId, { ...this.opt, bars: this.chunkBars, seed: (opt.seed ?? 1), countIn: true });
     this.onState("loading");
     await this.sampler.ensure(this.needs(first.events));
+    await this.limiterReady;
+    this.loud.gain.value = 10 ** ((st.master?.gainDb ?? 0) / 20);
     this.session = this.buildBuses(st);
     this.buses = this.session.buses;
     this.chunk = 0;
@@ -322,6 +336,8 @@ export class Player {
     const only = opt.only; // 只算某幾軌(分軌量測)
     await p.sampler.ensure(p.needs(r.events));
     await p.sampler.background;
+    await p.limiterReady;
+    p.loud.gain.value = opt.noMaster ? 1 : 10 ** ((st.master?.gainDb ?? 0) / 20);
     const session = p.buildBuses(st), { buses } = session;
     if (!only) await p.vinyl(0, session.out);
     for (const e of r.events) {

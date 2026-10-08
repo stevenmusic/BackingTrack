@@ -2,8 +2,17 @@
 // 只產生事件(時間、音高、力度),不發聲;瀏覽器與 Node 都能 import。
 // 不用內建亂數:人性化走 mulberry32 固定種子,同一個 seed 一定產生同一組事件。
 
-export const CELLS = 16;
+export const CELLS = 16;      // 4/4 一小節的格數(規格的節奏型)
 export const FILL_CELLS = 8;
+/**
+ * 拍號:一小節幾格(十六分)、一拍幾格、兩顆和弦怎麼分。
+ * 3/4 兩顆和弦 = 2 拍 + 1 拍(舊網頁 spansOf 的規則:前面拿多的);6/8 = 兩個附點四分各一顆;6/8 不搖擺
+ */
+export const METERS = {
+  "4/4": { cells: 16, beat: 4, split: [8, 8] },
+  "3/4": { cells: 12, beat: 4, split: [8, 4] },
+  "6/8": { cells: 12, beat: 6, split: [6, 6], straight: true },
+};
 export const SYMBOLS = { drums: "Xxor.", bass: "R3578A-.", keys: "CSU123456NP-.", guitar: "x." };
 export const DRUM_VEL = { X: 112, x: 88, o: 48, r: [70, 60] };
 export const RANGE = { bass: [28, 48], bassRoot: [31, 43], keys: [48, 72], arp: [43, 67], pad: [52, 67], lowKeysMax: 69 };
@@ -264,7 +273,7 @@ function densityAt(o, bar) {
 }
 
 /** 一條旋律軌在某個密度的節奏型(沒有就 null) */
-const laneOf = (st, track, dens) => st.tracks[track]?.[dens] ?? null;
+const laneOf = (T, track, dens) => T[track]?.[dens] ?? null;
 
 /**
  * 產生一段伴奏的事件。
@@ -278,6 +287,14 @@ export function render(data, styleId, opt = {}) {
     progression: st.progressions[0].id, key: 0, bars: 16, density: "auto",
     bpm: st.bpm.default, swing: st.swing, seed: 1, humanize: true, countIn: true, ...opt,
   };
+  const meterKey = o.meter ?? "4/4";
+  const MT = METERS[meterKey];
+  if (!MT) throw new Error(`不支援的拍號:${meterKey}`);
+  const BAR = MT.cells;
+  // 這個拍號的節奏型:4/4 在 tracks,其他拍號在 meters[拍號].tracks;沒寫就是這個曲風不打這個拍號
+  const T = meterKey === "4/4" ? st.tracks : st.meters?.[meterKey]?.tracks;
+  if (!T) throw new Error(`${st.name?.zh ?? st.id} 沒有 ${meterKey} 拍`);
+  if (MT.straight) o.swing = 50;
   const rules = st.rules ?? {};
   let pBars;
   if (o.chords) pBars = progressionBars({ example: o.chords }, o.key, "example"); // 使用者自己輸入(音名)
@@ -292,8 +309,9 @@ export function render(data, styleId, opt = {}) {
   for (let b = 0; b <= o.bars; b++) {
     const chords = pBars[b % pBars.length];
     if (chords.length > 2) throw new Error(`一小節最多兩顆和弦:${chords.map(c => c.sym).join(" ")}`);
-    const w = CELLS / chords.length;
-    chords.forEach((c, i) => slots.push({ bar: b, from: i * w, to: (i + 1) * w, chord: c }));
+    const ws = chords.length === 1 ? [BAR] : MT.split;
+    let at = 0;
+    chords.forEach((c, i) => { slots.push({ bar: b, from: at, to: at + ws[i], chord: c }); at += ws[i]; });
   }
   const slotAt = (bar, cell) => slots.findIndex(s => s.bar === bar && cell >= s.from && cell < s.to);
   const nextOf = i => slots[Math.min(i + 1, slots.length - 1)];
@@ -310,17 +328,17 @@ export function render(data, styleId, opt = {}) {
   };
   const kType = st.voicing.keys;
   const kRange = st.ranges?.keys ?? (kType === "arp5" ? RANGE.arp : RANGE.keys);
-  if (st.tracks.keys || st.tracks.guitar) {
+  if (T.keys || T.guitar) {
     plans.keys = plan(kType, kRange, true);
     plans.keysShell = plan("shell", kRange, true);
   }
-  if (st.tracks.keys2) plans.keys2 = plan(st.voicing.keys2, RANGE.keys, true);
-  if (st.tracks.pad) plans.pad = plan(st.voicing.pad, st.ranges?.pad ?? RANGE.pad, false);
+  if (T.keys2) plans.keys2 = plan(st.voicing.keys2, RANGE.keys, true);
+  if (T.pad) plans.pad = plan(st.voicing.pad, st.ranges?.pad ?? RANGE.pad, false);
 
   // 貝斯根音:優先 31–43、離上一顆近;這小節要彈 8 就挑彈得到高八度的那個八度
   let prevR = null;
   const bassR = slots.map(s => {
-    const lane = laneOf(st, "bass", densityAt(o, s.bar));
+    const lane = laneOf(T, "bass", densityAt(o, s.bar));
     const needs8 = lane ? cells(lane).includes("8") : false;
     const cands = [];
     for (let p = RANGE.bass[0]; p <= RANGE.bass[1]; p++) if (mod12(p) === s.chord.bass) cands.push(p);
@@ -335,7 +353,7 @@ export function render(data, styleId, opt = {}) {
   const cellSec = 60 / o.bpm / 4;
   const offsetBars = o.countIn ? 1 : 0;
   const gridAt = (bar, cell) => {
-    const abs = (bar + offsetBars) * CELLS + cell;
+    const abs = (bar + offsetBars) * BAR + cell;
     const whole = Math.floor(abs), frac = abs - whole;
     const at = n => (n % 2 ? (n - 1) * cellSec + 2 * cellSec * o.swing / 100 : n * cellSec);
     return at(whole) + frac * (at(whole + 1) - at(whole));
@@ -354,7 +372,7 @@ export function render(data, styleId, opt = {}) {
   };
 
   // 預備拍:hi-hat 四下四分音符
-  if (o.countIn) for (let c = 0; c < CELLS; c += 4) hit("hat", -1, c, DRUM_VEL.x);
+  if (o.countIn) for (let c = 0; c < BAR; c += MT.beat) hit("hat", -1, c, DRUM_VEL.x);
 
   const fillOn = dens => !rules.fillDensities || rules.fillDensities.includes(dens);
   const carry = {}; // N 延到下一小節:carry[track] = 被吃掉的那一小節
@@ -362,17 +380,20 @@ export function render(data, styleId, opt = {}) {
 
   // 每小節的變化(資料:styles/feel.json,由 Groove MIDI / POP909 統計而來)
   const hz = st.humanize ?? {};
-  const F = o.feel ?? data.feel?.styles?.[st.id] ?? null;
+  // 彈法資料:4/4 用曲風自己的;3/4、6/8 用 Groove MIDI 三拍段落的統計(資料少,鍵盤沒有三拍資料就不分強弱、不搶拍)
+  const F0 = o.feel ?? data.feel?.styles?.[st.id] ?? null;
+  const F = !F0 || meterKey === "4/4" ? F0
+    : F0.meters?.[meterKey] ? { ...F0, drums: F0.meters[meterKey].drums, keys: { ...F0.keys, accent: null, anticipation: null } } : null;
   const vary = o.vary !== false && F;
   const vrng = mulberry32((o.seed ^ 0x5bd1e995) >>> 0);
   const progScale = Math.min(1, (hz.timingSigmaMs ?? 6) / 6); // 程式打的曲風(K-pop 舞曲)變化少
   const kickAdds = {};
   const pushAt = {};
   if (vary && F.keys?.anticipation && st.voicing.keys !== "arp5") {
-    const A = F.keys.anticipation, at = CELLS - Math.max(1, Math.round(A.beatsEarly * 4 / 2) * 2);
+    const A = F.keys.anticipation, at = BAR - Math.max(1, Math.round(A.beatsEarly * 4 / 2) * 2);
     for (let b = 0; b + 1 < o.bars; b++) {
       if (b % 8 === 7) continue; // 過門小節不搶
-      const cur = laneOf(st, "keys", densityAt(o, b)), nx = laneOf(st, "keys", densityAt(o, b + 1));
+      const cur = laneOf(T, "keys", densityAt(o, b)), nx = laneOf(T, "keys", densityAt(o, b + 1));
       if (!cur || !nx || !"CSU".includes(cells(nx)[0])) continue;
       const tail = cells(cur).slice(at);
       if (![...tail].every(ch => ch === "." || ch === "-")) continue;
@@ -386,12 +407,12 @@ export function render(data, styleId, opt = {}) {
     const dens = densityAt(o, b);
 
     // 鼓
-    const kit = st.tracks.drums?.[dens];
+    const kit = T.drums?.[dens];
     if (kit) {
       const lanes = Object.fromEntries(Object.entries(kit).map(([k, v]) => [k, cells(v)]));
-      if (b % 8 === 7 && st.tracks.drums.fill && fillOn(dens))
-        for (const [piece, f] of Object.entries(st.tracks.drums.fill))
-          lanes[piece] = (lanes[piece] ?? ".".repeat(CELLS)).slice(0, FILL_CELLS) + cells(f);
+      if (b % 8 === 7 && T.drums.fill && fillOn(dens))
+        for (const [piece, f] of Object.entries(T.drums.fill))
+          lanes[piece] = (lanes[piece] ?? ".".repeat(BAR)).slice(0, BAR / 2) + cells(f);
       if (b % 8 === 0 && rules.crashOnSection !== false) hit("crash", b, 0, DRUM_VEL.X);
       if (vary && b % 8 !== 7) kickAdds[b] = varyDrums(lanes, b, dens);
       for (const [piece, s] of Object.entries(lanes)) {
@@ -412,21 +433,21 @@ export function render(data, styleId, opt = {}) {
 
     // 旋律軌
     for (const track of MELODIC) {
-      const lane = laneOf(st, track, dens);
+      const lane = laneOf(T, track, dens);
       if (!lane) continue;
       let s = cells(lane);
       if (track === "keys" && pushAt[b] != null) // 搶拍:下一顆和弦提早一個八分音符進來
-        s = s.slice(0, pushAt[b]) + "N" + "-".repeat(CELLS - pushAt[b] - 1);
+        s = s.slice(0, pushAt[b]) + "N" + "-".repeat(BAR - pushAt[b] - 1);
       if (track === "bass" && kickAdds[b]?.length) { // 鼓手多踩的大鼓,貝斯跟著彈根音
         const arr = [...s];
         for (const c of kickAdds[b]) if (arr[c] === ".") arr[c] = "R";
         s = arr.join("");
       }
-      for (let c = 0; c < CELLS; c++) {
+      for (let c = 0; c < BAR; c++) {
         const ch = s[c];
         if (ch === "-" || ch === ".") continue;
         let len = 1;
-        while (c + len < CELLS && s[c + len] === "-") len++;
+        while (c + len < BAR && s[c + len] === "-") len++;
         if (c === 0 && carry[track] === b) continue; // 被上一小節的 N 吃掉
         const si = slotAt(b, c);
 
@@ -453,15 +474,15 @@ export function render(data, styleId, opt = {}) {
         }
 
         if (ch === "N") {
-          let n = CELLS - c;
-          const nx = b + 1 < o.bars ? laneOf(st, track, densityAt(o, b + 1)) : null;
+          let n = BAR - c;
+          const nx = b + 1 < o.bars ? laneOf(T, track, densityAt(o, b + 1)) : null;
           if (nx && !"-.".includes(cells(nx)[0])) {
             let k = 1;
-            while (k < CELLS && cells(nx)[k] === "-") k++;
+            while (k < BAR && cells(nx)[k] === "-") k++;
             n += k;
           }
           const held = capKeys(track, n);
-          if (held > CELLS - c) carry[track] = b + 1; // 真的延進下一小節才吃掉那一下
+          if (held > BAR - c) carry[track] = b + 1; // 真的延進下一小節才吃掉那一下
           note(track, b, c, held, plans.keys[si + 1].notes, { symbol: pushAt[b] === c && track === "keys" ? "push" : "N" });
           continue;
         }
@@ -476,11 +497,11 @@ export function render(data, styleId, opt = {}) {
           const pl = track === "guitar" ? plans.keys : plans[track];
           const v = pl[idx].notes;
           let notes;
-          if (track === "guitar" && st.tracks.guitar.voicing === "power") {
+          if (track === "guitar" && T.guitar.voicing === "power") {
             // power chord:根音、五度、八度,根音放在吉他低音區 40–51(E2–D♯3)
             const c = slots[idx].chord, r = 40 + mod12(c.root - 40);
             notes = [r, r + 7, r + 12];
-          } else if (track === "guitar") notes = v.slice(-(st.tracks.guitar.topNotes ?? 2));
+          } else if (track === "guitar") notes = v.slice(-(T.guitar.topNotes ?? 2));
           else if (ch === "C") notes = v;
           else if (ch === "S") notes = plans.keysShell[idx].notes;
           else if (ch === "U") notes = v.slice(-3);
@@ -519,7 +540,7 @@ export function render(data, styleId, opt = {}) {
       const key = pc === "clap" ? "snare" : pc;
       if (!D.add[key] || pc === "openhat") continue;
       const ph = D.phrase[key]?.[b % 4] ?? 1, arr = [...s0];
-      for (let c = 0; c < CELLS; c++) {
+      for (let c = 0; c < BAR; c++) {
         const r = vrng();
         if (arr[c] === ".") {
           if (r < D.add[key][c] * scale * ph) {
@@ -532,9 +553,9 @@ export function render(data, styleId, opt = {}) {
     }
     // 開放 hi-hat:換掉那一下閉合的(只在有 hi-hat 的段落)
     if (lanes.hat && D.add.openhat) {
-      const oh = [...(lanes.openhat ?? ".".repeat(CELLS))], hh = [...lanes.hat];
+      const oh = [...(lanes.openhat ?? ".".repeat(BAR))], hh = [...lanes.hat];
       const ph = D.phrase.openhat?.[b % 4] ?? 1;
-      for (let c = 0; c < CELLS; c++)
+      for (let c = 0; c < BAR; c++)
         if (hh[c] !== "." && oh[c] === "." && vrng() < D.add.openhat[c] * scale * ph) { oh[c] = "x"; hh[c] = "."; }
       lanes.openhat = oh.join(""); lanes.hat = hh.join("");
     }
@@ -581,7 +602,7 @@ export function render(data, styleId, opt = {}) {
       acc = e.track === "drums" ? e.acc ?? 1 : DR.accent.hat ? DR.accent.hat[e.cell] ** 0.5 : 1;
     } else if (F?.keys && KEYS_LIKE.includes(e.track)) {
       sys = odd ? 0 : F.keys.sysRel[e.cell] * K0;
-      acc = e.track === "pad" ? 1 : F.keys.accent[e.cell] ** 0.6;
+      acc = e.track === "pad" || !F.keys.accent ? 1 : F.keys.accent[e.cell] ** 0.6;
     }
     const j = drift.get(e.bar) + sys + clampMs(gauss() * jit * k) + (ov.offsetMs ?? 0);
     e.time = Math.max(0, e.gridTime + j / 1000);
@@ -606,5 +627,5 @@ export function render(data, styleId, opt = {}) {
   }
   events.sort((a, b) => a.gridTime - b.gridTime);
 
-  return { events, plans, meta: { style: st.id, ...o, cellSec, barSec: cellSec * CELLS } };
+  return { events, plans, meta: { style: st.id, ...o, cellSec, barSec: cellSec * BAR } };
 }

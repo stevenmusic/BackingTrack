@@ -66,6 +66,8 @@ footer li{margin-bottom:4px}
     <div class="row">
       <div><p class="label">和弦進行</p><select id="prog"></select></div>
       <div><p class="label">調</p><select id="key"></select></div>
+      <div><p class="label">拍號</p>
+        <select id="meter"><option>4/4</option><option>3/4</option><option>6/8</option></select></div>
       <div><p class="label">密度</p>
         <select id="dens">
           <option value="auto">A 段 standard → B 段 high</option>
@@ -142,6 +144,10 @@ function pickStyle(id) {
   const sk = st.suggestedKeys[0].replace("m", "");
   const idx = (minor ? MINOR : KEYS).findIndex(k => k === sk);
   $("key").value = String(Math.max(0, idx));
+  // 拍號:這個曲風沒寫的拍號變灰;現在選的不能用就回 4/4
+  const meters = ["4/4", ...Object.keys(st.meters ?? {})];
+  for (const op of $("meter").options) op.disabled = !meters.includes(op.value);
+  if (!meters.includes($("meter").value)) $("meter").value = "4/4";
   Object.assign($("bpm"), { min: st.bpm.min, max: st.bpm.max, value: st.bpm.default });
   $("bpmv").textContent = st.bpm.default;
   // 可選的聲部、替代樂器、效果(預設照 styles.json 的 default)
@@ -171,7 +177,7 @@ function paintBars() {
 function opt() {
   const parts = {};
   document.querySelectorAll("[data-part]").forEach(el => { parts[el.dataset.part] = el.checked; });
-  const o = { progression: $("prog").value, key: +$("key").value, density: $("dens").value, bpm: +$("bpm").value, parts };
+  const o = { progression: $("prog").value, key: +$("key").value, density: $("dens").value, bpm: +$("bpm").value, meter: $("meter").value, parts };
   const text = $("chords").value.trim();
   if (text) o.chords = text;
   return o;
@@ -187,7 +193,7 @@ $("styles").addEventListener("click", e => {
   const b = e.target.closest(".chip"); if (!b) return;
   pickStyle(b.dataset.id); if (player.playing) play();
 });
-for (const id of ["prog", "key", "dens"]) $(id).addEventListener("change", restartIfPlaying);
+for (const id of ["prog", "key", "dens", "meter"]) $(id).addEventListener("change", restartIfPlaying);
 $("chords").addEventListener("change", restartIfPlaying);
 $("chords").addEventListener("input", paintBars);
 $("bpm").addEventListener("input", () => { $("bpmv").textContent = $("bpm").value; });

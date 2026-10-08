@@ -80,3 +80,15 @@ Rhodes 是唯一例外(每 4 個白鍵一個取樣):量過移調 3 半音的泛�
 3. 互相蓋住:同一頻帶兩軌都占全混音 ≥ 30%
 4. 空間:左右相關(目標 0.3–0.9)、單聲道損失、殘響/乾(同一組事件有殘響減掉沒殘響)
 音量校正用 `tools/mix/solve_balance.py` 算(目標寫在檔頭),結果寫進 `styles.json` 的 `mix`(dB)
+
+## 拍號(Steven 2026-10-08:「拍號應該還是有可能會有 3 拍」)
+- 4/4 的節奏型在 `tracks`,3/4、6/8 在 `meters["3/4"].tracks`(一小節 12 格、過門 6 格);沒寫的拍號 = 這個曲風不打(會講清楚)
+- 支援 3/4、6/8:Pop、華語抒情、K-pop 抒情(繼承)、Lo-fi(3/4)、R&B(6/8,12/8 慢歌);J-pop、City Pop、K-pop 舞曲、Reggaeton 只有 4/4
+- 3/4 兩顆和弦 = 2 拍 + 1 拍;6/8 兩顆 = 各一個附點四分;6/8 不搖擺;預備拍照拍子數(3/4 三下、6/8 兩下)
+- 寫法參考舊網頁的 3 拍(3/4「蹦恰恰」小鼓 2、3 拍;6/8 小鼓第 4 個八分)與 Groove MIDI 的 3-4 / 6-8 段落(資料少:571 / 106 小節,
+  只取時間偏差大小與 hi-hat 強弱,變化機率再打五折);鍵盤沒有三拍資料,不分強弱、不搶拍
+
+## 母帶(Steven 2026-10-08:「母帶跟混音都幫我做好」)
+`黏著壓縮(2:1、門檻 −18dB、起音 30ms)→ 各曲風響度校正(styles.json 的 master.gainDb)→ 預讀限幅器(limiter.mjs,AudioWorklet,
+預讀 5ms、4 倍超取樣估 true peak、天花板 −1 dBTP)`;worklet 不能用時退回 DynamicsCompressor。
+目標 −14 LUFS(串流平台的標準響度)、true peak ≤ −1 dBTP;`tools/mix/solve_loudness.py` 量完寫回 `master.gainDb`

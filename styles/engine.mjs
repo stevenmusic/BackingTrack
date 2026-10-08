@@ -35,7 +35,24 @@ export const QUALITY = {
   "9":     { 3: 4, 5: 7, 7: 10, 9: 14 },
   "13":    { 3: 4, 5: 7, 7: 10, 9: 14, 13: 21 },
   "7♭9":   { 3: 4, 5: 7, 7: 10, 9: 13 },
+  // 下面是讓使用者自己輸入和弦時用的常見性質(規格的進行用不到)
+  "6":     { 3: 4, 5: 7, 13: 9 },
+  m6:      { 3: 3, 5: 7, 13: 9 },
+  add9:    { 3: 4, 5: 7, 9: 14 },
+  madd9:   { 3: 3, 5: 7, 9: 14 },
+  dim:     { 3: 3, 5: 6 },
+  dim7:    { 3: 3, 5: 6, 7: 9 },
+  aug:     { 3: 4, 5: 8 },
+  "7♯9":   { 3: 4, 5: 7, 7: 10, 9: 15 },
+  "7♯5":   { 3: 4, 5: 8, 7: 10 },
+  "9sus4": { 3: 5, 5: 7, 7: 10, 9: 14 },
+  m11:     { 3: 3, 5: 7, 7: 10, 9: 14 },
+  maj13:   { 3: 4, 5: 7, 7: 11, 9: 14, 13: 21 },
+  "mM7":   { 3: 3, 5: 7, 7: 11 },
 };
+// 常見寫法 → 上表的 key
+const ALIAS = { min: "m", "-": "m", M7: "maj7", Δ: "maj7", "Δ7": "maj7", ma7: "maj7", "m7b5": "m7♭5", ø: "m7♭5", ø7: "m7♭5",
+  "°": "dim", "°7": "dim7", "+": "aug", sus: "sus4", "7sus": "7sus4", "m(maj7)": "mM7", mmaj7: "mM7", "69": "6", "6/9": "6" };
 
 function chordOf(root, bass, quality, sym) {
   const iv = QUALITY[quality];
@@ -49,7 +66,8 @@ export function parseChord(sym) {
   if (!m) throw new Error(`看不懂的和弦:「${sym}」`);
   const root = LETTER[m[1]] + accOf(m[2]);
   const bass = m[4] ? LETTER[m[4]] + accOf(m[5]) : root;
-  return chordOf(root, bass, m[3].replace(/b/g, "♭").replace(/#/g, "♯"), sym);
+  const q = m[3];
+  return chordOf(root, bass, ALIAS[q] ?? q.replace(/b/g, "♭").replace(/#/g, "♯"), sym);
 }
 
 const SCALE = { major: [0, 2, 4, 5, 7, 9, 11], minor: [0, 2, 3, 5, 7, 8, 10] };
@@ -73,7 +91,9 @@ const tonicOf = mode => (mode === "minor" ? 9 : 0); // 範例用 C 大調 / A �
 
 /** 進行 → 每小節的和弦陣列;key = 主音往上移幾個半音(0–11) */
 export function progressionBars(prog, key = 0, from = "roman") {
-  return prog[from].split("|").map(bar => bar.trim().split(/\s+/).map(tok =>
+  const bars = prog[from].split("|").map(b => b.trim()).filter(Boolean);
+  if (!bars.length) throw new Error("沒有和弦");
+  return bars.map(bar => bar.split(/\s+/).map(tok =>
     from === "roman"
       ? transpose(parseRoman(tok, prog.mode), tonicOf(prog.mode) + key)
       : transpose(parseChord(tok), key)));
@@ -245,7 +265,8 @@ const laneOf = (st, track, dens) => st.tracks[track]?.[dens] ?? null;
 
 /**
  * 產生一段伴奏的事件。
- * opt: { progression, key(0–11), bars, density: "auto"|"low"|"standard"|"high", bpm, swing, seed, humanize, countIn }
+ * opt: { progression | chords("C | G/B | Am7 | F G"), key(0–11), bars, density: "auto"|"low"|"standard"|"high",
+ *        bpm, swing, seed, humanize, countIn }
  * 回傳 { events, plans, meta };events 依時間排序,plans 是各軌每顆和弦的聲位(驗收 voice leading 用)
  */
 export function render(data, styleId, opt = {}) {
@@ -254,10 +275,14 @@ export function render(data, styleId, opt = {}) {
     progression: st.progressions[0].id, key: 0, bars: 16, density: "auto",
     bpm: st.bpm.default, swing: st.swing, seed: 1, humanize: true, countIn: true, ...opt,
   };
-  const prog = st.progressions.find(p => p.id === o.progression);
-  if (!prog) throw new Error(`${st.id} 沒有這個和弦進行:${o.progression}`);
   const rules = st.rules ?? {};
-  const pBars = progressionBars(prog, o.key);
+  let pBars;
+  if (o.chords) pBars = progressionBars({ example: o.chords }, o.key, "example"); // 使用者自己輸入(音名)
+  else {
+    const prog = st.progressions.find(p => p.id === o.progression);
+    if (!prog) throw new Error(`${st.id} 沒有這個和弦進行:${o.progression}`);
+    pBars = progressionBars(prog, o.key);
+  }
 
   // 和弦格:每小節 1 顆佔滿,2 顆各佔半小節;多排一小節給「下一顆和弦」看
   const slots = [];

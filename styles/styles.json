@@ -32,6 +32,7 @@
         "pad": null,
         "guitar": null
       },
+      "instruments": { "keys": "piano", "bass": "electric_bass", "drums": "acoustic_kit" },
       "samples": ["piano", "acoustic_kit", "electric_bass"],
       "optionalSamples": []
     },
@@ -64,7 +65,8 @@
         "pad":   { "low": null, "standard": null, "high": "C--- ---- ---- ----", "optional": true },
         "guitar": null
       },
-      "samples": ["piano", "acoustic_kit", "electric_bass", "string_pad"],
+      "instruments": { "keys": "piano", "keys2": "piano", "pad": "strings", "bass": "electric_bass", "drums": "acoustic_kit" },
+      "samples": ["piano", "acoustic_kit", "electric_bass", "strings"],
       "optionalSamples": []
     },
     {
@@ -96,8 +98,9 @@
         "pad": null,
         "guitar": null
       },
+      "instruments": { "keys": "piano", "bass": "electric_bass", "drums": "acoustic_kit" },
       "samples": ["piano", "acoustic_kit", "electric_bass"],
-      "optionalSamples": ["distorted_guitar"]
+      "optionalSamples": []
     },
     {
       "id": "citypop",
@@ -129,8 +132,9 @@
         "pad": null,
         "guitar": { "low": null, "standard": null, "high": "..x. ..x. ..x. ..x.", "optional": true, "topNotes": 2 }
       },
+      "instruments": { "keys": "rhodes", "bass": "electric_bass", "drums": "acoustic_kit", "guitar": "clean_guitar" },
       "samples": ["rhodes", "acoustic_kit", "electric_bass"],
-      "optionalSamples": ["slap_bass", "clean_electric_guitar"]
+      "optionalSamples": ["clean_guitar"]
     },
     {
       "id": "kpop_dance",
@@ -161,7 +165,8 @@
         "pad":   { "low": "C--- ---- ---- ----", "standard": null, "high": "C--- ---- ---- ----" },
         "guitar": null
       },
-      "samples": ["electronic_kit", "synth_bass", "pluck", "synth_pad"],
+      "instruments": { "keys": "piano", "pad": "strings", "bass": "electric_bass", "drums": "electronic_kit" },
+      "samples": ["piano", "electronic_kit", "electric_bass", "strings"],
       "optionalSamples": []
     },
     {
@@ -205,6 +210,7 @@
         "pad": null,
         "guitar": null
       },
+      "instruments": { "keys": "rhodes", "bass": "electric_bass", "drums": "acoustic_kit" },
       "samples": ["rhodes", "acoustic_kit", "electric_bass"],
       "optionalSamples": []
     },
@@ -220,8 +226,7 @@
       "rules": { "crashOnSection": false },
       "effects": [
         { "type": "pitchDrift", "bus": "keys", "cents": 8, "rateHz": 0.5 },
-        { "type": "lowpass", "bus": "keys", "hz": 4500 },
-        { "type": "vinylNoise", "db": -30, "userToggle": true }
+        { "type": "lowpass", "bus": "keys", "hz": 4500 }
       ],
       "progressions": [
         { "id": "lofi_2516", "roman": "ii9 | V13 | Imaj9 | VI7♭9", "example": "Dm9 | G13 | Cmaj9 | A7♭9", "mode": "major" },
@@ -242,8 +247,9 @@
         "pad": null,
         "guitar": null
       },
-      "samples": ["piano", "boombap_kit", "electric_bass", "vinyl_noise"],
-      "optionalSamples": ["upright_bass"]
+      "instruments": { "keys": "piano", "bass": "electric_bass", "drums": "acoustic_kit" },
+      "samples": ["piano", "acoustic_kit", "electric_bass"],
+      "optionalSamples": []
     },
     {
       "id": "reggaeton",
@@ -274,8 +280,9 @@
         "pad": null,
         "guitar": null
       },
-      "samples": ["electronic_kit", "synth_bass", "piano"],
-      "optionalSamples": ["electric_bass", "nylon_guitar"]
+      "instruments": { "keys": "piano", "bass": "electric_bass", "drums": "electronic_kit" },
+      "samples": ["piano", "electronic_kit", "electric_bass"],
+      "optionalSamples": []
     }
   ]
 }

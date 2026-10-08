@@ -49,7 +49,8 @@ def dropouts(x, sr):
     db = 20 * np.log10(rms + 1e-12)
     on = np.where(db > -40)[0]
     if not len(on): return 0
-    mid = db[on[0]:on[-1]]
+    # 跳過預備拍(只有 hi-hat 四下,中間本來就安靜;16 小節、速度 ≥ 70 的預備拍 ≤ 3.5 秒)
+    mid = db[max(on[0], int(3.5 / 0.05)):on[-1]]
     return int((mid < -50).sum())
 
 

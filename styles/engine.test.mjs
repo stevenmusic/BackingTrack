@@ -3,7 +3,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
-  cells, SYMBOLS, CELLS, FILL_CELLS, RANGE, render, resolveStyle, progressionBars,
+  cells, SYMBOLS, CELLS, FILL_CELLS, RANGE, METERS, render, resolveStyle, progressionBars,
 } from "./engine.mjs";
 
 const data = JSON.parse(readFileSync(new URL("./styles.json", import.meta.url), "utf8"));
@@ -11,17 +11,21 @@ data.feel = JSON.parse(readFileSync(new URL("./feel.json", import.meta.url), "ut
 const ids = data.styles.map(s => s.id);
 const DENS = ["low", "standard", "high"];
 
-// 每一條節奏型字串:[位置, 軌別, 字串]
+// 每一條節奏型字串:[位置, 軌別, 字串, 是不是過門, 一小節幾格](4/4 在 tracks,其他拍號在 meters)
 function* lanes(st) {
-  for (const d of [...DENS, "fill"]) {
-    const kit = st.tracks.drums?.[d];
-    if (kit) for (const [p, s] of Object.entries(kit)) yield [`${st.id}.drums.${d}.${p}`, "drums", s, d === "fill"];
-  }
-  for (const t of ["bass", "keys", "keys2", "pad", "guitar"])
-    for (const d of DENS) {
-      const s = st.tracks[t]?.[d];
-      if (s) yield [`${st.id}.${t}.${d}`, t === "bass" ? "bass" : t === "guitar" ? "guitar" : "keys", s, false];
+  const all = [["4/4", st.tracks], ...Object.entries(st.meters ?? {}).map(([m, v]) => [m, v.tracks])];
+  for (const [m, T] of all) {
+    const bar = METERS[m].cells;
+    for (const d of [...DENS, "fill"]) {
+      const kit = T.drums?.[d];
+      if (kit) for (const [p, s] of Object.entries(kit)) yield [`${st.id}.${m}.drums.${d}.${p}`, "drums", s, d === "fill", bar];
     }
+    for (const t of ["bass", "keys", "keys2", "pad", "guitar"])
+      for (const d of DENS) {
+        const s = T[t]?.[d];
+        if (s) yield [`${st.id}.${m}.${t}.${d}`, t === "bass" ? "bass" : t === "guitar" ? "guitar" : "keys", s, false, bar];
+      }
+  }
 }
 
 test("有 9 個風格,kpop_ballad 繼承 mandopop_ballad", () => {
@@ -31,9 +35,9 @@ test("有 9 個風格,kpop_ballad 繼承 mandopop_ballad", () => {
   assert.equal(kb.bpm.default, 70);
 });
 
-test("1. 節奏型去空白後長度 16(fill 8)", () => {
-  for (const id of ids) for (const [where, , s, fill] of lanes(resolveStyle(data, id)))
-    assert.equal(cells(s).length, fill ? FILL_CELLS : CELLS, where);
+test("1. 節奏型去空白後長度 16(fill 8);3/4、6/8 是 12(fill 6)", () => {
+  for (const id of ids) for (const [where, , s, fill, bar] of lanes(resolveStyle(data, id)))
+    assert.equal(cells(s).length, fill ? bar / 2 : bar, where);
 });
 
 test("2. 所有字元都在符號表內", () => {
@@ -52,13 +56,14 @@ test("級數與 C 調範例是同一串和弦", () => {
   }
 });
 
-// 每個風格 × 每組進行 × 12 調 × 四種密度設定
+// 每個風格 × 每個拍號 × 每組進行 × 12 調 × 四種密度設定
 function* allRenders(extra = {}) {
   for (const id of ids) {
     const st = resolveStyle(data, id);
-    for (const p of st.progressions) for (let key = 0; key < 12; key++)
-      for (const density of ["auto", ...DENS])
-        yield [`${id}/${p.id}/key${key}/${density}`, st, render(data, id, { progression: p.id, key, density, bars: 16, ...extra })];
+    for (const meter of ["4/4", ...Object.keys(st.meters ?? {})])
+      for (const p of st.progressions) for (let key = 0; key < 12; key++)
+        for (const density of ["auto", ...DENS])
+          yield [`${id}/${meter}/${p.id}/key${key}/${density}`, st, render(data, id, { progression: p.id, key, density, bars: 16, meter, ...extra })];
   }
 }
 
@@ -205,4 +210,20 @@ test("關掉變化(vary:false)就完全照規格的節奏型", () => {
   const r = render(data, "pop", { density: "standard", bars: 8, vary: false, humanize: false });
   const kicks = r.events.filter(e => e.piece === "kick" && e.bar === 2).map(e => e.cell);
   assert.deepEqual(kicks, [0, 8, 10]);
+});
+
+test("拍號:3/4、6/8 一小節 12 格;沒寫這個拍號的曲風會講清楚", () => {
+  for (const [id, meter] of [["pop", "3/4"], ["pop", "6/8"], ["mandopop_ballad", "6/8"], ["kpop_ballad", "3/4"], ["rnb_neosoul", "6/8"], ["lofi", "3/4"]]) {
+    const r = render(data, id, { meter, bars: 8, humanize: false });
+    assert.ok(r.events.every(e => e.cell < 12), `${id} ${meter}`);
+    assert.ok(r.events.some(e => e.track === "drums" && e.bar === 1) || id.includes("ballad"), `${id} ${meter} 有鼓`);
+    const bar = r.meta.barSec, sec16 = r.meta.cellSec;
+    assert.ok(Math.abs(bar - 12 * sec16) < 1e-9);
+    assert.equal(r.events.filter(e => e.bar === -1).length, meter === "6/8" ? 2 : 3, `${id} ${meter} 預備拍`);
+  }
+  assert.throws(() => render(data, "citypop", { meter: "3/4" }), /3\/4/);
+  // 3/4 兩顆和弦 = 2 拍 + 1 拍
+  const r = render(data, "pop", { meter: "3/4", chords: "C G | Am", bars: 2, humanize: false, vary: false });
+  const keysBar0 = r.events.filter(e => e.track === "keys" && e.bar === 0).map(e => e.cell);
+  assert.deepEqual(keysBar0, [0, 4, 8]);
 });

@@ -160,3 +160,10 @@ test("第 2.5 節:每 8 小節最後一小節換 fill、新段落 crash(kpop_dan
     assert.equal(render(data, id).events.filter(e => e.piece === "crash").length, 0, id);
   assert.equal(r.events.filter(e => e.bar === -1).length, 4, "預備拍四下");
 });
+
+test("自己輸入和弦:常見寫法都吃得下,看不懂的要講出是哪一個", () => {
+  for (const c of ["Cmaj7 | A7 | Dm7 G7 | C6", "Am7b5 | D7#9 | Gm(maj7) | C°7", "F/A | G7sus | Em7 | Bbmaj7"])
+    for (const id of ids) assert.ok(render(data, id, { chords: c, bars: 8 }).events.length > 0, `${id} ${c}`);
+  assert.throws(() => render(data, "pop", { chords: "C | Hm" }), /Hm/);
+  assert.throws(() => render(data, "pop", { chords: "C | Cxyz" }), /Cxyz/);
+});

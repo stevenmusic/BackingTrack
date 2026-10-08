@@ -17,6 +17,8 @@
 | 低音提琴 | dsmolken.double-bass(D. Smolken) | CC0 1.0 | ✅ 可以 | 不要求 |
 | 電吉他(City Pop) | Black And Green Guitars(Karoryfer,Brian Wood 錄) | CC0 1.0 | ✅ 可以 | 不要求 |
 | 管樂(City Pop:小號、長號斷奏) | VSCO-2-CE(Versilian Studios Chamber Orchestra 2 Community Edition,Sam Gossner) | CC0 1.0 | ✅ 可以 | 不要求 |
+| 弦樂鋪底(`styles/` 的華語 / K-pop 抒情、K-pop 舞曲) | VSCO-2-CE 小提琴 / 中提琴 / 大提琴聲部 sustain vibrato | CC0 1.0 | ✅ 可以 | 不要求 |
+| 平台鋼琴 16 層力度版(`styles/`,取 5 層) | Salamander Grand Piano V3 FLAC(sfzinstruments/SalamanderGrandPiano) | CC BY 3.0 | ✅ 可以 | 要署名 + 附授權連結 |
 | 管樂(City Pop:中音薩克斯) | Weresax(Karoryfer Samples) | CC0 1.0 | ✅ 可以 | 不要求 |
 | 鋼弦木吉他(Pop) | tonejs-instruments `guitar-acoustic` ← University of Iowa MIS | Iowa:任何用途不受限;整理者標 CC BY 3.0 | ✅ 可以 | 署名 Brosowsky(CC BY 3.0) |
 | 電吉他(Swing、Funk) | tonejs-instruments `guitar-electric` ← Karoryfer | 整理者標 CC BY 3.0(原始是 Karoryfer 的免費取樣) | ✅ 大概可以 | 署名 Brosowsky |

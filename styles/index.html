@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BackingTrack 風格試聽</title>
+<meta name="description" content="BackingTrack 規格書 v1 的 9 種伴奏風格,全部用真實錄音取樣播放。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0C0A07; --panel:#161209; --panel-2:#201A0F; --gold:#C9A24B; --gold-bright:#EFD48A;
+  --ivory:#F4ECDA; --muted:#8A7D5F; --muted-bright:#B6A576; --line:#2A2415;
+  --radius-sm:8px; --radius-md:14px; --radius-pill:999px;
+  --danger:#D9724C; --danger-bg:rgba(217,114,76,.1);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ivory);font:15px/1.5 "Noto Sans TC",system-ui,sans-serif}
+main{max-width:720px;margin:0 auto;padding:24px 16px 48px}
+h1{font:700 24px "Noto Serif TC",serif;color:var(--gold-bright);margin:0 0 4px}
+.sub{color:var(--muted-bright);font-size:13px;margin:0 0 20px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);padding:16px;margin-bottom:14px}
+.label{font-size:12px;color:var(--muted-bright);margin:0 0 8px;letter-spacing:.04em}
+.chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.chip{appearance:none;border:1px solid var(--line);background:var(--panel-2);color:var(--ivory);border-radius:var(--radius-pill);
+  padding:8px 12px;font:inherit;font-size:14px;cursor:pointer;text-align:center}
+.chip small{display:block;color:var(--muted);font-size:11px}
+.chip[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--bg)}
+.chip[aria-pressed="true"] small{color:var(--bg);opacity:.75}
+@media (hover:hover){.chip:hover{border-color:var(--gold)}}
+.row{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+select,input[type=text]{width:100%;background:var(--panel-2);color:var(--ivory);border:1px solid var(--line);border-radius:var(--radius-sm);
+  padding:9px 10px;font:inherit}
+input[type=text]{font-family:ui-monospace,monospace}
+input[type=range]{width:100%;accent-color:var(--gold)}
+.toggles{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:14px}
+.toggles label{display:flex;gap:6px;align-items:center}
+.play{display:flex;align-items:center;gap:14px}
+#play{appearance:none;border:0;background:var(--gold);color:var(--bg);border-radius:var(--radius-pill);
+  font:700 16px inherit;padding:12px 28px;cursor:pointer;min-width:120px}
+#play[data-state="playing"]{background:var(--ivory)}
+#status{color:var(--muted-bright);font-size:13px}
+#err{color:var(--danger);background:var(--danger-bg);border-radius:var(--radius-sm);padding:8px 10px;margin-top:10px;font-size:13px}
+#err:empty{display:none}
+.bars{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:12px}
+.bar{border:1px solid var(--line);border-radius:6px;padding:6px 4px;text-align:center;font-size:13px;min-width:0;overflow:hidden;
+  white-space:nowrap;text-overflow:ellipsis;color:var(--muted-bright)}
+.bar.on{border-color:var(--gold);color:var(--gold-bright)}
+footer{color:var(--muted);font-size:12px;margin-top:24px}
+footer li{margin-bottom:4px}
+</style>
+</head>
+<body>
+<main>
+  <h1>風格試聽</h1>
+  <p class="sub">規格書 v1 的 9 種伴奏。全部是真實錄音的取樣樂器,沒有即時合成的音色。母帶還沒做。</p>
+
+  <section class="card">
+    <p class="label">風格</p>
+    <div class="chips" id="styles"></div>
+  </section>
+
+  <section class="card">
+    <div class="row">
+      <div><p class="label">和弦進行</p><select id="prog"></select></div>
+      <div><p class="label">調</p><select id="key"></select></div>
+      <div><p class="label">密度</p>
+        <select id="dens">
+          <option value="auto">A 段 standard → B 段 high</option>
+          <option value="low">只用 low</option>
+          <option value="standard">只用 standard</option>
+          <option value="high">只用 high</option>
+        </select></div>
+    </div>
+    <div style="margin-top:12px"><p class="label">自己輸入和弦(用 | 分小節,一小節最多兩顆;空白 = 用上面的進行)</p>
+      <input type="text" id="chords" placeholder="例:Fmaj7 | E7 | Am7 | Gm7 C7" autocomplete="off" spellcheck="false"></div>
+    <div style="margin-top:12px"><p class="label">速度 <span id="bpmv"></span> BPM</p><input type="range" id="bpm"></div>
+    <div class="toggles" id="opts"></div>
+    <div class="bars" id="bars"></div>
+  </section>
+
+  <section class="card play">
+    <button id="play" data-state="stopped">播放</button>
+    <span id="status">按播放會先下載這次用得到的取樣</span>
+  </section>
+  <div id="err"></div>
+
+  <footer>
+    <p>取樣來源</p>
+    <ul>
+      <li>平台鋼琴:Salamander Grand Piano V3 by Alexander Holm(CC BY 3.0)</li>
+      <li>電鋼琴:jRhodes3c by Jeff Learman(取樣散布 CC BY-NC-SA 4.0,非商用)</li>
+      <li>原聲鼓:Virtuosity Drums(CC0);電子鼓:TR-808 實機取樣(tidalcycles/Dirt-Samples)</li>
+      <li>電貝斯:Black And Blue Basses、乾淨電吉他:Black And Green Guitars(Karoryfer,CC0)</li>
+      <li>弦樂:VSCO-2 Community Edition(Versilian Studios,CC0)</li>
+    </ul>
+  </footer>
+</main>
+<script type="module">
+import { Player } from "./player.mjs";
+import { resolveStyle, progressionBars } from "./engine.mjs";
+
+const [data, manifest] = await Promise.all([
+  fetch("./styles.json").then(r => r.json()),
+  fetch("./samples.json").then(r => r.json()),
+]);
+const player = new Player(data, manifest);
+const $ = id => document.getElementById(id);
+const KEYS = ["C", "D♭", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
+const MINOR = ["A", "B♭", "B", "C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "G♯"];
+const PC = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+const NAMES = ["C", "D♭", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
+let styleId = "pop", st;
+
+function paintStyles() {
+  $("styles").innerHTML = data.styles.map(s => {
+    const r = resolveStyle(data, s.id);
+    return `<button class="chip" data-id="${s.id}" aria-pressed="${s.id === styleId}">${r.name.zh}<small>${r.name.en}</small></button>`;
+  }).join("");
+}
+function pickStyle(id) {
+  styleId = id;
+  st = resolveStyle(data, id);
+  paintStyles();
+  $("prog").innerHTML = st.progressions.map(p => `<option value="${p.id}">${p.example}(${p.roman})</option>`).join("");
+  const minor = st.progressions[0].mode === "minor";
+  $("key").innerHTML = (minor ? MINOR : KEYS).map((k, i) => `<option value="${i}">${k}${minor ? "m" : ""}</option>`).join("");
+  // 預設第一個建議調
+  const sk = st.suggestedKeys[0].replace("m", "");
+  const idx = (minor ? MINOR : KEYS).findIndex(k => k === sk);
+  $("key").value = String(Math.max(0, idx));
+  Object.assign($("bpm"), { min: st.bpm.min, max: st.bpm.max, value: st.bpm.default });
+  $("bpmv").textContent = st.bpm.default;
+  const opts = Object.entries(st.tracks).filter(([, t]) => t && t.optional);
+  $("opts").innerHTML = opts.map(([k]) => `<label><input type="checkbox" data-part="${k}" checked> ${k === "pad" ? "弦樂鋪底" : "吉他切音"}(只在 high)</label>`).join("");
+  paintBars();
+}
+function chordName(c) {
+  return NAMES[c.root] + c.quality + (c.bass !== c.root ? "/" + NAMES[c.bass] : "");
+}
+function currentBars() {
+  const key = +$("key").value, text = $("chords").value.trim();
+  if (text) return progressionBars({ example: text }, key, "example");
+  return progressionBars(st.progressions.find(p => p.id === $("prog").value), key);
+}
+function paintBars() {
+  $("err").textContent = "";
+  try {
+    $("bars").innerHTML = currentBars().map((b, i) => `<div class="bar" data-i="${i}">${b.map(chordName).join(" ")}</div>`).join("");
+  } catch (e) { $("bars").innerHTML = ""; $("err").textContent = e.message; }
+}
+function opt() {
+  const parts = {};
+  document.querySelectorAll("[data-part]").forEach(el => { parts[el.dataset.part] = el.checked; });
+  const o = { progression: $("prog").value, key: +$("key").value, density: $("dens").value, bpm: +$("bpm").value, parts };
+  const text = $("chords").value.trim();
+  if (text) o.chords = text;
+  return o;
+}
+async function play() {
+  $("err").textContent = "";
+  try { await player.start(styleId, opt()); }
+  catch (e) { player.stop(); $("err").textContent = e.message; }
+}
+const restartIfPlaying = () => { paintBars(); if (player.playing) play(); };
+
+$("styles").addEventListener("click", e => {
+  const b = e.target.closest(".chip"); if (!b) return;
+  pickStyle(b.dataset.id); if (player.playing) play();
+});
+for (const id of ["prog", "key", "dens"]) $(id).addEventListener("change", restartIfPlaying);
+$("chords").addEventListener("change", restartIfPlaying);
+$("chords").addEventListener("input", paintBars);
+$("bpm").addEventListener("input", () => { $("bpmv").textContent = $("bpm").value; });
+$("bpm").addEventListener("change", restartIfPlaying);
+$("opts").addEventListener("change", restartIfPlaying);
+$("play").addEventListener("click", () => (player.playing ? player.stop() : play()));
+
+player.onState = s => {
+  $("play").dataset.state = s;
+  $("play").textContent = s === "playing" ? "停止" : s === "loading" ? "載入中…" : "播放";
+  if (s === "stopped") document.querySelectorAll(".bar.on").forEach(b => b.classList.remove("on"));
+  if (s === "playing") $("status").textContent = "播放中(第一小節是預備拍)";
+};
+player.onProgress = p => {
+  if (p.done < p.total) $("status").textContent = `下載取樣 ${p.done} / ${p.total}`;
+  if (p.failed) $("status").textContent += `(${p.failed} 個載不到)`;
+};
+// 小節亮燈:用 requestAnimationFrame 比對 currentTime,不用 setTimeout
+const marks = [];
+player.onBar = (bar, when) => marks.push([bar, when]);
+(function paint() {
+  if (player.ctx && marks.length && marks[0][1] <= player.ctx.currentTime) {
+    const [bar] = marks.shift(), cells = document.querySelectorAll(".bar");
+    cells.forEach(c => c.classList.remove("on"));
+    if (cells.length) cells[bar % cells.length].classList.add("on");
+  }
+  if (!player.playing) marks.length = 0;
+  requestAnimationFrame(paint);
+})();
+
+pickStyle(styleId);
+window.__player = player;
+</script>
+</body>
+</html>

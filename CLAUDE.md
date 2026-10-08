@@ -27,9 +27,14 @@
 - 退回之後聲音的改動照舊:Steven 說不好聽的照他說的退回;不主動調音色
 
 ## 風格規格 v1(`styles/`,2026-10-08 Steven 給的規格書)
-- `styles/styles.json` + `styles/engine.mjs`(事件引擎)+ `styles/engine.test.mjs`(規格第 6 節驗收,`node --test styles/engine.test.mjs`)
-- **還沒接進 `index.html`**;規格要求全部取樣(不用即時合成),跟目前網頁的合成銅管 / 鋪底衝突,接之前先問 Steven
-- 規格沒寫死、在這裡做的決定列在 `styles/README.md`
+- `styles/styles.json` + `engine.mjs`(事件引擎)+ `engine.test.mjs`(規格第 6 節驗收,`node --test styles/engine.test.mjs`)
+- 試聽頁 `styles/index.html`:`sampler.mjs`(取樣樂器)+ `player.mjs`(即時排程與 `renderOffline`);**主網頁 `index.html` 還沒換**
+- **全部用錄音取樣,不准即時合成的音色**(Steven 2026-10-08:「合成音色一定要換成真實取樣樂器,否則就乾脆不要。最少要做到 Band-in-a-Box 的品質」)。
+  找不到授權清楚的真樂器取樣 → 那一層拿掉,不准用合成頂替(效果器、調變訊號不算音色)
+- **音色先對,母帶混音之後做**:現在只有各軌音量、殘響送出、防削波的保險壓縮
+- 取樣清單 `styles/samples.json` 由 `tools/samples/build_manifest.py` 從實際檔案列表產生,手改會被蓋掉;
+  量測用 `tools/samples/render_styles.mjs`(離線算 WAV)、`smoke_live.mjs`(即時播放冒煙測試)
+- 規格沒寫死、在這裡做的決定與各樂器來源列在 `styles/README.md`
 
 ## 回報方式(使用者要求,每次都照做)
 - **所有回覆一律用中文**:分析結果、比較、總結、進度回報都用中文寫(程式碼、檔名、指令照原文)

@@ -82,6 +82,44 @@ const level = await page.evaluate(async () => {
 });
 results.push(["audio", level]);
 await page.click("#playBtn");
+// B1:播放中換曲風,新曲風的樂器要跟上(換完之後 12 拍內 Rhodes 漏音 ≤ 2)
+await page.click(`#feelSeg [data-feel="pop"]`);
+await page.fill("#chordInput", "C | Am | F | G");
+await page.dispatchEvent("#chordInput", "input");
+await page.click("#playBtn");
+await page.waitForFunction(() => playing && btSession && currentBeat() > 16, null, { timeout: 120000 });
+const b1 = await page.evaluate(async () => {
+  const stat = { ok: 0, miss: 0 };
+  const orig = btPlayer.sampler.note.bind(btPlayer.sampler);
+  btPlayer.sampler.note = (instr, ...a) => { const r = orig(instr, ...a); if (instr === "rhodes") r ? stat.ok++ : stat.miss++; return r; };
+  document.querySelector('#feelSeg [data-feel="citypop"]').click();
+  const start = currentBeat();
+  while (currentBeat() < start + 12) await new Promise(r => setTimeout(r, 100));
+  return stat;
+});
+results.push(["B1 換曲風", b1]);
+// B3:第 2 圈中途改和弦,這一圈的聲音要用畫面上的和弦(barsNow)
+const b3 = await page.evaluate(async () => {
+  while (btCurLap < 1) await new Promise(r => setTimeout(r, 100));
+  chordInput.value = "Dm | G | C | C"; chordInput.dispatchEvent(new Event("input"));
+  await new Promise(r => setTimeout(r, 600));
+  return { lap: btCurLap, sameAsScreen: btBarsOfLap(btCurLap) === barsNow(), lapBars: lapBars === null };
+});
+results.push(["B3 改和弦", b3]);
+await page.click("#playBtn");
+// B2:重新開頁面,第一次播 Lo-fi,預備拍不能排到過去
+results.push(["B2 Lo-fi 第一次", await (async () => {
+  await page.goto(page.url());
+  await page.waitForFunction(() => typeof BT !== "undefined" && BT, null, { timeout: 60000 });
+  await page.click(`#feelSeg [data-feel="lofi"]`);
+  await page.evaluate(() => { window.__late = []; const h = () => { if (!btPlayer) return setTimeout(h, 5); const o = btPlayer.sampler.hit.bind(btPlayer.sampler);
+    btPlayer.sampler.hit = (k, pc, v, when, d) => { window.__late.push(when - ctx.currentTime); return o(k, pc, v, when, d); }; }; h(); });
+  await page.click("#playBtn");
+  await page.waitForFunction(() => playing && window.__late.length > 4, null, { timeout: 120000 });
+  const r = await page.evaluate(() => ({ minAhead: +Math.min(...window.__late.slice(0, 4)).toFixed(3) }));
+  await page.click("#playBtn");
+  return r;
+})()]);
 for (const [k, v] of results) console.log(k.padEnd(16), JSON.stringify(v));
 console.log("errors:", errors.length ? errors : "none");
 await browser.close(); server.close();

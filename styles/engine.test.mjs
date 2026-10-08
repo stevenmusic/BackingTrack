@@ -259,3 +259,12 @@ test("主網頁 index.html 的 BT_INFO(速度範圍、拍號)跟 styles.json 一
     assert.deepEqual(info[id].meters, ["4/4", ...Object.keys(st.meters ?? {})], id);
   }
 });
+
+test("沒有三度的和弦(C5)維持空五度,不補大三度", async () => {
+  const { chordFromIntervals } = await import("./engine.mjs");
+  const c = chordFromIntervals(0, 0, [0, 7]);
+  assert.equal(c.iv[3], 7);
+  const r = render(data, "pop", { barSpans: [[{ chord: c, from: 0, to: 16 }]], bars: 2, humanize: false, vary: false, countIn: false });
+  // 和聲層不能出現三度(E 或 E♭);add9 聲位加的九度(D)不算
+  for (const e of r.events) if (e.notes && e.track !== "bass") assert.ok(e.notes.every(n => ![3, 4].includes(((n % 12) + 12) % 12)), JSON.stringify(e.notes));
+});

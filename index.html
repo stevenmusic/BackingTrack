@@ -187,13 +187,13 @@ main{
 /* 窄螢幕:七顆一定排不完。**不要讓它們在同一顆膠囊裡換行**——
    接成一整塊的 seg 換行之後左右兩端是圓角、中間是直角,看起來像壞掉(手機上踩過)。
    改成格線,每一顆自己有邊框,跟音名那幾排同一個長相。
-   **一排四顆不是三顆**:七顆排三欄會變成 3+3+1,最後一排孤零零一顆而且多佔 34px;
-   四欄剛好 4+3。360px 寬時一格還有 67px 的內容寬,`City Pop` 只要 45px,不會切字。
+   **2026-10-08 起九顆,一排五顆**(5+4,跟七顆時一樣兩排);400 以下改三欄 3+3+3(五欄會切字)。
+   四欄會變成 4+4+1,最後一排孤零零一顆。
    「自動」與狀態字一起掉到下面那行,右邊對齊 */
 @media (max-width:679px){
   .style-bar{flex-wrap:wrap;gap:6px}
   .style-bar .seg-mini{
-    flex:1 1 100%;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;
+    flex:1 1 100%;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;
     border:0;border-radius:0;overflow:visible;
   }
   .style-bar .seg-mini button{
@@ -201,6 +201,10 @@ main{
   }
   .style-bar .seg-mini button + button{border-left:1px solid var(--line)}
   .style-bar .bars{flex:1 1 auto}
+}
+/* 400 以下五欄會切字(「K-Pop 舞曲」「Reggaeton」),改三欄 3+3+3 */
+@media (max-width:399px){
+  .style-bar .seg-mini{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 /* 狀態字(形式 ・ 小節數 ・ 移調)靠右,而且**要縮得下去**:
    加了段落名字之後這一行會變長(「形式 主歌×2 ・ 導歌 ・ 副歌×2 ・ 20 小節」),
@@ -1313,6 +1317,7 @@ const I18N = {
     feelAutoTip: "跟著和弦走:有九度以上是 Swing、六七度過半是 Bossa,其餘是 Pop。City Pop / K-Pop / Blues / Funk 的差別在律動不在和弦,推不出來——自己點,或從段落庫點一組進行",
     feelStraight: "Pop",
     feel_pop: "Pop", feel_popTip: "現代流行:鋼琴、原聲鼓、電貝斯;4/4、3/4、6/8",
+    playErrMeter: "這個風格沒有這個拍號,換一個拍號或風格", playErrLoad: "伴奏引擎或取樣載不到,檢查網路後再按一次播放",
     feel_mandopop_ballad: "華語抒情", feel_mandopop_balladTip: "鋼琴分解和弦、弦樂鋪底;4/4、3/4、6/8",
     feel_jpop: "J-Pop", feel_jpopTip: "J-pop/動畫:快、提前切分推進;只有 4/4",
     feel_citypop: "City Pop", feel_citypopTip: "Rhodes、十六分的貝斯與 hi-hat;只有 4/4",
@@ -1445,11 +1450,12 @@ const I18N = {
     feelAutoTip: "Follows the chords: 9ths and up go Swing, mostly 6ths/7ths go Bossa, the rest stay Pop. City Pop / K-Pop / Blues / Funk can't be inferred \u2014 tap them, or pick one from the library",
     feelStraight: "Pop",
     feel_pop: "Pop", feel_popTip: "Modern pop: piano, acoustic drums, electric bass; 4/4, 3/4, 6/8",
-    feel_mandopop_ballad: "Mandopop Ballad", feel_mandopop_balladTip: "Arpeggiated piano, string pad; 4/4, 3/4, 6/8",
+    playErrMeter: "This style has no pattern for this time signature — pick another meter or style", playErrLoad: "Couldn't load the accompaniment engine or samples — check the connection and press play again",
+    feel_mandopop_ballad: "Mandopop", feel_mandopop_balladTip: "Arpeggiated piano, string pad; 4/4, 3/4, 6/8",
     feel_jpop: "J-Pop", feel_jpopTip: "J-pop / anime: fast, pushed anticipations; 4/4 only",
     feel_citypop: "City Pop", feel_citypopTip: "Rhodes, 16th-note bass and hi-hat; 4/4 only",
-    feel_kpop_dance: "K-Pop Dance", feel_kpop_danceTip: "808 kit, mostly minor keys; 4/4 only",
-    feel_kpop_ballad: "K-Pop Ballad", feel_kpop_balladTip: "Arpeggiated piano, secondary dominants; 4/4, 3/4, 6/8",
+    feel_kpop_dance: "K-Pop", feel_kpop_danceTip: "808 kit, mostly minor keys; 4/4 only",
+    feel_kpop_ballad: "K-Ballad", feel_kpop_balladTip: "Arpeggiated piano, secondary dominants; 4/4, 3/4, 6/8",
     feel_rnb_neosoul: "R&B", feel_rnb_neosoulTip: "Neo-soul: Rhodes, laid-back snare; 4/4, 6/8",
     feel_lofi: "Lo-fi", feel_lofiTip: "Lo-fi hip-hop: great for improvising; 4/4, 3/4",
     feel_reggaeton: "Reggaeton", feel_reggaetonTip: "Dembow groove, electronic kit; 4/4 only",
@@ -5136,7 +5142,7 @@ function btLoad(){
     BT = { engine, Player: player.Player, data, manifest };
     btAddSections();
     return BT;
-  });
+  }).catch(err => { btLoading = null; throw err; });   // 失敗了下次按播放可以再試
   return btLoading;
 }
 /* 段落庫加上每個風格規格書裡的進行(C 大調 / A 小調,跟原本的段落庫同一個規則) */
@@ -5165,10 +5171,17 @@ function btSpans(bar){
     from: Math.round(sp.fromBeat * cpb), to: Math.round(sp.toBeat * cpb),
   }));
 }
-function btBarsOfLap(lap){ return (reharmOn && loopOn && lap > 0) ? barsForLap(lap) : parsed.bars; }
+/* 正在播的那一圈 = 畫面上的那一份(barsNow,改和弦或關掉和弦變化時 resetLap 會把它放回原譜);
+   還沒到的圈才照 barsForLap 先算(代理和弦只在圈的第一小節第一拍換,見 scheduleBeat) */
+let btCurLap = -1;
+function btBarsOfLap(lap){
+  if (lap === btCurLap) return barsNow();
+  return (reharmOn && loopOn && lap > 0) ? barsForLap(lap) : parsed.bars;
+}
 /* 這一圈的音:引擎算一整圈(多看下一圈第一小節),依「第幾小節:第幾拍」分好 */
 function btLapEvents(lap){
-  const sig = [feelNow, meterOn, transposeOn, bpmOn, styleOn, reharmOn, loopOn, chordInput.value].join("|");
+  /* 速度不在裡面:事件用拍數排,速度只影響毫秒級的人性化,拖速度不必整圈重算 */
+  const sig = [feelNow, meterOn, transposeOn, styleOn, reharmOn, loopOn, lapBuilt, chordInput.value].join("|");
   if (sig !== btCacheSig) { btCache.clear(); btCacheSig = sig; }
   if (btCache.has(lap)) return btCache.get(lap);
   const bars = btBarsOfLap(lap), n = bars.length;
@@ -5192,28 +5205,39 @@ function btLapEvents(lap){
   }
   map.events = r.events;
   btCache.set(lap, map);
-  if (btPlayer && btPlayer.style) btPlayer.sampler.ensure(btPlayer.needs(r.events));   // 背景先載(代理和弦可能用到新的音)
+  if (btPlayer) btPlayer.sampler.ensure(btNeeds(r.events));   // 背景先載(代理和弦、換了風格都可能用到新的音)
   return map;
 }
+/* 這些事件要載哪些取樣:照「現在選的風格」算(播放中換風格時 btPlayer.style 還是舊的) */
+function btNeeds(events){
+  const keep = btPlayer.style;
+  btPlayer.style = BT.engine.resolveStyle(BT.data, feelNow);
+  try { return btPlayer.needs(events); } finally { btPlayer.style = keep; }
+}
 /* 混音匯流排:每次播放、每次換風格各一組;換的時候舊的淡出 */
-function btFadeSession(){
+function btFadeSession(at){
   if (!btSession) return;
-  const t = ctx.currentTime, old = btSession;
+  const t = Math.max(at || 0, ctx.currentTime), old = btSession;   // 在新小節那一拍才淡出,前一小節已經排好的音不會被切掉
   for (const g of [old.out.gain, ...old.wet.map(w => w.gain)]) { g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(0, t + 0.06); }
   setTimeout(() => { old.out.disconnect(); old.wet.forEach(w => w.disconnect()); if (old.vinyl) old.vinyl.stop(); if (old.lfo) old.lfo.stop(); }, 3000);
   btSession = null; btSessionStyle = null;
 }
 async function btEnsureSession(when){
   if (btSession && btSessionStyle === feelNow) return;
-  btFadeSession();
+  const at = Math.max(when || 0, ctx.currentTime);
+  const swapping = !!btSession;
+  btFadeSession(at);
   const st = BT.engine.resolveStyle(BT.data, feelNow);
   btPlayer.style = st;
   btPlayer.parts = {};
-  btPlayer.loud.gain.setValueAtTime(10 ** (((st.master && st.master.gainDb) || 0) / 20), ctx.currentTime);
+  btPlayer.loud.gain.setValueAtTime(10 ** (((st.master && st.master.gainDb) || 0) / 20), at);
+  btPlayer.lfo = null;
   btSession = btPlayer.buildBuses(st);
   btSession.lfo = btPlayer.lfo;
   btSessionStyle = feelNow;
-  btSession.vinyl = await btPlayer.vinyl(when || ctx.currentTime, btSession.out);
+  // 播放中換了風格:這一圈的音照新風格補載(第一拍可能還沒到,之後就跟上)
+  if (swapping && btCurLap >= 0) btPlayer.sampler.ensure(btNeeds(btLapEvents(btCurLap).events));
+  btSession.vinyl = await btPlayer.vinyl(at, btSession.out);
 }
 /* 一下音:鼓走各鼓件的擺位,其他照軌 */
 function btPlay(e, t){
@@ -7034,10 +7058,9 @@ function scheduleBeat(i, when){
   const lap = Math.floor(absBar / nBars);
   /* 繞到新的一圈就換一兩顆和弦(代理和弦,見 SUB_RULES)。一定要在這一圈的第一小節第一拍做 */
   if (reharmOn && loopOn && b === 0 && bar === 0 && lap !== lapBuilt) buildLap(lap);
-  if (b === 0) {
-    btEnsureSession(when);                         // 播放中換了風格:換一組混音匯流排
-    if (bar === 0 && loopOn) btLapEvents(lap + 1); // 先把下一圈算好、取樣在背景載
-  }
+  btCurLap = lap;
+  if (b === 0) btEnsureSession(when);              // 播放中換了風格:在小節線換一組混音匯流排
+  if (loopOn && !btCache.has(lap + 1)) btLapEvents(lap + 1);   // 先把下一圈算好、取樣在背景載
   const ev = btLapEvents(lap).get(bar + ":" + b) || [];
   for (const e of ev) btPlay(e, beatTime(barStartBeat + e.beatPos) + e.dt);
 }
@@ -7057,8 +7080,14 @@ function schedulerTick(){
   }
 }
 
+let btStarting = false;
 async function startPlayback(){
+  if (btStarting) return;                          // 載入中又按了一次(空白鍵):不要開第二個
   if (!parsed.bars.length || parsed.bars.some(b => !b.ok)) return;
+  btStarting = true;
+  try { await btStart(); } finally { btStarting = false; }
+}
+async function btStart(){
   ensureAudio();
   ctx.resume();
   resetLap();                       // 每次按播放都從原譜那一圈開始
@@ -7079,19 +7108,25 @@ async function startPlayback(){
     const st = BT.engine.resolveStyle(BT.data, feelNow);
     btPlayer.style = st;
     btPlayer.parts = {};
+    btCurLap = 0;
     // 這一圈與下一圈要用的音 + 預備拍的 hi-hat,先載第一批(其餘背景補)
     const ev0 = btLapEvents(0).events, ev1 = loopOn ? btLapEvents(1).events : [];
     const needs = btPlayer.needs(ev0.concat(ev1));
     needs.push({ instr: st.instruments.drums, piece: "hat", vel: 112 }, { instr: st.instruments.drums, piece: "hat", vel: 80 });
     await btPlayer.sampler.ensure(needs);
+    // 黑膠底噪(Lo-fi)也先載好:要在起點之前,不然開頭的拍子會被排到已經過去的時間
+    if ((st.effects || []).some(f => f.type === "vinylNoise")) await btPlayer.sampler.loopBuffer("vinyl_noise");
   } catch (err) {
-    /* 看不懂的和弦或這個風格沒有這個拍號:講清楚,不出聲 */
+    /* 引擎或取樣載不到、這個風格沒有這個拍號:講清楚,不出聲(細節在 console) */
+    console.error(err);
     endLoadProgress();
     playBtn.disabled = false;
-    setStatus(String(err && err.message || err), true);
+    setStatus(T(/拍/.test(String(err && err.message)) ? "playErrMeter" : "playErrLoad"), true);
     updateTransportIdle();
     return;
   }
+  // 載入中把和弦改壞、或已經按了停止:不要開始
+  if (!parsed.bars.length || parsed.bars.some(b => !b.ok)) { endLoadProgress(); playBtn.disabled = false; updateTransportIdle(); return; }
   endLoadProgress();
   playBtn.disabled = false;
   const failed = btPlayer.sampler.progress.failed;
@@ -7107,7 +7142,7 @@ async function startPlayback(){
   // 起點往後推一點點,第一個和弦才不會被排在「已經過去的時間」上而被吃掉
   anchorTime = ctx.currentTime + 0.15;
   nextBeat = 0;
-  await btEnsureSession(anchorTime);
+  btEnsureSession(anchorTime);   // 底噪已經載好,這裡不會再等
   setPlayIcon(true);
   schedulerTick();
   tickTimer = setInterval(schedulerTick, TICK_MS);
@@ -7117,6 +7152,7 @@ async function startPlayback(){
 function stopPlayback(){
   playing = false;
   btFadeSession();
+  btCurLap = -1;
   if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
   if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
   for (const s of [...activeSources]) { try { s.stop(); } catch (e) {} }
@@ -8457,7 +8493,10 @@ const SECTIONS = [
 ];
 /* 段落庫的曲風 key 換成新的 9 種(舊的 7 種只留在這張對照表):Bossa → R&B、Swing → Lo-fi、Blues → Pop、Funk → R&B。
    新引擎載完之後,再把 styles.json 每個風格的規格進行加進來(btAddSections) */
-for (const e of SECTIONS) e.feel = BT_OLD_FEEL[e.feel] || e.feel;
+for (const e of SECTIONS) {
+  const k = BT_OLD_FEEL[e.feel] || e.feel;
+  e.feel = BT_INFO[k] && BT_INFO[k].meters.indexOf(e.meter || "4/4") >= 0 ? k : "pop";   // 新風格沒有這個拍號就歸到 Pop(三種拍號都有)
+}
 
 
 /* ── 形式 ──────────────────────────────────────────────────────

@@ -79,7 +79,7 @@ function chordOf(root, bass, quality, sym) {
 export function chordFromIntervals(root, bass, intervals, sym = "") {
   const has = i => intervals.some(x => mod12(x) === mod12(i));
   const iv = {};
-  iv[3] = has(4) ? 4 : has(3) ? 3 : has(5) ? 5 : has(2) ? 2 : 4;
+  iv[3] = has(4) ? 4 : has(3) ? 3 : has(5) ? 5 : has(2) ? 2 : 7; // 沒有三度(C5、no3):維持空五度,不要自己補大三度
   iv[5] = has(7) ? 7 : has(6) && !has(4) ? 6 : has(8) ? 8 : has(6) ? 6 : 7;
   if (has(10)) iv[7] = 10; else if (has(11)) iv[7] = 11; else if (has(9) && iv[3] === 3 && iv[5] === 6) iv[7] = 9;
   if (intervals.some(x => x >= 12)) {

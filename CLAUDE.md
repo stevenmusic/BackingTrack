@@ -21,7 +21,7 @@
 
 ## 風格規格 v1(`styles/`,2026-10-08 Steven 給的規格書)
 - `styles/styles.json` + `engine.mjs`(事件引擎)+ `engine.test.mjs`(規格第 6 節驗收,`node --test styles/engine.test.mjs`)
-- 試聽頁 `styles/index.html`:`sampler.mjs`(取樣樂器)+ `player.mjs`(即時排程與 `renderOffline`);**主網頁 `index.html` 還沒換**
+- 試聽頁 `styles/index.html`:`sampler.mjs`(取樣樂器)+ `player.mjs`(即時排程與 `renderOffline`);主網頁也用同一個引擎(見最上面一節)
 - **全部用錄音取樣,不准即時合成的音色**(Steven 2026-10-08:「合成音色一定要換成真實取樣樂器,否則就乾脆不要。最少要做到 Band-in-a-Box 的品質」)。
   找不到授權清楚的真樂器取樣 → 那一層拿掉,不准用合成頂替(效果器、調變訊號不算音色)
 - **混音與母帶**:混音(各軌音量、EQ、兩種空間、鼓件擺位)照數學檢查調;母帶 = 黏著壓縮 → 各曲風 `master.gainDb` → 預讀限幅器
@@ -78,14 +78,17 @@
 
 ## 技術棧與絕對規則
 - **單檔 `index.html`**,CSS/JS 內嵌,CDN only,無 build,GitHub Pages 直接部署。不要拆檔,除非使用者明確要求
-  (限幅器的 AudioWorklet 也是用 Blob URL 從同一檔生出來的)
+  (限幅器的 AudioWorklet 也是用 Blob URL 從同一檔生出來的)。
+  **例外(Steven 2026-10-08 指示主網頁換新引擎)**:主網頁用 `import("./styles/…")` 載 `styles/` 的引擎模組,並 fetch `styles/*.json`;
+  `styles/` 以外不要再拆
 - 配色/字體/元件跟 ScrollScore、SightScore、LoudMaster 共用同一套變數(gold / ivory / muted / line / danger),不要發明新顏色
 - 排程一律用 `AudioContext.currentTime` 提前排(約 0.15–0.2 秒);setInterval 只負責「來看一下」,**不准用 setTimeout 排音符**
 - 取樣只抓這次進行真的會用到的音,不准一次載完整組
 - 解析失敗要擋住播放並明講是哪一個 token,不准猜
 - **整份檔案不准出現 `Math.random()`**:變化一律 `hash01(絕對位置, salt)`(兩輪 murmur,不要簡化)或 `mulberry32` 固定種子
 - 任何取樣播放都要 `start(when, leadOf(buffer))`(跳過起音前的空白)
-- 「取樣一定載得到」這個假設永遠不成立:每一種取樣都要有備援(鋼琴→三角波、鼓→`synthDrum`、吉他→KS、Rhodes→平台鋼琴、808→`synth808`、真管樂→合成銅管)
+- 「取樣一定載得到」這個假設永遠不成立。**新引擎(2026-10-08 起)不用合成備援**(Steven:「合成音色一定要換成真實取樣樂器,否則就乾脆不要」):
+  取樣載不到 → 那一下不出聲、狀態列講「幾個載不到」;下面「鋼琴→三角波、鼓→`synthDrum`…」那套備援是舊引擎的
 - 排程裡**不准針對某一個曲風寫 if**:差異一律寫成 `FEELS[x]` 的欄位,**沒寫的曲風要零差異**
 
 ## 和弦語法(`normalizeSymbol` / `parseProgression`)
@@ -144,6 +147,9 @@
 - 改規則要跑 scratchpad 式的機器驗證(`tools/realism/mood_check.mjs`、`harmony.mjs`),不要靠讀
 
 ## 旋律只准用和弦音(唯一例外見下)
+- **2026-10-08 起這一節對新引擎不成立,【待 Steven 決定】**:規格書的聲位 `triad_add9` / `rootless4` 頂音本來就常是九度。
+  審查員量 `Fmaj7|E7|Am7|C7` 和聲層頂音不在和弦內:pop 8/16、citypop 4/8、rnb_neosoul 10/12、lofi 6/8、kpop_ballad 16/64。
+  **不准自己在引擎加 melodyOk 過濾**,等 Steven 決定(`docs/REVIEW.md`);下面是舊引擎的規則
 - 「旋律」= 每一下和聲的頂音(鋼琴、兩把吉他、鋪底、銅管、人聲切片、lead)+ 單音線條(arp、第二把吉他)。貝斯不算
 - **唯一的例外(Steven 2026-09-26)**:City Pop 切音吉他照ギター・マガジン的指型(`parts.chopForms`,`docs/SOURCES.md` G1)時,
   **吉他和弦的頂音可以是九度**(只在九度在調內、和弦沒有 ♭9/♯9 時);鋼琴、鋪底、銅管、第二把吉他的單音線不放寬。驗證加 `HARM_GTR9=1`
@@ -283,7 +289,8 @@
 - Pop 維持三和弦(不然會被判成 Bossa);K-Pop 的 V 留三和弦;爵士 3/4、6/8 要用九度以上聲位
 - 整串 ii-V 沒有主和弦、♭VII 主導的進行會讓 `keyOf` 判錯,不收
 - 接段落用 `partGroups` + `groupsToText`,不准用 `-` 串;拍號或曲風不同時當新的一首
-- 目前 83 組:Pop 21、City Pop 24、K-Pop 6、Bossa 7、Blues 6、Swing 14、Funk 5
+- 原本 83 組(Pop 21、City Pop 24、K-Pop 6、Bossa 7、Blues 6、Swing 14、Funk 5),併到新風格(新風格沒有那個拍號就歸 Pop)
+  再加規格書的 27 組,共 110 組:Pop 29、City Pop 28、K-Pop 舞曲 9、R&B 16、Lo-fi 17、華語抒情 3、J-Pop 3、K-Pop 抒情 2、Reggaeton 3
 
 ## 刻意不做 / 拿掉的(要加回來先問)
 - 必選的曲風入口選單;單獨的音色選單;各軌靜音(鼓與貝斯永遠都在,沒有開關);愈練愈快;MIDI 匯出;小節區段循環

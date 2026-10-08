@@ -879,3 +879,13 @@ Steven 聽完第十五輪與〈Plastic Love〉對照後說「所有樂器都不�
   - 經過音只在小節線前接,骰子 salt 不看 b0
 - 配器輪換底座已拿掉,回到 bd80000 原文。
 - D1–D3 維持【待 Steven 決定】。
+
+
+## 2026-10-08 主網頁換成 styles/ 新引擎(PR:claude/main-site-new-engine)
+- 第 1 輪審查(reviewer):阻擋 5 條(B1 播放中換曲風新樂器不出聲、B2 Lo-fi 第一次播排到過去的時間、B3 代理和弦在圈中間換、
+  B4 英文版面溢出與手機切字、B5 文件與絕對規則衝突)→ 全部【同意】已修;建議 S1–S11 見 PR 描述
+- **【待 Steven 決定】旋律只准用和弦音**:新引擎照規格書的 `triad_add9` / `rootless4` 聲位,頂音常是九度
+  (pop 8/16、citypop 4/8、rnb 10/12、lofi 6/8、kpop_ballad 16/64)。選項:①照規格書保留(九度是這些曲風的色彩)
+  ②加 melodyOk 把頂音的九度換成和弦音(更穩,但規格書的聲位會被改掉)
+- **【待 Steven 聽過】**:自動判斷會判到 R&B / Lo-fi;舊曲風對照(Blues→Pop、Swing→Lo-fi、Bossa/Funk→R&B);
+  華語 / K-pop 抒情用取樣弦樂鋪底(以前盲聽退回過取樣弦樂,這次照「全部換取樣」);City Pop 不再是 bd80000 那一版

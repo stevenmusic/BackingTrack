@@ -3,7 +3,8 @@
       python3 tools/mix/make_ir.py /tmp/irsrc/IR-Library
 
 room  = Arroyo House Living Room Mid A(真實房間,RT60 ≈ 0.6 秒,跟 Virtuosity 鼓的房間麥同一個衰減長度)
-plate = Conner Plate I(真實的板式殘響),衰減照指數修到 RT60 約 1.8 秒(目標寫 2.2,Schroeder 量起來 1.8)(原本 3–4 秒,伴奏用太長)
+plate = Conner Plate I(真實的板式殘響)。原檔左右很不對稱(T20 左 1.77 秒、右 3.59 秒,能量差 3dB;板子兩個拾音點位置不同),
+        不修的話殘響尾巴會飄到右邊。**每個聲道各自**照指數修衰減,迭代到兩聲道的 T20 都是 1.8 秒(±0.03),再把兩聲道能量拉平
 兩個都:拿掉直達聲之前的空白與直達聲本身(送出式殘響只要反射)、轉 44.1kHz、能量正規化、16-bit
 """
 import sys, os, subprocess, io, numpy as np, soundfile as sf
@@ -14,7 +15,7 @@ OUT = os.path.join(os.path.dirname(__file__), "../../styles/ir")
 SR = 44100
 FILES = {
     "room": ("Rooms/Residential/Arroyo House/Arroyo House Living Room Mid A.wav", None),
-    "plate": ("Plates/Conner Plate I/Conner Plate I Sweeps/Conner Plate I 1s -42.wav", 2.2),
+    "plate": ("Plates/Conner Plate I/Conner Plate I Sweeps/Conner Plate I 1s -42.wav", 1.8),
 }
 
 def rt60(x, sr):
@@ -31,14 +32,20 @@ for name, (path, target) in FILES.items():
     m = np.abs(x).sum(1); pk = int(np.argmax(m))
     x = x[pk + int(0.0025 * SR):]                    # 直達聲之後 2.5ms 開始(只留反射)
     x[: int(0.001 * SR)] *= np.linspace(0, 1, int(0.001 * SR))[:, None]
-    rt0 = rt60(x.mean(1), SR)
-    if target:                                       # 指數修衰減:每秒多掉 60/target − 60/rt0 dB
+    rt0 = [rt60(x[:, c], SR) for c in range(2)]
+    if target:                                       # 每個聲道指數修衰減,迭代到量起來等於目標(Schroeder 不是線性的)
         t = np.arange(len(x)) / SR
-        x *= (10 ** (-(60 / target - 60 / rt0) * t / 20))[:, None]
-    rt1 = rt60(x.mean(1), SR)
+        for c in range(2):
+            for _ in range(20):
+                r = rt60(x[:, c], SR)
+                if abs(r - target) < 0.03: break
+                x[:, c] *= 10 ** (-(60 / target - 60 / r) * t / 20)
+        x[:, 1] *= np.sqrt((x[:, 0] ** 2).sum() / (x[:, 1] ** 2).sum())   # 兩聲道能量拉平
+    rt1 = max(rt60(x[:, c], SR) for c in range(2))
     n = int(min(len(x), (rt1 * 1.25) * SR))          # 留到 −75dB 左右
     x = x[:n]; x[-int(0.05 * SR):] *= np.linspace(1, 0, int(0.05 * SR))[:, None]
     x /= np.sqrt((x ** 2).sum() / 2)                 # 能量正規化(跟原本的 impulse() 一樣)
     x *= 0.25 / np.abs(x).max()                      # 存檔用的大小;播放端會再正規化
     sf.write(os.path.join(OUT, name + ".wav"), x, SR, subtype="PCM_16")
-    print(f"{name}: {path.split('/')[-1]}  RT60 {rt0:.2f} → {rt1:.2f} s  {n / SR:.2f} s  L/R 相關 {np.corrcoef(x[:, 0], x[:, 1])[0, 1]:.2f}")
+    print(f"{name}: {path.split('/')[-1]}  T20 左/右 {rt0[0]:.2f}/{rt0[1]:.2f} → {rt60(x[:, 0], SR):.2f}/{rt60(x[:, 1], SR):.2f} s  "
+          f"長 {n / SR:.2f} s  L/R 相關 {np.corrcoef(x[:, 0], x[:, 1])[0, 1]:.2f}  能量差 {10 * np.log10((x[:, 0] ** 2).sum() / (x[:, 1] ** 2).sum()):+.1f} dB")

@@ -5,6 +5,7 @@ import { Sampler } from "./sampler.mjs";
 import { makeLimiter } from "./limiter.mjs";
 
 const LOOKAHEAD = 0.2, TICK_MS = 25, MIN_CHUNK = 64;
+const COMP_LAT = 0.006; // DynamicsCompressor 的預讀延遲(Chromium 固定 6ms)
 const BUTTER_Q_DB = -3.01; // Web Audio 的 highpass / lowpass Q 單位是 dB;Butterworth = −3.01
 const gcd = (a, b) => (b ? gcd(b, a % b) : a);
 /** 一段幾小節:進行長度與 16(A/B 段)的公倍數,至少 64;接縫才不會把進行或段落從頭開始 */
@@ -76,14 +77,20 @@ function normalizeIR(ctx, b) {
   }
   return out;
 }
-/** 真實空間的 IR 檔(styles/ir/,tools/mix/make_ir.py 從 MIT 授權的 IR 庫做的);整頁共用 */
+/**
+ * 真實空間的 IR 檔(styles/ir/,tools/mix/make_ir.py 從 MIT 授權的 IR 庫做的)。
+ * 整頁共用的是**檔案內容**(ArrayBuffer),每個 context 自己解碼:解碼結果綁那個 context 的取樣率,
+ * 即時播放(48k)載過再離線算(44.1k)不能共用。8 秒沒回應算失敗(退回雜訊 IR),不讓播放卡在載入
+ */
 const IR_CACHE = new Map();
 function loadIR(ctx, file) {
-  if (!IR_CACHE.has(file)) IR_CACHE.set(file, fetch(new URL("./" + file, import.meta.url))
-    .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.arrayBuffer(); })
-    .then(ab => ctx.decodeAudioData(ab))
-    .catch(e => { IR_CACHE.delete(file); throw e; }));
-  return IR_CACHE.get(file).then(b => normalizeIR(ctx, b));
+  if (!IR_CACHE.has(file)) {
+    const signal = typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined;
+    IR_CACHE.set(file, fetch(new URL("./" + file, import.meta.url), { signal })
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.arrayBuffer(); })
+      .catch(e => { IR_CACHE.delete(file); throw e; }));
+  }
+  return IR_CACHE.get(file).then(ab => ctx.decodeAudioData(ab.slice(0))).then(b => normalizeIR(ctx, b));
 }
 /**
  * Web Audio 的 DynamicsCompressor 會自己補增益:makeup = (1 / 0dBFS 進去的輸出)^0.6(規格與 Chromium 的實作)。
@@ -156,9 +163,9 @@ export class Player {
       cv.connect(lc).connect(r).connect(master);
       this.verbs[name] = cv;
       const file = sp.ir?.[name];
+      const fallback = () => { cv.buffer = impulse(ctx, sec, seed, early); };
       irs.push((file ? loadIR(ctx, file) : Promise.reject(new Error("no IR")))
-        .catch(() => impulse(ctx, sec, seed, early))
-        .then(b => { cv.buffer = b; }));
+        .then(b => { try { cv.buffer = b; } catch (e) { fallback(); } }, fallback));
     }
     // 主網頁只等 limiterReady:IR 也算在裡面
     this.limiterReady = Promise.all([limiterReady, ...irs]).then(([ok]) => ok);
@@ -178,7 +185,9 @@ export class Player {
     for (const [name, cv] of Object.entries(this.verbs)) {
       sends[name] = ctx.createGain();
       sends[name].gain.value = this.noReverb ? 0 : 1; // 量測用:看乾的取樣直接相加是什麼樣子
-      sends[name].connect(cv);
+      // 殘響也晚 COMP_LAT:鼓的送出是從壓縮器前面接的,這樣乾聲、鼓、殘響三者對齊
+      const d = ctx.createDelay(0.05); d.delayTime.value = COMP_LAT;
+      sends[name].connect(d).connect(cv);
       wet.push(sends[name]);
     }
     const mix = st.mix ?? {}; // 各曲風的音量校正(dB),由 tools/mix/analyze.py 量完定的
@@ -189,6 +198,11 @@ export class Player {
     const drumGroup = ctx.createDynamicsCompressor();
     drumGroup.threshold.value = DC.threshold ?? -24; drumGroup.knee.value = DC.knee ?? 6; drumGroup.ratio.value = DC.ratio ?? 4;
     drumGroup.attack.value = DC.attack ?? 0.01; drumGroup.release.value = DC.release ?? 0.12;
+    // **DynamicsCompressor 自帶 6ms 預讀延遲**(CLAUDE.md;審查員量到 5.986ms):鼓整組會比其他軌晚 6ms,
+    // 所以不過鼓組壓縮的軌一起晚 6ms(align),殘響送出也晚 6ms
+    const align = ctx.createDelay(0.05);
+    align.delayTime.value = COMP_LAT;
+    align.connect(out);
     const drumMakeup = ctx.createGain(); // 扣掉壓縮器自己補的增益
     drumMakeup.gain.value = 10 ** (-compAutoMakeupDb(drumGroup.threshold.value, drumGroup.knee.value, drumGroup.ratio.value) / 20);
     drumGroup.connect(drumMakeup).connect(out);
@@ -223,7 +237,7 @@ export class Player {
           this.lfo = lfo;
         }
       }
-      tail.connect(p).connect(name === "drums" || name === "kick" ? drumGroup : out);
+      tail.connect(p).connect(name === "drums" || name === "kick" ? drumGroup : align);
       // 殘響送出:tools/mix/space.py 照舞台位置(styles.json 的 space.stage)解出來的量;
       // pre-delay 越長越近(直達聲跟反射分得越開),越短越遠
       const so = st.space?.sends?.[name] ?? {};

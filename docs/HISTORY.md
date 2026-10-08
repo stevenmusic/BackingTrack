@@ -2586,6 +2586,9 @@ Tone.js 那三件管樂**只有小號能用**。量「峰值出現在第幾秒�
 - 舊的 7 個曲風 key 對到新的:straight→pop、citypop→citypop、kpop→kpop_dance、latin→rnb_neosoul、blues→pop、swing→lofi、funk→rnb_neosoul。
   Bossa、Blues、Swing、Funk 不再是獨立的曲風(規格書沒有),它們的段落庫進行併到對應的新風格
 - 版面:9 顆曲風膠囊寬版仍是一行(英文縮成 Mandopop / K-Pop / K-Ballad,680–760 寬才不會超出卡片);手機 5 欄(5+4),
-  400 以下 3 欄(3+3+3);頁尾出處改成一行 + 連到 `styles/#credits`。`document.body.scrollHeight` 跟 main 比(中英文一樣):
-  680 / 700 寬 +2px,600 / 400 寬 +6px,360 寬 +38px,其餘 0;沒有溢出、沒有切字。
+  400 以下 3 欄(3+3+3);頁尾出處改成一行 + 連到 `styles/#credits`。`document.body.scrollHeight` 跟 main 比:
+  1280×720 / 1280×800 / 1440×900 / 1100×800 / 900×800 / 820×900 / 800×800 中英文都 +0;
+  中文 700 / 680 +2、600 / 400 +6、360 +38;英文(審查員量的)700 / 680 +0、600 +20、400 +0、360 +32。
+  全部沒有溢出、沒有切字、「自動」沒有超出卡片。
+- 效能:CPU 降速 6 倍、和弦變化開著、City Pop 播 20 秒 × 3 次,「來不及」3 / 0 / 0(中位數 0;那 3 次在剛開始載入時)
   900 高的視窗在無頭瀏覽器 main 本來就是 920(字型沒載到),不是這次造成的

@@ -93,8 +93,12 @@ const b1 = await page.evaluate(async () => {
   const orig = btPlayer.sampler.note.bind(btPlayer.sampler);
   btPlayer.sampler.note = (instr, ...a) => { const r = orig(instr, ...a); if (instr === "rhodes") r ? stat.ok++ : stat.miss++; return r; };
   document.querySelector('#feelSeg [data-feel="citypop"]').click();
-  const start = currentBeat();
+  // 點新曲風之後、下一條小節線之前,鼓組要還是舊的(Pop = acoustic_kit)
+  const kits = []; const oh = btPlayer.sampler.hit.bind(btPlayer.sampler);
+  btPlayer.sampler.hit = (k, ...a) => { kits.push([currentBeat(), k]); return oh(k, ...a); };
+  const start = currentBeat(), barEnd = Math.ceil((start - countInBeats) / beatsInBar()) * beatsInBar() + countInBeats;
   while (currentBeat() < start + 12) await new Promise(r => setTimeout(r, 100));
+  stat.mixedBeforeBarline = kits.filter(([b, k]) => b < barEnd - 0.3 && k !== "acoustic_kit").length;
   return stat;
 });
 results.push(["B1 換曲風", b1]);
@@ -103,7 +107,8 @@ const b3 = await page.evaluate(async () => {
   while (btCurLap < 1) await new Promise(r => setTimeout(r, 100));
   chordInput.value = "Dm | G | C | C"; chordInput.dispatchEvent(new Event("input"));
   await new Promise(r => setTimeout(r, 600));
-  return { lap: btCurLap, sameAsScreen: btBarsOfLap(btCurLap) === barsNow(), lapBars: lapBars === null };
+  const bass = btLapEvents(btCurLap).events.find(e => e.track === "bass" && e.bar === 0);
+  return { lap: btCurLap, bassPcIsD: ((bass.notes[0] % 12) + 12) % 12 === 2 };
 });
 results.push(["B3 改和弦", b3]);
 await page.click("#playBtn");
@@ -120,6 +125,26 @@ results.push(["B2 Lo-fi 第一次", await (async () => {
   await page.click("#playBtn");
   return r;
 })()]);
+// 效能:CPU 降速 6 倍、和弦變化開著,播 20 秒 × 3 次,數「來不及」(排程時那一下已經過了)的次數
+const cdp = await page.context().newCDPSession(page);
+const late = [];
+for (let run = 0; run < 3; run++) {
+  await page.goto(page.url());
+  await page.waitForFunction(() => typeof BT !== "undefined" && BT, null, { timeout: 60000 });
+  await page.click(`#feelSeg [data-feel="citypop"]`);
+  await page.fill("#chordInput", "Fmaj7 | E7 | Am7 | Gm7 C7");
+  await page.dispatchEvent("#chordInput", "input");
+  await page.evaluate(() => { reharmOn = true; window.__lateN = 0; const w = () => { if (!btPlayer) return setTimeout(w, 5);
+    const o = btPlay; btPlay = (e, t) => { if (t < ctx.currentTime) window.__lateN++; return o(e, t); }; }; w(); });
+  await page.click("#playBtn");
+  await page.waitForFunction(() => playing && btSession, null, { timeout: 120000 });
+  await cdp.send("Emulation.setCPUThrottlingRate", { rate: 6 });
+  await page.waitForTimeout(20000);
+  await cdp.send("Emulation.setCPUThrottlingRate", { rate: 1 });
+  late.push(await page.evaluate(() => window.__lateN));
+  await page.click("#playBtn");
+}
+results.push(["CPU 6x 來不及", { runs: late, median: late.slice().sort((a, b) => a - b)[1] }]);
 for (const [k, v] of results) console.log(k.padEnd(16), JSON.stringify(v));
 console.log("errors:", errors.length ? errors : "none");
 await browser.close(); server.close();

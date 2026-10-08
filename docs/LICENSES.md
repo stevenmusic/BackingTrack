@@ -23,10 +23,11 @@
 | 鋼弦木吉他(Pop) | tonejs-instruments `guitar-acoustic` ← University of Iowa MIS | Iowa:任何用途不受限;整理者標 CC BY 3.0 | ✅ 可以 | 署名 Brosowsky(CC BY 3.0) |
 | 電吉他(Swing、Funk) | tonejs-instruments `guitar-electric` ← Karoryfer | 整理者標 CC BY 3.0(原始是 Karoryfer 的免費取樣) | ✅ 大概可以 | 署名 Brosowsky |
 | 尼龍弦吉他(Bossa) | tonejs-instruments `guitar-nylon` ← Freesound pack 11573(quartertone) | 整理者標 CC BY 3.0;**Freesound 原頁的授權讀不到** | ⚠️ 不確定 | 至少署名 quartertone + Brosowsky |
-| 鼓的節奏(Pop、City Pop、Funk、Blues、Swing) | Groove MIDI Dataset(Google Magenta) | CC BY 4.0 | ✅ 可以 | 要署名 + 附授權連結 + 標明有修改 |
+| 鼓的節奏(Pop、City Pop、Funk、Blues、Swing);`styles/feel.json` 的鼓與合奏律動統計 | Groove MIDI Dataset(Google Magenta) | CC BY 4.0 | ✅ 可以 | 要署名 + 附授權連結 + 標明有修改 |
+| `styles/feel.json` 的吉他刷弦統計 | GuitarSet(Xi et al. 2018,Zenodo 3371780) | CC BY 4.0 | ✅ 可以 | 要署名 + 附授權連結 |
 | 貝斯彈法庫(City Pop 的 `bassPhr`) | 12 首商業 City Pop 唱片的貝斯分軌,經 Basic Pitch 轉譜萃取的半小節音型 | 原曲有著作權 | ⚠️ **不確定** | — |
 | 字型 | Noto Serif TC / Noto Sans TC(Google Fonts) | SIL OFL 1.1 | ✅ 可以 | 附 OFL |
-| 鍵盤片段庫(計畫中) | POP909 | MIT | ✅ 可以 | 附 MIT 聲明;作者要求論文引用 |
+| `styles/feel.json` 的鍵盤力度位置與搶拍比例 | POP909 | MIT | ✅ 可以 | 附 MIT 聲明;作者要求論文引用 |
 
 風琴、合成器鋪底、銅管、K-Pop 的 pluck / supersaw / 808 低音、打擊小物(沙鈴、鈴鼓、cabasa)、
 殘響都是程式即時合成的,沒有外部授權問題。

@@ -96,16 +96,24 @@ footer li{margin-bottom:4px}
       <li>電貝斯:Black And Blue Basses、乾淨電吉他:Black And Green Guitars(Karoryfer,CC0)</li>
       <li>弦樂:VSCO-2 Community Edition(Versilian Studios,CC0)</li>
     </ul>
+    <p>彈法資料(人性化與每小節變化的統計)</p>
+    <ul>
+      <li>Groove MIDI Dataset(Gillick et al. 2019,Google,CC BY 4.0,取統計值,有修改)</li>
+      <li>GuitarSet(Xi et al. 2018,CC BY 4.0,取統計值)</li>
+      <li>POP909(Wang et al. 2020,MIT,取統計值)</li>
+    </ul>
   </footer>
 </main>
 <script type="module">
 import { Player } from "./player.mjs";
 import { resolveStyle, progressionBars } from "./engine.mjs";
 
-const [data, manifest] = await Promise.all([
+const [data, manifest, feel] = await Promise.all([
   fetch("./styles.json").then(r => r.json()),
   fetch("./samples.json").then(r => r.json()),
+  fetch("./feel.json").then(r => r.json()),
 ]);
+data.feel = feel; // 人性化與每小節變化的資料(Groove MIDI / POP909 / GuitarSet)
 const player = new Player(data, manifest);
 const $ = id => document.getElementById(id);
 const KEYS = ["C", "D♭", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];

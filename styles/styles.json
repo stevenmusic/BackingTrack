@@ -32,6 +32,7 @@
         "pad": null,
         "guitar": null
       },
+      "mix": {"drums": 0.0, "bass": -3.4, "keys": 1.5},
       "instruments": { "keys": "piano", "bass": "electric_bass", "drums": "acoustic_kit" },
       "samples": ["piano", "acoustic_kit", "electric_bass"],
       "optionalSamples": []
@@ -65,6 +66,8 @@
         "pad":   { "low": null, "standard": null, "high": "C--- ---- ---- ----", "optional": true },
         "guitar": null
       },
+      "eq": { "keys": { "highpass": 60 } },
+      "mix": {"drums": 0.0, "bass": -1.0, "keys": 5.5, "pad": -0.8, "keys2": 5.0},
       "instruments": { "keys": "piano", "keys2": "piano", "pad": "strings", "bass": "electric_bass", "drums": "acoustic_kit" },
       "samples": ["piano", "acoustic_kit", "electric_bass", "strings"],
       "optionalSamples": []
@@ -98,6 +101,7 @@
         "pad": null,
         "guitar": null
       },
+      "mix": {"drums": 0.0, "bass": -2.8, "keys": 2.7},
       "instruments": { "keys": "piano", "bass": "electric_bass", "drums": "acoustic_kit" },
       "samples": ["piano", "acoustic_kit", "electric_bass"],
       "optionalSamples": []
@@ -132,6 +136,7 @@
         "pad": null,
         "guitar": { "low": null, "standard": null, "high": "..x. ..x. ..x. ..x.", "optional": true, "topNotes": 2 }
       },
+      "mix": {"drums": 0.0, "bass": -2.6, "keys": -3.0, "guitar": -0.5},
       "instruments": { "keys": "rhodes", "bass": "electric_bass", "drums": "acoustic_kit", "guitar": "clean_guitar" },
       "samples": ["rhodes", "acoustic_kit", "electric_bass"],
       "optionalSamples": ["clean_guitar"]
@@ -165,6 +170,8 @@
         "pad":   { "low": "C--- ---- ---- ----", "standard": null, "high": "C--- ---- ---- ----" },
         "guitar": null
       },
+      "sends": { "drums": { "room": 1.3, "plate": 0.15 } },
+      "mix": {"drums": 0.0, "bass": -3.4, "keys": 2.4, "pad": -1.0},
       "instruments": { "keys": "piano", "pad": "strings", "bass": "electric_bass", "drums": "electronic_kit" },
       "samples": ["piano", "electronic_kit", "electric_bass", "strings"],
       "optionalSamples": []
@@ -210,6 +217,7 @@
         "pad": null,
         "guitar": null
       },
+      "mix": {"drums": 0.0, "bass": -2.5, "keys": -4.9},
       "instruments": { "keys": "rhodes", "bass": "electric_bass", "drums": "acoustic_kit" },
       "samples": ["rhodes", "acoustic_kit", "electric_bass"],
       "optionalSamples": []
@@ -247,6 +255,7 @@
         "pad": null,
         "guitar": null
       },
+      "mix": {"drums": 0.0, "bass": -2.3, "keys": 3.0},
       "instruments": { "keys": "piano", "bass": "electric_bass", "drums": "acoustic_kit" },
       "samples": ["piano", "acoustic_kit", "electric_bass"],
       "optionalSamples": []
@@ -280,6 +289,8 @@
         "pad": null,
         "guitar": null
       },
+      "sends": { "drums": { "room": 1.3, "plate": 0.15 } },
+      "mix": {"drums": 0.0, "bass": -2.5, "keys": 1.8},
       "instruments": { "keys": "piano", "bass": "electric_bass", "drums": "electronic_kit" },
       "samples": ["piano", "electronic_kit", "electric_bass"],
       "optionalSamples": []

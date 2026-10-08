@@ -125,6 +125,15 @@ out["acoustic_kit"] = {
         "crash": drum("mid_crash_crash"), "htom": drum("mid_htom_center", 4), "ltom": drum("mid_ltom_center", 4),
     },
 }
+# 房間麥:同一次演奏、同一個房間的另一對麥克風(Samples/room/,檔名 mid_ → room_,一對一)。
+# 跟中距離麥同時播,鼓的空間來自真的房間,不靠人工殘響
+room = set(tree("virtuosity_drums", "Samples/room"))
+for P in out["acoustic_kit"]["pieces"].values():
+    for files in P["layers"]:
+        for f in files:
+            r = "Samples/room/" + f.replace("/mid_", "/room_")
+            assert r in room, f"房間麥缺檔:{r}"
+out["acoustic_kit"]["room"] = {"src": src("sfzinstruments/virtuosity_drums", "master", "Samples/room/"), "from": "/mid_", "to": "/room_"}
 
 # ── 電子鼓組:Dirt-Samples 的 808(實機取樣;授權待確認,見 docs/LICENSES.md)──
 one = lambda f: {"vel": [[1, 127]], "layers": [[f]]}

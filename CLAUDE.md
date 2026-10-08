@@ -24,7 +24,10 @@
 - 試聽頁 `styles/index.html`:`sampler.mjs`(取樣樂器)+ `player.mjs`(即時排程與 `renderOffline`);主網頁也用同一個引擎(見最上面一節)
 - **全部用錄音取樣,不准即時合成的音色**(Steven 2026-10-08:「合成音色一定要換成真實取樣樂器,否則就乾脆不要。最少要做到 Band-in-a-Box 的品質」)。
   找不到授權清楚的真樂器取樣 → 那一層拿掉,不准用合成頂替(效果器、調變訊號不算音色)
-- **混音與母帶**:混音(各軌音量、EQ、兩種空間、鼓件擺位)照數學檢查調;母帶 = 黏著壓縮 → 各曲風 `master.gainDb` → 預讀限幅器
+- **空間(融合)照數學算,不邊聽邊調**(Steven 2026-10-08):殘響是真實錄音的 IR(`styles/ir/`);原聲鼓的空間來自自己的房間麥;
+  其他軌的送出量由 `tools/mix/space.py` 照舞台(`styles.json` 的 `space.stage`,相對鼓手房間的距離)閉式解出,寫進各曲風 `space.sends`。
+  改了音色、聲位、EQ、送出的基準 → 重跑 `space.py --write`,不准手改 `space.sends`;方法與數字在 `styles/README.md`「空間與融合」
+- **混音與母帶**:混音(各軌音量、EQ、兩種空間、鼓件擺位)照數學檢查調;母帶 = 黏著壓縮 → 各曲風 `master.gainDb` → 總線飽和 → 預讀限幅器
   (`styles/limiter.mjs`,−1 dBTP),目標 −14 LUFS;改了聲音就重跑 `tools/mix/solve_loudness.py`
 - **拍號**:`styles/` 的 3/4、6/8 寫在 `meters[拍號].tracks`(12 格);只有 4/4 的曲風不准硬套
 - 取樣清單 `styles/samples.json` 由 `tools/samples/build_manifest.py` 從實際檔案列表產生,手改會被蓋掉;

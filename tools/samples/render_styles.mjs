@@ -1,6 +1,7 @@
 // 用無頭 Chromium 把 styles/ 的風格離線算成 WAV,並量 peak / RMS。
 // CDN 的取樣請求導到本機 blobless clone(/tmp/smp,git show 現抓)。
-// 用法:node tools/samples/render_styles.mjs <輸出資料夾> [style[:progression[:density]] ...]
+// 用法:node tools/samples/render_styles.mjs <輸出資料夾> [style[:progression[:density[:bars[:only[:flag]]]]]] ...]
+// flag 用 / 串:dry(不加空間)、raw(跳過母帶鏈)、wet(只要殘響)、probe(印出鼓組 / 黏著壓縮平均壓幾 dB)、on=a+b(開可選聲部)
 import { chromium } from "playwright";
 import { execFileSync } from "node:child_process";
 import { createServer } from "node:http";
@@ -65,18 +66,21 @@ for (const job of jobs) {
   const [style, progression, density = "auto", bars = "16", only, flag] = job.split(":");
   const r = await page.evaluate(async ({ style, progression, density, bars, only, flag }) => {
     const p = window.__player;
-    const o = { density, seed: 7, ...(progression ? { progression } : {}), ...(only ? { only: only.split(",") } : {}), ...(flag === "dry" ? { noReverb: true } : {}),
-      ...(flag?.startsWith("on=") ? { parts: Object.fromEntries(flag.slice(3).split("+").map(k => [k, true])) } : {}) };
-    const { buffer, meta, failed } = await p.renderOffline(style, o, +bars);
+    const fl = (flag ?? "").split("/"), on = fl.find(f => f.startsWith("on="));
+    const o = { density, seed: 7, ...(progression ? { progression } : {}), ...(only ? { only: only.split(",") } : {}),
+      noReverb: fl.includes("dry"), raw: fl.includes("raw"), wetOnly: fl.includes("wet"), probe: fl.includes("probe"),
+      ...(on ? { parts: Object.fromEntries(on.slice(3).split("+").map(k => [k, true])) } : {}) };
+    const { buffer, meta, failed, gr } = await p.renderOffline(style, o, +bars);
+    const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
     const chs = [buffer.getChannelData(0), buffer.getChannelData(1)];
     let peak = 0, ss = 0, clip = 0;
     for (const c of chs) for (const x of c) { const a = Math.abs(x); if (a > peak) peak = a; ss += x * x; if (a >= 0.999) clip++; }
-    return { peak, rms: Math.sqrt(ss / (2 * chs[0].length)), clip, failed, sr: buffer.sampleRate,
+    return { peak, rms: Math.sqrt(ss / (2 * chs[0].length)), clip, failed, sr: buffer.sampleRate, grD: avg(gr.drums), grG: avg(gr.glue), probe: o.probe,
       bpm: meta.bpm, l: Array.from(chs[0]), r: Array.from(chs[1]) };
   }, { style, progression, density, bars, only, flag });
-  const name = job.replace(/[:,]/g, "_");
+  const name = job.replace(/[:,/=+]/g, "_");
   writeFileSync(join(out, name + ".wav"), wav([r.l, r.r], r.sr));
-  console.log(`${name.padEnd(36)} bpm ${r.bpm}  peak ${r.peak.toFixed(3)}  rms ${(20 * Math.log10(r.rms)).toFixed(1)} dBFS  clip ${r.clip}  載不到 ${r.failed}`);
+  console.log(`${name.padEnd(36)} bpm ${r.bpm}  peak ${r.peak.toFixed(3)}  rms ${(20 * Math.log10(r.rms)).toFixed(1)} dBFS  clip ${r.clip}  載不到 ${r.failed}` + (r.probe ? `  鼓組壓 ${(-r.grD).toFixed(1)} dB  黏著壓 ${(-r.grG).toFixed(1)} dB` : ""));
 }
 console.log("route 404:", missing);
 await browser.close();

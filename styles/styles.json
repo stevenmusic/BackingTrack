@@ -1,9 +1,26 @@
 {
   "version": 1,
   "spec": "backingtrack-styles-spec v1",
+  "space": {
+    "ir": { "room": "ir/room.wav", "plate": "ir/plate.wav" },
+    "stage": {
+      "drums":  { "rel": 0,  "predelay": 0.015 },
+      "kick":   { "rel": 0,  "predelay": 0.015 },
+      "drums_electronic": { "rel": 3, "predelay": 0.015 },
+      "bass":   { "rel": 8, "predelay": 0.02 },
+      "keys":   { "rel": 1,  "predelay": 0.012 },
+      "guitar": { "rel": 1,  "predelay": 0.012 },
+      "keys2":  { "rel": -1,  "predelay": 0.008 },
+      "pad":    { "rel": -3,  "predelay": 0.005 }
+    },
+    "drumRoomDb": -6,
+    "drumComp": { "threshold": -24, "knee": 6, "ratio": 4, "attack": 0.01, "release": 0.12 },
+    "saturation": 0.5
+  },
   "styles": [
     {
       "id": "pop",
+      "space": {"sends": {"drums": {"room": 0, "plate": 0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0.754, "plate": 0.0}, "keys": {"room": 0.186, "plate": 0.217}}, "drumRoomDb": -6},
       "master": { "gainDb": 4.1 },
       "name": { "zh": "現代流行", "en": "Modern Pop" },
       "bpm": { "default": 104, "min": 95, "max": 120 },
@@ -41,6 +58,7 @@
     },
     {
       "id": "mandopop_ballad",
+      "space": {"sends": {"drums": {"room": 0, "plate": 0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0.689, "plate": 0.0}, "keys": {"room": 0.174, "plate": 0.203}, "keys2": {"room": 0.353, "plate": 0.411}, "pad": {"room": 0.078, "plate": 0.186}}, "drumRoomDb": -6},
       "master": { "gainDb": 2.6 },
       "name": { "zh": "華語抒情", "en": "Mandopop Ballad" },
       "bpm": { "default": 72, "min": 60, "max": 80 },
@@ -78,6 +96,7 @@
     },
     {
       "id": "jpop",
+      "space": {"sends": {"drums": {"room": 0, "plate": 0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0.737, "plate": 0.0}, "keys": {"room": 0.223, "plate": 0.261}, "guitar": {"room": 0.616, "plate": 0.176}}, "drumRoomDb": -6},
       "master": { "gainDb": 3.6 },
       "name": { "zh": "J-pop／動畫", "en": "J-Pop / Anime" },
       "bpm": { "default": 140, "min": 120, "max": 170 },
@@ -113,6 +132,7 @@
     },
     {
       "id": "citypop",
+      "space": {"sends": {"drums": {"room": 0, "plate": 0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0.767, "plate": 0.0}, "keys": {"room": 0.218, "plate": 0.254}, "guitar": {"room": 0.808, "plate": 0.231}}, "drumRoomDb": -6},
       "master": { "gainDb": 4.6 },
       "name": { "zh": "City Pop", "en": "City Pop" },
       "bpm": { "default": 108, "min": 100, "max": 118 },
@@ -150,6 +170,7 @@
     },
     {
       "id": "kpop_dance",
+      "space": {"sends": {"drums": {"room": 2.741, "plate": 0.0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0.794, "plate": 0.0}, "keys": {"room": 0.26, "plate": 0.303}, "pad": {"room": 0.086, "plate": 0.206}}},
       "master": { "gainDb": 3.6 },
       "name": { "zh": "K-pop 舞曲", "en": "K-Pop Dance" },
       "bpm": { "default": 120, "min": 100, "max": 128 },
@@ -178,7 +199,6 @@
         "pad":   { "low": "C--- ---- ---- ----", "standard": null, "high": "C--- ---- ---- ----" },
         "guitar": null
       },
-      "sends": { "drums": { "room": 1.3, "plate": 0.15 } },
       "mix": {"drums": 0.0, "bass": -3.4, "keys": 2.4, "pad": -1.0},
       "instruments": { "keys": "piano", "pad": "strings", "bass": "electric_bass", "drums": "electronic_kit" },
       "samples": ["piano", "electronic_kit", "electric_bass", "strings"],
@@ -186,6 +206,7 @@
     },
     {
       "id": "kpop_ballad",
+      "space": {"sends": {"drums": {"room": 0, "plate": 0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0.644, "plate": 0.0}, "keys": {"room": 0.178, "plate": 0.207}, "keys2": {"room": 0.207, "plate": 0.242}, "pad": {"room": 0.075, "plate": 0.18}}, "drumRoomDb": -6},
       "master": { "gainDb": 2.9 },
       "inherits": "mandopop_ballad",
       "name": { "zh": "K-pop 抒情", "en": "K-Pop Ballad" },
@@ -198,6 +219,7 @@
     },
     {
       "id": "rnb_neosoul",
+      "space": {"sends": {"drums": {"room": 0, "plate": 0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0.749, "plate": 0.0}, "keys": {"room": 0.153, "plate": 0.178}}, "drumRoomDb": -6},
       "master": { "gainDb": 5.7 },
       "name": { "zh": "R&B／Neo-soul", "en": "R&B / Neo-Soul" },
       "bpm": { "default": 80, "min": 65, "max": 90 },
@@ -235,6 +257,7 @@
     },
     {
       "id": "lofi",
+      "space": {"sends": {"drums": {"room": 0, "plate": 0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0.658, "plate": 0.0}, "keys": {"room": 0.176, "plate": 0.205}}, "drumRoomDb": -6},
       "master": { "gainDb": 5.0 },
       "name": { "zh": "Lo-fi Hip-hop", "en": "Lo-fi Hip-hop" },
       "bpm": { "default": 82, "min": 70, "max": 90 },
@@ -277,6 +300,7 @@
     },
     {
       "id": "reggaeton",
+      "space": {"sends": {"drums": {"room": 2.849, "plate": 0.0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0.878, "plate": 0.0}, "keys": {"room": 0.264, "plate": 0.308}}},
       "master": { "gainDb": 4.8 },
       "name": { "zh": "Reggaeton／Latin", "en": "Reggaeton / Latin" },
       "bpm": { "default": 95, "min": 88, "max": 100 },
@@ -305,7 +329,6 @@
         "pad": null,
         "guitar": null
       },
-      "sends": { "drums": { "room": 1.3, "plate": 0.15 } },
       "mix": {"drums": 0.0, "bass": -2.5, "keys": 1.8},
       "alternatives": [{ "id": "nylon", "track": "keys", "instr": "nylon_guitar", "default": false, "label": { "zh": "尼龍吉他(取代鋼琴)", "en": "Nylon guitar (instead of piano)" } }],
       "instruments": { "keys": "piano", "bass": "electric_bass", "drums": "electronic_kit" },

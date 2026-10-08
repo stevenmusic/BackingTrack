@@ -43,7 +43,7 @@ const BUS = {
 const DRUM_PAN = { hat: 0.25, openhat: 0.25, crash: -0.3, htom: 0.15, ltom: -0.2, rim: 0.05, clap: 0, snare: 0 };
 
 /**
- * 殘響 IR:固定種子的雜訊,指數衰減(RT60 = seconds),左右不同種子;
+ * 備援殘響 IR(真實房間的 IR 檔載不到時才用):固定種子的雜訊,指數衰減(RT60 = seconds),左右不同種子;
  * room 有前 20ms 的稀疏早期反射。能量正規化
  */
 function impulse(ctx, seconds, seed, early = false) {
@@ -63,6 +63,33 @@ function impulse(ctx, seconds, seed, early = false) {
   const g = 1 / Math.sqrt(e / 2);
   for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < n; i++) d[i] *= g; }
   return ir;
+}
+/** 卷積 IR 一律能量正規化(左右平均能量 = 1),換 IR 不會換音量 */
+function normalizeIR(ctx, b) {
+  let e = 0;
+  for (let c = 0; c < b.numberOfChannels; c++) for (const x of b.getChannelData(c)) e += x * x;
+  const g = 1 / Math.sqrt(e / b.numberOfChannels);
+  const out = ctx.createBuffer(2, b.length, b.sampleRate);
+  for (let c = 0; c < 2; c++) {
+    const s = b.getChannelData(Math.min(c, b.numberOfChannels - 1)), d = out.getChannelData(c);
+    for (let i = 0; i < s.length; i++) d[i] = s[i] * g;
+  }
+  return out;
+}
+/** 真實空間的 IR 檔(styles/ir/,tools/mix/make_ir.py 從 MIT 授權的 IR 庫做的);整頁共用 */
+const IR_CACHE = new Map();
+function loadIR(ctx, file) {
+  if (!IR_CACHE.has(file)) IR_CACHE.set(file, fetch(new URL("./" + file, import.meta.url))
+    .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.arrayBuffer(); })
+    .then(ab => ctx.decodeAudioData(ab))
+    .catch(e => { IR_CACHE.delete(file); throw e; }));
+  return IR_CACHE.get(file).then(b => normalizeIR(ctx, b));
+}
+/** 飽和曲線:y = tanh(k·x)/k(小訊號增益 1、0dBFS 約 −0.7dB、奇次諧波),輸入範圍 ±2 */
+function satCurve(k) {
+  const n = 4096, c = new Float32Array(n);
+  for (let i = 0; i < n; i++) { const u = (i / (n - 1)) * 2 - 1; c[i] = Math.tanh(k * 2 * u) / k; }
+  return c;
 }
 
 export class Player {
@@ -92,23 +119,36 @@ export class Player {
     const fallback = this.fallback = ctx.createDynamicsCompressor();
     fallback.threshold.value = -2; fallback.knee.value = 0; fallback.ratio.value = 20;
     fallback.attack.value = 0.002; fallback.release.value = 0.1;
-    master.connect(glue).connect(loud).connect(fallback).connect(ctx.destination);
-    this.limiterReady = makeLimiter(ctx, -1).then(lim => {
+    // 總線飽和(類比磁帶 / 母帶機那一點點諧波,讓各軌的波形「黏」在一起):k 0.5,4 倍超取樣
+    const sp = this.data.space ?? {};
+    const satIn = ctx.createGain(), sat = ctx.createWaveShaper();
+    satIn.gain.value = 0.5;
+    sat.curve = satCurve(sp.saturation ?? 0.5); sat.oversample = "4x";
+    master.connect(glue).connect(loud).connect(satIn).connect(sat).connect(fallback).connect(ctx.destination);
+    this.glue = glue;
+    const limiterReady = makeLimiter(ctx, -1).then(lim => {
       if (!lim) return false;
-      loud.disconnect(); loud.connect(lim).connect(ctx.destination);
+      sat.disconnect(); sat.connect(lim).connect(ctx.destination);
       this.limiter = lim;
       return true;
     });
-    // 兩個空間:room(0.5 秒,讓乾的取樣像在同一個房間)與 plate(1.6 秒,鍵盤、弦樂)
+    // 兩個空間,都是真的錄音:room = 真實房間(RT60 0.6 秒,跟鼓的房間麥同樣長),plate = 真實的板式殘響(1.8 秒)。
+    // IR 檔載不到才退回固定種子的雜訊 IR(殘響是效果,不是音色)
     this.verbs = {};
-    for (const [name, sec, seed, early, ret] of [["room", 0.5, 4321, true, 2.0], ["plate", 1.6, 1234, false, 1.8]]) {
+    const irs = [];
+    for (const [name, sec, seed, early, ret] of [["room", 0.6, 4321, true, 2.0], ["plate", 1.8, 1234, false, 1.8]]) {
       const cv = ctx.createConvolver(), lc = ctx.createBiquadFilter(), r = ctx.createGain();
-      cv.buffer = impulse(ctx, sec, seed, early);
       lc.type = "highpass"; lc.frequency.value = 200; // 殘響不留低頻,不然會糊
       r.gain.value = ret;
       cv.connect(lc).connect(r).connect(master);
       this.verbs[name] = cv;
+      const file = sp.ir?.[name];
+      irs.push((file ? loadIR(ctx, file) : Promise.reject(new Error("no IR")))
+        .catch(() => impulse(ctx, sec, seed, early))
+        .then(b => { cv.buffer = b; }));
     }
+    // 主網頁只等 limiterReady:IR 也算在裡面
+    this.limiterReady = Promise.all([limiterReady, ...irs]).then(([ok]) => ok);
   }
 
   /**
@@ -119,6 +159,7 @@ export class Player {
     const ctx = this.ctx;
     const out = ctx.createGain();
     out.connect(this.master);
+    if (this.wetOnly) out.gain.value = 0; // 量測用:只聽殘響
     // 每個空間一條送出;停止時跟 out 一起拉掉
     const sends = {}, wet = [];
     for (const [name, cv] of Object.entries(this.verbs)) {
@@ -130,6 +171,14 @@ export class Player {
     const mix = st.mix ?? {}; // 各曲風的音量校正(dB),由 tools/mix/analyze.py 量完定的
     const buses = {};
     this.drift = null;
+    // 鼓組(各鼓件、大鼓、房間麥)先進同一台壓縮(鼓組黏在一起),再進混音
+    const SP = this.data.space ?? {}, DC = SP.drumComp ?? {};
+    const drumGroup = ctx.createDynamicsCompressor();
+    drumGroup.threshold.value = DC.threshold ?? -24; drumGroup.knee.value = DC.knee ?? 6; drumGroup.ratio.value = DC.ratio ?? 4;
+    drumGroup.attack.value = DC.attack ?? 0.01; drumGroup.release.value = DC.release ?? 0.12;
+    // Web Audio 的壓縮器會自己補一個固定增益;它是常數,由 tools/mix/solve_balance.py 重解各軌音量時一起扣掉
+    drumGroup.connect(out);
+    this.drumGroup = drumGroup;
     for (const [name, b] of Object.entries(BUS)) {
       const g = ctx.createGain(), p = ctx.createStereoPanner();
       g.gain.value = b.gain * 10 ** ((mix[name === "kick" ? "drums" : name] ?? 0) / 20);
@@ -160,11 +209,16 @@ export class Player {
           this.lfo = lfo;
         }
       }
-      tail.connect(p).connect(out);
-      const so = st.sends?.[name === "kick" ? "drums" : name] ?? {}; // 曲風的殘響送出覆寫(例:808 是單聲道,多給房間)
+      tail.connect(p).connect(name === "drums" || name === "kick" ? drumGroup : out);
+      // 殘響送出:tools/mix/space.py 照舞台位置(styles.json 的 space.stage)解出來的量;
+      // pre-delay 越長越近(直達聲跟反射分得越開),越短越遠
+      const so = st.space?.sends?.[name] ?? {};
+      const pre = SP.stage?.[name]?.predelay ?? 0;
+      let sendSrc = tail;
+      if (pre > 0) { const d = ctx.createDelay(0.1); d.delayTime.value = pre; tail.connect(d); sendSrc = d; }
       for (const v of ["room", "plate"]) if (so[v] ?? b[v]) {
         const s = ctx.createGain(); s.gain.value = so[v] ?? b[v];
-        tail.connect(s).connect(sends[v]);
+        sendSrc.connect(s).connect(sends[v]);
       }
       buses[name] = { in: g };
     }
@@ -176,6 +230,14 @@ export class Player {
       buses["drums:" + pc] = { in: p };
     }
     buses["drums:kick"] = buses.kick;
+    // 鼓的房間麥:立體聲原樣進鼓組(它本身就是空間,不再送人工殘響);低切 60Hz 免得大鼓的房間低頻糊掉
+    const room = ctx.createGain(), roomHp = ctx.createBiquadFilter();
+    room.gain.value = 10 ** ((mix.drums ?? 0) / 20) * BUS.drums.gain;
+    roomHp.type = "highpass"; roomHp.frequency.value = 60; roomHp.Q.value = BUTTER_Q_DB;
+    room.connect(roomHp).connect(drumGroup);
+    this.sampler.roomGain = this.noReverb || !this.manifest[st.instruments.drums]?.room ? 0 : 10 ** ((st.space?.drumRoomDb ?? -12) / 20);
+    for (const [k, v] of Object.entries(buses)) if (k === "drums" || k.startsWith("drums:")) this.sampler.roomOf.set(v.in, room);
+    buses["drums:room"] = { in: room };
     return { out, wet, buses };
   }
 
@@ -333,12 +395,18 @@ export class Player {
     p.style = st;
     p.parts = opt.parts ?? {};
     p.noReverb = !!opt.noReverb;
+    p.wetOnly = !!opt.wetOnly; // 量測用:只要殘響(tools/mix/space.py)
     const only = opt.only; // 只算某幾軌(分軌量測)
     await p.sampler.ensure(p.needs(r.events));
     await p.sampler.background;
     await p.limiterReady;
     p.loud.gain.value = opt.noMaster ? 1 : 10 ** ((st.master?.gainDb ?? 0) / 20);
+    if (opt.raw) { p.master.disconnect(); p.master.connect(ctx.destination); } // 量測用:跳過母帶鏈,分軌才能線性相加
     const session = p.buildBuses(st), { buses } = session;
+    // 量測用:每 50ms 讀一次鼓組壓縮與黏著壓縮壓了幾 dB
+    const gr = { drums: [], glue: [] };
+    if (opt.probe) for (let t = 0.5; t < len / sampleRate - 0.1; t += 0.05)
+      ctx.suspend(t).then(() => { gr.drums.push(p.drumGroup.reduction); gr.glue.push(p.glue.reduction); ctx.resume(); });
     if (!only) await p.vinyl(0, session.out);
     for (const e of r.events) {
       if (!p.on(e.track) || (only && !only.includes(e.track))) continue;
@@ -347,6 +415,6 @@ export class Player {
       else e.notes.forEach((midi, i) => p.sampler.note(p.instrOf(e.track, e), midi, e.noteVel?.[i] ?? e.vel, when + (e.noteDt?.[i] ?? 0),
         e.dur, buses[e.track].in, e.track === "keys" && p.drift ? { detune: p.drift } : {}));
     }
-    return { buffer: await ctx.startRendering(), meta: r.meta, failed: p.sampler.progress.failed };
+    return { buffer: await ctx.startRendering(), meta: r.meta, failed: p.sampler.progress.failed, gr };
   }
 }

@@ -1026,27 +1026,24 @@ try {
            併進來省掉一整列 -->
       <div class="style-bar">
         <div class="seg-mini" id="feelSeg">
-          <button type="button" data-feel="straight" aria-pressed="false"
-            data-i18n="feelStraight" data-i18n-attr="title:feelStraightTip"
-            title="八分音符平均、小鼓打 2、4;圓舞曲與 6/8 抒情也走這一種">Pop</button>
+          <button type="button" data-feel="pop" aria-pressed="false"
+            data-i18n="feel_pop" data-i18n-attr="title:feel_popTip">Pop</button>
+          <button type="button" data-feel="mandopop_ballad" aria-pressed="false"
+            data-i18n="feel_mandopop_ballad" data-i18n-attr="title:feel_mandopop_balladTip">華語抒情</button>
+          <button type="button" data-feel="jpop" aria-pressed="false"
+            data-i18n="feel_jpop" data-i18n-attr="title:feel_jpopTip">J-Pop</button>
           <button type="button" data-feel="citypop" aria-pressed="false"
-            data-i18n="feelCitypop" data-i18n-attr="title:feelCitypopTip"
-            title="八〇年代日本 AOR:hi-hat 走八分、貝斯與大鼓咬十六分切分。只有 4/4">City Pop</button>
-          <button type="button" data-feel="kpop" aria-pressed="false"
-            data-i18n="feelKpop" data-i18n-attr="title:feelKpopTip"
-            title="half-time 的十六分 R&amp;B:808 電子鼓、拍手只打第 3 拍、電鋼琴。只有 4/4">K-Pop</button>
-          <button type="button" data-feel="latin" aria-pressed="false"
-            data-i18n="feelLatin" data-i18n-attr="title:feelLatinTip"
-            title="Bossa Nova:clave、框邊小鼓、低音提琴;3/4 與 6/8 走非洲 6/8 的鈴型">Bossa</button>
-          <button type="button" data-feel="blues" aria-pressed="false"
-            data-i18n="feelBlues" data-i18n-attr="title:feelBluesTip"
-            title="Shuffle:八分是三連音的、boogie 貝斯;6/8 就是 12/8 的慢藍調。沒有三拍的">Blues</button>
-          <button type="button" data-feel="swing" aria-pressed="false"
-            data-i18n="feelSwing" data-i18n-attr="title:feelSwingTip"
-            title="爵士:ride 的 ding ding-da ding、走動低音;6/8 是慢藍調 shuffle">Swing</button>
-          <button type="button" data-feel="funk" aria-pressed="false"
-            data-i18n="feelFunk" data-i18n-attr="title:feelFunkTip"
-            title="十六分的律動,hi-hat 也走滿十六分。只有 4/4">Funk</button>
+            data-i18n="feel_citypop" data-i18n-attr="title:feel_citypopTip">City Pop</button>
+          <button type="button" data-feel="kpop_dance" aria-pressed="false"
+            data-i18n="feel_kpop_dance" data-i18n-attr="title:feel_kpop_danceTip">K-Pop 舞曲</button>
+          <button type="button" data-feel="kpop_ballad" aria-pressed="false"
+            data-i18n="feel_kpop_ballad" data-i18n-attr="title:feel_kpop_balladTip">K-Pop 抒情</button>
+          <button type="button" data-feel="rnb_neosoul" aria-pressed="false"
+            data-i18n="feel_rnb_neosoul" data-i18n-attr="title:feel_rnb_neosoulTip">R&amp;B</button>
+          <button type="button" data-feel="lofi" aria-pressed="false"
+            data-i18n="feel_lofi" data-i18n-attr="title:feel_lofiTip">Lo-fi</button>
+          <button type="button" data-feel="reggaeton" aria-pressed="false"
+            data-i18n="feel_reggaeton" data-i18n-attr="title:feel_reggaetonTip">Reggaeton</button>
         </div>
         <button type="button" class="auto-chip" id="feelAutoBtn" aria-pressed="true"
           data-i18n="feelAuto" data-i18n-attr="title:feelAutoTip"
@@ -1279,7 +1276,7 @@ try {
 </main>
 
 <footer>
-  <span data-i18n-html="footerText">音色:<a href="https://github.com/sfzinstruments/SalamanderGrandPiano" target="_blank" rel="noopener">Salamander</a> 鋼琴、<a href="https://github.com/sfzinstruments/virtuosity_drums" target="_blank" rel="noopener">Virtuosity Drums</a>、<a href="https://github.com/sfzinstruments/karoryfer.black-and-blue-basses" target="_blank" rel="noopener">Black And Blue Basses</a> 電貝斯、<a href="https://github.com/sfzinstruments/dsmolken.double-bass" target="_blank" rel="noopener">D. Smolken 低音提琴</a><br>問題回報：<a href="mailto:steventsaimusic@gmail.com">steventsaimusic@gmail.com</a></span>
+  <span data-i18n-html="footerText">音色全部是錄音取樣(Salamander、jRhodes3d、Virtuosity、Karoryfer、VSCO-2-CE 等),<a href="styles/#credits" target="_blank" rel="noopener">出處與授權</a><br>問題回報：<a href="mailto:steventsaimusic@gmail.com">steventsaimusic@gmail.com</a></span>
 </footer>
 
 <script>
@@ -1315,6 +1312,15 @@ const I18N = {
     feelAuto: "自動",
     feelAutoTip: "跟著和弦走:有九度以上是 Swing、六七度過半是 Bossa,其餘是 Pop。City Pop / K-Pop / Blues / Funk 的差別在律動不在和弦,推不出來——自己點,或從段落庫點一組進行",
     feelStraight: "Pop",
+    feel_pop: "Pop", feel_popTip: "現代流行:鋼琴、原聲鼓、電貝斯;4/4、3/4、6/8",
+    feel_mandopop_ballad: "華語抒情", feel_mandopop_balladTip: "鋼琴分解和弦、弦樂鋪底;4/4、3/4、6/8",
+    feel_jpop: "J-Pop", feel_jpopTip: "J-pop/動畫:快、提前切分推進;只有 4/4",
+    feel_citypop: "City Pop", feel_citypopTip: "Rhodes、十六分的貝斯與 hi-hat;只有 4/4",
+    feel_kpop_dance: "K-Pop 舞曲", feel_kpop_danceTip: "808 電子鼓、小調為主;只有 4/4",
+    feel_kpop_ballad: "K-Pop 抒情", feel_kpop_balladTip: "鋼琴分解和弦、大量副屬和弦;4/4、3/4、6/8",
+    feel_rnb_neosoul: "R&B", feel_rnb_neosoulTip: "Neo-soul:Rhodes、慵懶的小鼓;4/4、6/8",
+    feel_lofi: "Lo-fi", feel_lofiTip: "Lo-fi hip-hop:最適合即興練習;4/4、3/4",
+    feel_reggaeton: "Reggaeton", feel_reggaetonTip: "Dembow 節奏、電子鼓;只有 4/4",
     feelLatin: "Bossa",
     feelSwing: "Swing",
     feelFunk: "Funk",
@@ -1420,7 +1426,7 @@ const I18N = {
     errUnknownChord: "看不懂「{tok}」這個和弦,先把它改掉才能播放。",
     errTooMany: "一次最多 {n} 小節,後面的先拿掉吧。",
     hintKbd: '按 <kbd>空白鍵</kbd> 播放或停止',
-    footerText: '音色:<a href="https://github.com/sfzinstruments/SalamanderGrandPiano" target="_blank" rel="noopener">Salamander</a> 鋼琴、<a href="https://github.com/sfzinstruments/virtuosity_drums" target="_blank" rel="noopener">Virtuosity Drums</a>、<a href="https://github.com/sfzinstruments/karoryfer.black-and-blue-basses" target="_blank" rel="noopener">Black And Blue Basses</a> 電貝斯、<a href="https://github.com/sfzinstruments/dsmolken.double-bass" target="_blank" rel="noopener">D. Smolken 低音提琴</a><br>問題回報：<a href="mailto:steventsaimusic@gmail.com">steventsaimusic@gmail.com</a>',
+    footerText: '音色全部是錄音取樣(Salamander、jRhodes3d、Virtuosity、Karoryfer、VSCO-2-CE 等),<a href="styles/#credits" target="_blank" rel="noopener">出處與授權</a><br>問題回報：<a href="mailto:steventsaimusic@gmail.com">steventsaimusic@gmail.com</a>',
   },
   en: {
     pageTitle: "BackingTrack — type chords, get an accompaniment",
@@ -1438,6 +1444,15 @@ const I18N = {
     feelAuto: "Auto",
     feelAutoTip: "Follows the chords: 9ths and up go Swing, mostly 6ths/7ths go Bossa, the rest stay Pop. City Pop / K-Pop / Blues / Funk can't be inferred \u2014 tap them, or pick one from the library",
     feelStraight: "Pop",
+    feel_pop: "Pop", feel_popTip: "Modern pop: piano, acoustic drums, electric bass; 4/4, 3/4, 6/8",
+    feel_mandopop_ballad: "Mandopop Ballad", feel_mandopop_balladTip: "Arpeggiated piano, string pad; 4/4, 3/4, 6/8",
+    feel_jpop: "J-Pop", feel_jpopTip: "J-pop / anime: fast, pushed anticipations; 4/4 only",
+    feel_citypop: "City Pop", feel_citypopTip: "Rhodes, 16th-note bass and hi-hat; 4/4 only",
+    feel_kpop_dance: "K-Pop Dance", feel_kpop_danceTip: "808 kit, mostly minor keys; 4/4 only",
+    feel_kpop_ballad: "K-Pop Ballad", feel_kpop_balladTip: "Arpeggiated piano, secondary dominants; 4/4, 3/4, 6/8",
+    feel_rnb_neosoul: "R&B", feel_rnb_neosoulTip: "Neo-soul: Rhodes, laid-back snare; 4/4, 6/8",
+    feel_lofi: "Lo-fi", feel_lofiTip: "Lo-fi hip-hop: great for improvising; 4/4, 3/4",
+    feel_reggaeton: "Reggaeton", feel_reggaetonTip: "Dembow groove, electronic kit; 4/4 only",
     feelLatin: "Bossa",
     feelSwing: "Swing",
     feelFunk: "Funk",
@@ -1543,7 +1558,7 @@ const I18N = {
     errUnknownChord: "\"{tok}\" isn't a chord I recognise — fix it to play.",
     errTooMany: "{n} bars is the maximum — trim the rest.",
     hintKbd: 'Press <kbd>Space</kbd> to play or stop',
-    footerText: 'Sounds: <a href="https://github.com/sfzinstruments/SalamanderGrandPiano" target="_blank" rel="noopener">Salamander</a> piano, <a href="https://github.com/sfzinstruments/virtuosity_drums" target="_blank" rel="noopener">Virtuosity Drums</a>, <a href="https://github.com/sfzinstruments/karoryfer.black-and-blue-basses" target="_blank" rel="noopener">Black And Blue Basses</a> electric bass, <a href="https://github.com/sfzinstruments/dsmolken.double-bass" target="_blank" rel="noopener">D. Smolken double bass</a><br>Feedback: <a href="mailto:steventsaimusic@gmail.com">steventsaimusic@gmail.com</a>',
+    footerText: 'All sounds are recorded samples (Salamander, jRhodes3d, Virtuosity, Karoryfer, VSCO-2-CE…) — <a href="styles/#credits" target="_blank" rel="noopener">credits &amp; licenses</a><br>Feedback: <a href="mailto:steventsaimusic@gmail.com">steventsaimusic@gmail.com</a>',
   },
 };
 
@@ -2748,6 +2763,7 @@ function loadPianoKit(kit, midis){
 }
 
 function ensureSamples(midis){
+  if (BT_ON) return Promise.resolve();   // 聲音由新引擎(styles/)負責,舊的取樣不載
   const kit = pianoKit();
   if (PIANO_KITS[kit] && PIANO_KITS[kit].synth) return Promise.resolve();   // 合成的,沒有檔案
   /* Rhodes 是 FLAC,舊的 iOS Safari 可能整組吃不下。整組都掛的時候
@@ -3463,6 +3479,7 @@ function loadDrumSet(pieces, withRoom){
 }
 
 function ensureDrums(){
+  if (BT_ON) return Promise.resolve();   // 聲音由新引擎(styles/)負責,舊的取樣不載
   /* 808 改成真的取樣了(見 `SRC_D808`)。**還是不要順手把爵士鼓組載下來**
      ——那是 26MB,808 整組不到 400KB */
   if (drumKit() === "e808") return ensure808();
@@ -3537,6 +3554,7 @@ function loadBassOne(kit, K, entry, rr){
 }
 
 function ensureBass(midis){
+  if (BT_ON) return Promise.resolve();   // 聲音由新引擎(styles/)負責,舊的取樣不載
   const kit = bassKit(), K = BASS_KITS[kit];
   if (K.synth) return Promise.resolve();   // 808 的低音是算出來的,沒有檔案要載
   const want = new Set();
@@ -4454,6 +4472,7 @@ const D808_CUT = { ohat: 0.45, crash: 1.2, ride: 0.7, clap: 0.35 };
 const d808Buffers = {};
 let d808Loading = null;
 function ensure808(){
+  if (BT_ON) return Promise.resolve();   // 聲音由新引擎(styles/)負責,舊的取樣不載
   if (d808Loading) return d808Loading;
   /* 一顆一顆排隊解碼,跟吉他取樣同一條規則:`decodeAudioData` 在主執行緒上做,
      十二顆一起解會跟排程器搶(踩過,吉他那次 46ms → 73ms) */
@@ -5089,6 +5108,135 @@ function midBeat(){ const b = meter().beats; return b >= 4 ? 2 : b - 1; }
 
 /* 感覺:跟拍號無關的那一半(搖擺比例、各軌音量、用哪顆鼓、貝斯走法)。
    真正打在哪幾格是 GROOVES 按拍號給的 */
+/* ══ 新引擎(styles/):全部是錄音取樣、彈法照資料庫、混音與母帶 ══════════════════
+   2026-10-08 起主網頁的聲音全部交給 styles/ 的引擎(Steven:「全部給你安排」「合成音色一定要換成真實取樣樂器」)。
+   畫面、和弦語法、拍號、移調、和弦變化(代理和弦)、播放控制都照舊;
+   每一圈開始時把這一圈(畫面上真的在響的和弦)交給引擎算好,每一拍把那一拍的音交給取樣播放器。
+   舊的音色程式還在檔案裡,但 BT_ON 時不會被呼叫(ensureSamples 等一開頭就回) */
+const BT_ON = true;
+/* 9 種風格的速度範圍與拍號(跟 styles/styles.json 一致;styles/engine.test.mjs 會核對) */
+const BT_INFO = {"pop":{"bpm":[95,104,120],"meters":["4/4","3/4","6/8"]},"mandopop_ballad":{"bpm":[60,72,80],"meters":["4/4","3/4","6/8"]},"jpop":{"bpm":[120,140,170],"meters":["4/4"]},"citypop":{"bpm":[100,108,118],"meters":["4/4"]},"kpop_dance":{"bpm":[100,120,128],"meters":["4/4"]},"kpop_ballad":{"bpm":[60,70,80],"meters":["4/4","3/4","6/8"]},"rnb_neosoul":{"bpm":[65,80,90],"meters":["4/4","6/8"]},"lofi":{"bpm":[70,82,90],"meters":["4/4","3/4"]},"reggaeton":{"bpm":[88,95,100],"meters":["4/4"]}};
+/* 舊的曲風 key → 新的(舊存檔、舊連結、段落庫、自動判斷用) */
+const BT_OLD_FEEL = { straight: "pop", citypop: "citypop", kpop: "kpop_dance", latin: "rnb_neosoul",
+                      blues: "pop", swing: "lofi", funk: "rnb_neosoul" };
+/* 舊的疏密 → 新的密度 */
+const BT_DENS = { pad: "low", comp: "standard", drive: "high" };
+let BT = null, btLoading = null, btPlayer = null, btSession = null, btSessionStyle = null;
+const btCache = new Map();
+let btCacheSig = "";
+
+function btLoad(){
+  if (!btLoading) btLoading = Promise.all([
+    import("./styles/engine.mjs"), import("./styles/player.mjs"),
+    fetch("styles/styles.json").then(r => r.json()),
+    fetch("styles/samples.json").then(r => r.json()),
+    fetch("styles/feel.json").then(r => r.json()),
+  ]).then(([engine, player, data, manifest, feelData]) => {
+    data.feel = feelData;
+    BT = { engine, Player: player.Player, data, manifest };
+    btAddSections();
+    return BT;
+  });
+  return btLoading;
+}
+/* 段落庫加上每個風格規格書裡的進行(C 大調 / A 小調,跟原本的段落庫同一個規則) */
+function btAddSections(){
+  for (const st of BT.data.styles) {
+    const r = BT.engine.resolveStyle(BT.data, st.id);
+    for (const p of r.progressions) {
+      const text = p.example.replace(/♭/g, "b").replace(/♯/g, "#");
+      const norm = t => t.replace(/\s*[-|]\s*/g, "|").replace(/\s+/g, " ").trim();   // 「C - G」與「C | G」是同一串
+      if (SECTIONS.some(e => e.feel === st.id && norm(e.text) === norm(text))) continue;
+      SECTIONS.push({ text, feel: st.id, meter: "4/4", role: "form", spec: true });
+    }
+  }
+  if (typeof renderExamples === "function") renderExamples();
+}
+/* 一拍幾格(十六分):4/4、3/4 一拍 = 四分音符 = 4 格;6/8 一拍 = 附點四分 = 6 格 */
+function btCellsPerBeat(){ return meterOn === "6/8" ? 6 : 4; }
+/* 引擎的速度是四分音符;6/8 畫面上的數字是附點四分 */
+function btQuarterBpm(){ return meterOn === "6/8" ? bpmOn * 1.5 : bpmOn; }
+/* 一小節的和弦 → 引擎的格子(含移調) */
+function btSpans(bar){
+  const cpb = btCellsPerBeat();
+  return spansOf(bar).filter(sp => sp.ok && sp.chord).map(sp => ({
+    chord: BT.engine.chordFromIntervals(sp.chord.rootPc + transposeOn, sp.chord.bassPc + transposeOn,
+                                        sp.chord.intervals, sp.text),
+    from: Math.round(sp.fromBeat * cpb), to: Math.round(sp.toBeat * cpb),
+  }));
+}
+function btBarsOfLap(lap){ return (reharmOn && loopOn && lap > 0) ? barsForLap(lap) : parsed.bars; }
+/* 這一圈的音:引擎算一整圈(多看下一圈第一小節),依「第幾小節:第幾拍」分好 */
+function btLapEvents(lap){
+  const sig = [feelNow, meterOn, transposeOn, bpmOn, styleOn, reharmOn, loopOn, chordInput.value].join("|");
+  if (sig !== btCacheSig) { btCache.clear(); btCacheSig = sig; }
+  if (btCache.has(lap)) return btCache.get(lap);
+  const bars = btBarsOfLap(lap), n = bars.length;
+  const next = loopOn ? btBarsOfLap(lap + 1)[0] : bars[0];
+  const spans = bars.map(btSpans);
+  spans.push(btSpans(next));
+  const densities = [];
+  for (let i = 0; i <= n; i++) densities.push(BT_DENS[styleAt(lap * n + i)] || "standard");
+  const r = BT.engine.render(BT.data, feelNow, {
+    barSpans: spans, bars: n, barBase: lap * n, densities, meter: meterOn,
+    bpm: btQuarterBpm(), seed: 1 + lap, countIn: false,
+  });
+  const beatSec = r.meta.cellSec * btCellsPerBeat();
+  const map = new Map();
+  for (const e of r.events) {
+    e.beatPos = (e.gridTime - e.bar * r.meta.barSec) / beatSec;   // 這一小節的第幾拍(含搖擺)
+    e.dt = e.time - e.gridTime;                                     // 人性化的偏移(秒)
+    const k = e.bar + ":" + Math.floor(e.beatPos + 1e-6);
+    if (!map.has(k)) map.set(k, []);
+    map.get(k).push(e);
+  }
+  map.events = r.events;
+  btCache.set(lap, map);
+  if (btPlayer && btPlayer.style) btPlayer.sampler.ensure(btPlayer.needs(r.events));   // 背景先載(代理和弦可能用到新的音)
+  return map;
+}
+/* 混音匯流排:每次播放、每次換風格各一組;換的時候舊的淡出 */
+function btFadeSession(){
+  if (!btSession) return;
+  const t = ctx.currentTime, old = btSession;
+  for (const g of [old.out.gain, ...old.wet.map(w => w.gain)]) { g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(0, t + 0.06); }
+  setTimeout(() => { old.out.disconnect(); old.wet.forEach(w => w.disconnect()); if (old.vinyl) old.vinyl.stop(); if (old.lfo) old.lfo.stop(); }, 3000);
+  btSession = null; btSessionStyle = null;
+}
+async function btEnsureSession(when){
+  if (btSession && btSessionStyle === feelNow) return;
+  btFadeSession();
+  const st = BT.engine.resolveStyle(BT.data, feelNow);
+  btPlayer.style = st;
+  btPlayer.parts = {};
+  btPlayer.loud.gain.setValueAtTime(10 ** (((st.master && st.master.gainDb) || 0) / 20), ctx.currentTime);
+  btSession = btPlayer.buildBuses(st);
+  btSession.lfo = btPlayer.lfo;
+  btSessionStyle = feelNow;
+  btSession.vinyl = await btPlayer.vinyl(when || ctx.currentTime, btSession.out);
+}
+/* 一下音:鼓走各鼓件的擺位,其他照軌 */
+function btPlay(e, t){
+  if (!btSession || !btPlayer.on(e.track)) return;
+  const buses = btSession.buses, now = ctx.currentTime;
+  if (e.track === "drums") {
+    btPlayer.sampler.hit(btPlayer.style.instruments.drums, e.piece, e.vel, Math.max(t, now), (buses["drums:" + e.piece] || buses.drums).in);
+    return;
+  }
+  const instr = btPlayer.instrOf(e.track, e), bus = buses[e.track].in;
+  const opt = e.track === "keys" && btPlayer.drift ? { detune: btPlayer.drift } : {};
+  const dur = e.cells * btBeatSecNow() / btCellsPerBeat();
+  e.notes.forEach((midi, i) => btPlayer.sampler.note(instr, midi, (e.noteVel && e.noteVel[i]) || e.vel,
+    Math.max(t + ((e.noteDt && e.noteDt[i]) || 0), now), dur, bus, opt));
+}
+function btBeatSecNow(){ return spb; }
+/* 預備拍:真的 hi-hat 取樣(不是合成的 click) */
+function btClick(when, strong){
+  if (!btSession) return;
+  btPlayer.sampler.hit(btPlayer.style.instruments.drums, "hat", strong ? 112 : 80, when, (btSession.buses["drums:hat"] || btSession.buses.drums).in);
+}
+btLoad().catch(() => {});   // 開頁面就先在背景載引擎與資料,第一次按播放比較快
+
 const FEELS = {
   /* Pop:八分平均的流行與搖滾。圓舞曲與 6/8 抒情也走這一種(差別在拍號) */
   straight: {
@@ -5473,7 +5621,7 @@ function styleAt(absBar){
   return MIX_CYCLE[Math.floor(absBar / n) % MIX_CYCLE.length];
 }
 
-let feelNow = "straight";
+let feelNow = "pop";
 /* 「感覺」預設跟著和弦走(auto)。使用者可以指定,那是覆寫不是預設——
    這條線是整個工具的設計:先有和弦才有感覺,不是先挑曲風再硬套 */
 let feelPick = "auto";
@@ -5729,8 +5877,8 @@ function bassMode(absBar){
    `FEELS[x].meters` 沒寫就是三個拍號都可以。膠囊變暗、指定會退回自動都靠這個,
    不要再針對某一種曲風寫 if——加第三個受限的曲風時一定會漏掉一邊 */
 function feelFitsMeter(k, m){
-  const f = FEELS[k];
-  return !f || !f.meters || f.meters.indexOf(m || meterOn) >= 0;
+  const f = BT_INFO[k];
+  return !f || f.meters.indexOf(m || meterOn) >= 0;
 }
 
 /* 過門。佔滿最後兩拍、又是整串 tom 滾奏會很突兀,所以預設只佔最後一拍,
@@ -6813,6 +6961,7 @@ function schedulePerc(barStartBeat, b, absBar, isFill){
 /* 這次的進行吉他會彈到哪幾個音,先把 Karplus-Strong 的 buffer 算出來存好。
    算完之後每一下就只是播一份 buffer,跟播取樣一樣便宜 */
 function prewarmGuitar(){
+  if (BT_ON) return Promise.resolve();   // 聲音由新引擎(styles/)負責
   const f = feel();
   if (!ctx) return Promise.resolve();
   // 808 的金屬音色也先算好(1.3 秒的 buffer,算一次就一直用)
@@ -6869,48 +7018,28 @@ function scheduleExtras(spans, barStartBeat, b, transpose, absBar, isFill){
 
 function scheduleBeat(i, when){
   const beats = beatsInBar();
-  if (i < countInBeats) { playClick(when, i % beats === 0); return; }
+  if (i < countInBeats) { btClick(when, i % beats === 0); return; }
   const musicBeat = i - countInBeats;
   const nBars = voicings.length;
-  if (!nBars) return;
+  if (!nBars || !BT) return;
   let bar = Math.floor(musicBeat / beats);
   if (bar >= nBars) {
     if (!loopOn) return;
     bar = bar % nBars;
   }
-  const v = voicings[bar];
-  if (!v || !v.length) return;               // 這一格解析失敗(理論上播放前就擋掉了)
   const b = ((musicBeat % beats) + beats) % beats;
   const barStartBeat = countInBeats + Math.floor(musicBeat / beats) * beats;
-  /* absBar 是「從頭數到現在的第幾小節」,繞第二圈時會繼續往上加——
-     變化就是靠它,同一格和弦第二圈聽起來才不會跟第一圈一模一樣 */
+  /* absBar 是「從頭數到現在的第幾小節」,繞第二圈時會繼續往上加 */
   const absBar = Math.floor(musicBeat / beats);
-  /* 繞到新的一圈就換一兩顆和弦(代理和弦,見 SUB_RULES)。
-     一定要在這一圈的第一小節第一拍做,不然會在樂句中間忽然換 */
-  if (reharmOn && loopOn && b === 0 && bar === 0) {
-    const lap = Math.floor(absBar / nBars);
-    if (lap !== lapBuilt) buildLap(lap);
+  const lap = Math.floor(absBar / nBars);
+  /* 繞到新的一圈就換一兩顆和弦(代理和弦,見 SUB_RULES)。一定要在這一圈的第一小節第一拍做 */
+  if (reharmOn && loopOn && b === 0 && bar === 0 && lap !== lapBuilt) buildLap(lap);
+  if (b === 0) {
+    btEnsureSession(when);                         // 播放中換了風格:換一組混音匯流排
+    if (bar === 0 && loopOn) btLapEvents(lap + 1); // 先把下一圈算好、取樣在背景載
   }
-  // 一格的進行沒有「最後一格」可言,每小節都過門會很吵,所以兩格以上才給
-  const isFill = nBars >= 2 && bar === nBars - 1;
-
-
-  schedulePiano(v, barStartBeat, b, transposeOn, absBar, isFill);
-  scheduleExtras(v, barStartBeat, b, transposeOn, absBar, isFill);
-  scheduleDrums(barStartBeat, b, absBar, isFill);
-  {
-    /* 貝斯吃「這一拍屬於哪一顆和弦」。接下去的那一顆可能還在同一小節裡
-       (一小節兩顆的後半),所以先找同一格的下一段,沒有了才看下一小節 */
-    const sp = spanAt(v, b * divNow());
-    const here = v.indexOf(sp);
-    const nextIdx = bar + 1 >= nBars ? (loopOn ? 0 : -1) : bar + 1;
-    const nextSp = here >= 0 && here + 1 < v.length ? v[here + 1]
-                 : (nextIdx >= 0 && voicings[nextIdx] ? voicings[nextIdx][0] : null);
-    if (sp && sp.chord) {
-      scheduleBass(sp.chord, barStartBeat, b, absBar, isFill,
-                   nextSp ? nextSp.chord : null, sp);
-    }
-  }
+  const ev = btLapEvents(lap).get(bar + ":" + b) || [];
+  for (const e of ev) btPlay(e, beatTime(barStartBeat + e.beatPos) + e.dt);
 }
 
 function schedulerTick(){
@@ -6928,67 +7057,66 @@ function schedulerTick(){
   }
 }
 
-function startPlayback(){
+async function startPlayback(){
   if (!parsed.bars.length || parsed.bars.some(b => !b.ok)) return;
   ensureAudio();
+  ctx.resume();
   resetLap();                       // 每次按播放都從原譜那一圈開始
-  last808.midi = -1; last808.at = -99;   // 808 的滑音不要從上一次播放接過來
   voicings = buildVoicings(parsed.bars);
-
-  // 這次會用到的音(含移調),只載這些取樣(一格可能有好幾顆和弦,每一顆的音都要算)
-  const midis = pianoMidisOf();
-  /* 撥弦的取樣先算好。**一定要在這裡算,不能等排程的時候現算**——
-     一顆 1.9 秒的弦要跑 84000 次迴圈,排程中途做會卡一下,
-     而且卡在音訊執行緒的前 0.15 秒裡,聽起來就是一聲爆音 */
-  const guitarReady = prewarmGuitar();
-
-  // 貝斯用的音(含移調)跟鋼琴不同,要另外算
-  const bassMidis = bassMidisOf();
-
   setTransport(T("loadingSamples"), T("loadingSamplesSub"));
   resetLoadProgress();
   playBtn.disabled = true;
-
-  Promise.all([
-    ensureSamples(midis),
-    ensureDrums(),
-    ensureBass(bassMidis),
-    guitarReady,
-  ]).then(() => {
+  try {
+    await btLoad();
+    if (!btPlayer) {
+      btPlayer = new BT.Player(BT.data, BT.manifest);
+      btPlayer.setupAudio(ctx);
+      btPlayer.sampler.onProgress = p => { loadStat.total = p.total; loadStat.done = p.done; renderLoadProgress(); };
+    }
+    await btPlayer.limiterReady;
+    btFadeSession();
+    btCache.clear();
+    const st = BT.engine.resolveStyle(BT.data, feelNow);
+    btPlayer.style = st;
+    btPlayer.parts = {};
+    // 這一圈與下一圈要用的音 + 預備拍的 hi-hat,先載第一批(其餘背景補)
+    const ev0 = btLapEvents(0).events, ev1 = loopOn ? btLapEvents(1).events : [];
+    const needs = btPlayer.needs(ev0.concat(ev1));
+    needs.push({ instr: st.instruments.drums, piece: "hat", vel: 112 }, { instr: st.instruments.drums, piece: "hat", vel: 80 });
+    await btPlayer.sampler.ensure(needs);
+  } catch (err) {
+    /* 看不懂的和弦或這個風格沒有這個拍號:講清楚,不出聲 */
     endLoadProgress();
     playBtn.disabled = false;
-    /* 狀態列講的是「這首真的在用的那一台琴」:Rhodes 整組沒載到時
-       ensureSamples 已經把平台鋼琴補上了,這裡就會看到平台鋼琴那一組。
-       **合成的那一台(K-Pop 的 pluck)沒有 bank**,不要去讀它的 size */
-    const want = pianoKit();
-    const synthKit = !!(PIANO_KITS[want] && PIANO_KITS[want].synth);
-    const kitNow = synthKit ? null
-                 : (pianoBanks[want] && pianoBanks[want].size) ? want : "acoustic";
-    if (synthKit) setStatus(T("statusSynthKeys"), false);
-    else if (!pianoBanks[kitNow].size) setStatus(T("statusSynth"), true);
-    else if (pianoFailed[kitNow].size) setStatus(T("statusPartial", { n: pianoFailed[kitNow].size }), true);
-    else setStatus(T("statusSamples", { n: pianoBanks[kitNow].size }), false);
+    setStatus(String(err && err.message || err), true);
+    updateTransportIdle();
+    return;
+  }
+  endLoadProgress();
+  playBtn.disabled = false;
+  const failed = btPlayer.sampler.progress.failed;
+  if (failed) setStatus(T("statusPartial", { n: failed }), true);
+  else setStatus(T("statusSamples", { n: btPlayer.sampler.progress.done }), false);
 
-    playing = true;
-    // 已經在播了,這時候才放行「補完整組鼓」那一大包(見 drumFillGate)
-    openDrumFill();
-    spb = 60 / bpmOn;
-    updateEcho();
-    countInBeats = countInOn ? beatsInBar() * 2 : 0;
-    endBeat = loopOn ? Infinity : countInBeats + voicings.length * beatsInBar();
-    anchorBeat = 0;
-    // 起點往後推一點點,第一個和弦才不會被排在「已經過去的時間」上而被吃掉
-    anchorTime = ctx.currentTime + 0.12;
-    nextBeat = 0;
-    setPlayIcon(true);
-    schedulerTick();
-    tickTimer = setInterval(schedulerTick, TICK_MS);
-    rafId = requestAnimationFrame(paintPlayhead);
-  });
+  playing = true;
+  spb = 60 / bpmOn;
+  updateEcho();
+  countInBeats = countInOn ? beatsInBar() * 2 : 0;
+  endBeat = loopOn ? Infinity : countInBeats + voicings.length * beatsInBar();
+  anchorBeat = 0;
+  // 起點往後推一點點,第一個和弦才不會被排在「已經過去的時間」上而被吃掉
+  anchorTime = ctx.currentTime + 0.15;
+  nextBeat = 0;
+  await btEnsureSession(anchorTime);
+  setPlayIcon(true);
+  schedulerTick();
+  tickTimer = setInterval(schedulerTick, TICK_MS);
+  rafId = requestAnimationFrame(paintPlayhead);
 }
 
 function stopPlayback(){
   playing = false;
+  btFadeSession();
   if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
   if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
   for (const s of [...activeSources]) { try { s.stop(); } catch (e) {} }
@@ -7054,8 +7182,10 @@ const TEMPO_QUICK = {
   blues:    { "4/4": [70, 90, 110],   "6/8": [40, 55, 70] },
 };
 function tempoQuick(){
-  const byFeel = TEMPO_QUICK[feelNow] || TEMPO_QUICK.straight;
-  return byFeel[meterOn] || byFeel["4/4"];
+  /* 慢 / 中 / 快 = styles.json 的 bpm 範圍(min / default / max,四分音符);
+     6/8 的速度數字是附點四分音符,所以除以 1.5 */
+  const f = BT_INFO[feelNow] || BT_INFO.pop;
+  return meterOn === "6/8" ? f.bpm.map(v => Math.round(v / 1.5)) : f.bpm.slice();
 }
 function renderTempoQuick(){
   const box = $("bpmQuick");
@@ -7094,7 +7224,7 @@ function setFeelPick(k){
      不是不理他。變暗跟拍號那排一樣是「提示不是鎖」:點下去就當使用者要這個曲風,
      而 Funk 的進行全是 4/4,擋住的話那五組就永遠碰不到了 */
   if (k !== "auto" && !feelFitsMeter(k)) {
-    const ms = (FEELS[k] || {}).meters;
+    const ms = (BT_INFO[k] || {}).meters;
     if (!ms || !ms.length) return;
     formMeter = null;
     setMeter(ms[0], true);
@@ -7161,8 +7291,11 @@ function clearFormMeter(){
 
 const STYLE_I18N = { pad: "stylePad", comp: "styleComp", drive: "styleDrive", mix: "styleMix" };
 /* 曲風的 key → 畫面上的名字。程式裡的 key 不跟著畫面改(存檔與網址都用它) */
-const FEEL_I18N = { straight: "feelStraight", citypop: "feelCitypop", kpop: "feelKpop",
-                    latin: "feelLatin", blues: "feelBlues", swing: "feelSwing", funk: "feelFunk" };
+const FEEL_I18N = { straight: "feelStraight", citypop: "feel_citypop", kpop: "feelKpop",
+                    latin: "feelLatin", blues: "feelBlues", swing: "feelSwing", funk: "feelFunk",
+                    pop: "feel_pop", mandopop_ballad: "feel_mandopop_ballad", jpop: "feel_jpop",
+                    kpop_dance: "feel_kpop_dance", kpop_ballad: "feel_kpop_ballad", rnb_neosoul: "feel_rnb_neosoul",
+                    lofi: "feel_lofi", reggaeton: "feel_reggaeton" };
 /* 混合時把現在走到哪一種也寫出來:不講的話會以為是自己亂變的。
    這跟「感覺」不一樣——感覺是和弦決定的、不顯示;疏密本來就是使用者選的那一軸 */
 function styleName(absBar){
@@ -7173,7 +7306,12 @@ function styleName(absBar){
 }
 
 /* 感覺是和弦決定的,和弦一改就要重算 */
-function feelAuto(){ return detectFeel(parsed.bars); }
+function feelAuto(){
+  /* 舊的判斷(straight / latin / swing)換成新的風格:三和弦 → Pop、六七和弦多 → R&B、九度以上 → Lo-fi;
+     這個拍號沒有那種風格就回 Pop(Pop 三種拍號都有) */
+  const k = BT_OLD_FEEL[detectFeel(parsed.bars)] || "pop";
+  return feelFitsMeter(k) ? k : "pop";
+}
 function updateFeel(){
   const before = typeof feelNow !== "undefined" ? bassKit() : "";
   /* 音色也跟著曲風換:換到 City Pop 就從平台鋼琴變 Rhodes、換到 K-Pop
@@ -7490,7 +7628,7 @@ function applyURLParams(){
   const t = parseInt(q.get("t"), 10);
   if (!isNaN(t)) transposeOn = Math.min(12, Math.max(-12, t));
   const f = q.get("f");
-  if (f && (f === "auto" || FEELS[f])) feelPick = f;
+  if (f && (f === "auto" || BT_INFO[f] || BT_OLD_FEEL[f])) feelPick = BT_OLD_FEEL[f] || f;
   return true;
 }
 
@@ -8317,6 +8455,10 @@ const SECTIONS = [
   { text: "Am7 - Dm9 - Am7 - Dm9 - Fmaj7 - G7 - Am7 - Am7",        feel: "funk",    meter: "4/4", role: "chorus" },  // vamp 四小節後接一句
   { text: "C9 - F9 - C9 - C9 - F9 - F9 - C9 - C9 - G9 - F9 - C9 - G9", feel: "funk", meter: "4/4", role: "form" },  // 12 小節的放克藍調
 ];
+/* 段落庫的曲風 key 換成新的 9 種(舊的 7 種只留在這張對照表):Bossa → R&B、Swing → Lo-fi、Blues → Pop、Funk → R&B。
+   新引擎載完之後,再把 styles.json 每個風格的規格進行加進來(btAddSections) */
+for (const e of SECTIONS) e.feel = BT_OLD_FEEL[e.feel] || e.feel;
+
 
 /* ── 形式 ──────────────────────────────────────────────────────
    一個 4 小節的循環聽再久都會膩,所以可以把段落接起來:
@@ -8855,7 +8997,7 @@ document.addEventListener("keydown", (e) => {
     if (typeof st.text === "string") chordInput.value = st.text;
     if (st.style && STYLE_KEYS.indexOf(st.style) >= 0) styleOn = st.style;
     if (st.meter && METERS[st.meter]) meterOn = st.meter;
-    if (st.feel && (st.feel === "auto" || FEELS[st.feel])) feelPick = st.feel;
+    if (st.feel && (st.feel === "auto" || BT_INFO[st.feel] || BT_OLD_FEEL[st.feel])) feelPick = BT_OLD_FEEL[st.feel] || st.feel;
     if (typeof st.countIn === "boolean") countInOn = st.countIn;
     if (typeof st.loop === "boolean") loopOn = st.loop;
     if (typeof st.reharm === "boolean") reharmOn = st.reharm;

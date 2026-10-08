@@ -2577,3 +2577,13 @@ Tone.js 那三件管樂**只有小號能用**。量「峰值出現在第幾秒�
 - Steven:「聽起來很不舒服,不確定是吉他還是電鋼琴太吵」。timbre.py(拆軌量尺先用單獨錄音驗證)量到吉他佔伴奏 −7.2dB、真歌 −11.5 [−16.4, −9.8]
 - 早期往上推是在平台鋼琴時期、吉他跟鍵盤比;這次是對 26 首真歌的整體比例。人聲滲漏會讓真歌吉他看起來更小,所以幅度照滲漏實驗修正
 - 鍵盤 + 鋪底的調整因量尺偏差太大退回
+
+
+## 2026-10-08 主網頁換成 styles/ 新引擎
+- Steven:「全部給你安排」「合成音色一定要換成真實取樣樂器,否則就乾脆不要。最少要做到 Band-in-a-Box 的品質」「母帶跟混音都幫我做好」
+- 主網頁的聲音全部交給 `styles/`:9 種風格(規格書)、全部錄音取樣、彈法照 Groove MIDI / GuitarSet / POP909、混音照數學檢查、母帶 −14 LUFS / −1 dBTP
+- 舊引擎(bd80000 退回的那一版,City Pop 盲聽 3 分)程式留在 index.html 但不會被呼叫;要比較或救回某一塊,從 git 的 e2adf42 / bd80000 找
+- 舊的 7 個曲風 key 對到新的:straight→pop、citypop→citypop、kpop→kpop_dance、latin→rnb_neosoul、blues→pop、swing→lofi、funk→rnb_neosoul。
+  Bossa、Blues、Swing、Funk 不再是獨立的曲風(規格書沒有),它們的段落庫進行併到對應的新風格
+- 版面:9 顆曲風膠囊仍是一行;頁尾的取樣出處改成一行 + 連到 `styles/#credits`。量 `document.body.scrollHeight` 跟改之前完全一樣
+  (900 高的視窗在無頭瀏覽器本來就多 20px,字型沒載到也有影響,不是這次造成的)

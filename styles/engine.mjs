@@ -72,6 +72,24 @@ function chordOf(root, bass, quality, sym) {
   return { sym, root: mod12(root), bass: mod12(bass), quality, iv };
 }
 
+/**
+ * 從音程集合建和弦(主網頁的解析器有 134 種拼法,轉過來用):intervals = 距根音的半音(可含 14、21 這種延伸音)
+ * 三度:有 4 用 4、有 3 用 3,都沒有就是 sus(5 或 2);五度 7 / 6 / 8;七度 10 / 11 / 9(減七);九度 14 / 13 / 15;十三度 21(6 和弦的 9 也算)
+ */
+export function chordFromIntervals(root, bass, intervals, sym = "") {
+  const has = i => intervals.some(x => mod12(x) === mod12(i));
+  const iv = {};
+  iv[3] = has(4) ? 4 : has(3) ? 3 : has(5) ? 5 : has(2) ? 2 : 4;
+  iv[5] = has(7) ? 7 : has(6) && !has(4) ? 6 : has(8) ? 8 : has(6) ? 6 : 7;
+  if (has(10)) iv[7] = 10; else if (has(11)) iv[7] = 11; else if (has(9) && iv[3] === 3 && iv[5] === 6) iv[7] = 9;
+  if (intervals.some(x => x >= 12)) {
+    if (has(13)) iv[9] = 13; else if (has(15) && iv[3] === 4) iv[9] = 15; else if (has(2) && iv[3] !== 2) iv[9] = 14;
+  }
+  if (has(9) && iv[7] !== 9) iv[13] = 9 + (intervals.some(x => x === 21) ? 12 : 0);
+  const quality = iv[3] === 3 && iv[5] === 6 && iv[7] === 10 ? "m7♭5" : sym;
+  return { sym, root: mod12(root), bass: mod12(bass), quality, iv };
+}
+
 /** 音名和弦:C、Am7、Bm7♭5、G/B、C7/B♭ */
 export function parseChord(sym) {
   const m = /^([A-G])([♯♭#b]?)([^/]*)(?:\/([A-G])([♯♭#b]?))?$/.exec(sym.trim());
@@ -268,6 +286,7 @@ const foldBass = p => {
 };
 
 function densityAt(o, bar) {
+  if (o.densities) return o.densities[Math.min(bar, o.densities.length - 1)] ?? "standard"; // 每小節自己指定(主網頁的鋪 / 伴 / 推)
   if (o.density !== "auto") return o.density;
   return Math.floor(bar / 8) % 2 === 0 ? "standard" : "high"; // A 段 standard 8 小節 → B 段 high 8 小節
 }
@@ -288,6 +307,7 @@ export function render(data, styleId, opt = {}) {
     bpm: st.bpm.default, swing: st.swing, seed: 1, humanize: true, countIn: true, ...opt,
   };
   const meterKey = o.meter ?? "4/4";
+  const base = o.barBase ?? 0; // 這一段第一小節是整首的第幾小節(過門、段落、樂句位置用)
   const MT = METERS[meterKey];
   if (!MT) throw new Error(`不支援的拍號:${meterKey}`);
   const BAR = MT.cells;
@@ -297,16 +317,22 @@ export function render(data, styleId, opt = {}) {
   if (MT.straight) o.swing = 50;
   const rules = st.rules ?? {};
   let pBars;
-  if (o.chords) pBars = progressionBars({ example: o.chords }, o.key, "example"); // 使用者自己輸入(音名)
+  if (o.barSpans) pBars = null; // 主網頁:每小節的和弦與位置(格)直接給
+  else if (o.chords) pBars = progressionBars({ example: o.chords }, o.key, "example"); // 使用者自己輸入(音名)
   else {
     const prog = st.progressions.find(p => p.id === o.progression);
     if (!prog) throw new Error(`${st.id} 沒有這個和弦進行:${o.progression}`);
     pBars = progressionBars(prog, o.key);
   }
 
-  // 和弦格:每小節 1 顆佔滿,2 顆各佔半小節;多排一小節給「下一顆和弦」看
+  // 和弦格:每小節 1 顆佔滿,2 顆依拍號分;多排一小節給「下一顆和弦」看
   const slots = [];
   for (let b = 0; b <= o.bars; b++) {
+    if (o.barSpans) {
+      const bar = o.barSpans[b % o.barSpans.length];
+      for (const sp of bar) slots.push({ bar: b, from: sp.from, to: sp.to, chord: sp.chord });
+      continue;
+    }
     const chords = pBars[b % pBars.length];
     if (chords.length > 2) throw new Error(`一小節最多兩顆和弦:${chords.map(c => c.sym).join(" ")}`);
     const ws = chords.length === 1 ? [BAR] : MT.split;
@@ -322,7 +348,7 @@ export function render(data, styleId, opt = {}) {
     const items = slots.map((s, i) => ({
       chord: s.chord, next: nextOf(i).chord,
       range: lowCap && densityAt(o, s.bar) === "low" ? [range[0], Math.min(range[1], RANGE.lowKeysMax)] : range,
-      fresh: s.from === 0 && s.bar % 8 === 0,
+      fresh: s.from === 0 && (s.bar + base) % 8 === 0,
     }));
     return planVoicings(type, items).map((notes, i) => ({ bar: slots[i].bar, from: slots[i].from, notes, fresh: items[i].fresh }));
   };
@@ -392,13 +418,13 @@ export function render(data, styleId, opt = {}) {
   if (vary && F.keys?.anticipation && st.voicing.keys !== "arp5") {
     const A = F.keys.anticipation, at = BAR - Math.max(1, Math.round(A.beatsEarly * 4 / 2) * 2);
     for (let b = 0; b + 1 < o.bars; b++) {
-      if (b % 8 === 7) continue; // 過門小節不搶
+      if ((b + base) % 8 === 7) continue; // 過門小節不搶
       const cur = laneOf(T, "keys", densityAt(o, b)), nx = laneOf(T, "keys", densityAt(o, b + 1));
       if (!cur || !nx || !"CSU".includes(cells(nx)[0])) continue;
       const tail = cells(cur).slice(at);
       if (![...tail].every(ch => ch === "." || ch === "-")) continue;
       // 樂句加權:Groove MIDI 鼓手在第幾小節最常變化(各鼓件平均),第 4 小節最常推進下一句
-      const ph = Object.values(F.drums.phrase).reduce((a, w) => a + w[b % 4], 0) / Object.keys(F.drums.phrase).length;
+      const ph = Object.values(F.drums.phrase).reduce((a, w) => a + w[(b + base) % 4], 0) / Object.keys(F.drums.phrase).length;
       if (vrng() < A.rate * VARY_SCALE * DENS_VARY[densityAt(o, b)] * ph) pushAt[b] = at;
     }
   }
@@ -410,11 +436,11 @@ export function render(data, styleId, opt = {}) {
     const kit = T.drums?.[dens];
     if (kit) {
       const lanes = Object.fromEntries(Object.entries(kit).map(([k, v]) => [k, cells(v)]));
-      if (b % 8 === 7 && T.drums.fill && fillOn(dens))
+      if ((b + base) % 8 === 7 && T.drums.fill && fillOn(dens))
         for (const [piece, f] of Object.entries(T.drums.fill))
           lanes[piece] = (lanes[piece] ?? ".".repeat(BAR)).slice(0, BAR / 2) + cells(f);
-      if (b % 8 === 0 && rules.crashOnSection !== false) hit("crash", b, 0, DRUM_VEL.X);
-      if (vary && b % 8 !== 7) kickAdds[b] = varyDrums(lanes, b, dens);
+      if ((b + base) % 8 === 0 && rules.crashOnSection !== false) hit("crash", b, 0, DRUM_VEL.X);
+      if (vary && (b + base) % 8 !== 7) kickAdds[b] = varyDrums(lanes, b, dens);
       for (const [piece, s] of Object.entries(lanes)) {
         // 資料的強弱只在「同一種符號」之間分(規格的 X / x / o 層級保留,不重複壓)
         const A = F?.drums.accent[piece === "clap" ? "snare" : piece];
@@ -539,7 +565,7 @@ export function render(data, styleId, opt = {}) {
     for (const [pc, s0] of Object.entries(lanes)) {
       const key = pc === "clap" ? "snare" : pc;
       if (!D.add[key] || pc === "openhat") continue;
-      const ph = D.phrase[key]?.[b % 4] ?? 1, arr = [...s0];
+      const ph = D.phrase[key]?.[(b + base) % 4] ?? 1, arr = [...s0];
       for (let c = 0; c < BAR; c++) {
         const r = vrng();
         if (arr[c] === ".") {
@@ -554,7 +580,7 @@ export function render(data, styleId, opt = {}) {
     // 開放 hi-hat:換掉那一下閉合的(只在有 hi-hat 的段落)
     if (lanes.hat && D.add.openhat) {
       const oh = [...(lanes.openhat ?? ".".repeat(BAR))], hh = [...lanes.hat];
-      const ph = D.phrase.openhat?.[b % 4] ?? 1;
+      const ph = D.phrase.openhat?.[(b + base) % 4] ?? 1;
       for (let c = 0; c < BAR; c++)
         if (hh[c] !== "." && oh[c] === "." && vrng() < D.add.openhat[c] * scale * ph) { oh[c] = "x"; hh[c] = "."; }
       lanes.openhat = oh.join(""); lanes.hat = hh.join("");

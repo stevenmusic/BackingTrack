@@ -1,7 +1,7 @@
 // 用無頭 Chromium 把 styles/ 的風格離線算成 WAV,並量 peak / RMS。
 // CDN 的取樣請求導到本機 blobless clone(/tmp/smp,git show 現抓)。
 // 用法:node tools/samples/render_styles.mjs <輸出資料夾> [style[:progression[:density[:bars[:only[:flag]]]]]] ...]
-// flag 用 / 串:dry(不加空間)、raw(跳過母帶鏈)、wet(只要殘響)、probe(印出鼓組 / 黏著壓縮在壓的時候壓幾 dB:95 百分位)、on=a+b(開可選聲部)
+// flag 用 / 串:dry(不加空間)、raw(跳過母帶鏈)、wet(只要殘響)、probe(印出鼓組 / 黏著壓縮在壓的時候壓幾 dB:95 百分位)、grid(不加人性化,量取樣本身的起音)、on=a+b(開可選聲部)
 import { chromium } from "playwright";
 import { execFileSync } from "node:child_process";
 import { createServer } from "node:http";
@@ -68,7 +68,7 @@ for (const job of jobs) {
     const p = window.__player;
     const fl = (flag ?? "").split("/"), on = fl.find(f => f.startsWith("on="));
     const o = { density, seed: 7, ...(progression ? { progression } : {}), ...(only ? { only: only.split(",") } : {}),
-      noReverb: fl.includes("dry"), raw: fl.includes("raw"), wetOnly: fl.includes("wet"), probe: fl.includes("probe"),
+      noReverb: fl.includes("dry"), raw: fl.includes("raw"), ...(fl.includes("grid") ? { humanize: false } : {}), wetOnly: fl.includes("wet"), probe: fl.includes("probe"),
       ...(on ? { parts: Object.fromEntries(on.slice(3).split("+").map(k => [k, true])) } : {}) };
     const { buffer, meta, failed, gr } = await p.renderOffline(style, o, +bars);
     // 壓縮量看「有在壓的時候」:95 百分位(平均會被鼓聲之間的空檔稀釋)

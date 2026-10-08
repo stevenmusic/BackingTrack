@@ -19,16 +19,23 @@ function fetchDecode(ctx, bases, path, onDone) {
   }).finally(onDone);
 }
 
-/** 起音前的空白:第一個超過峰值 1%(−40dB)的位置往前 1ms;每個 buffer 算一次 */
+/**
+ * 起音前要跳過的長度:**對到音真的起來的地方**,不是「開始有聲音」的地方。
+ * 量法:前 150ms 的最大值(低音的峰值可能在 300ms 後,不能用整顆的峰值)的 10%,第一個超過的位置往前 2ms。
+ * 2026-10-08 改(Steven:「拍子不準確」「bass 聲音很扁」):以前用整顆峰值的 1%,電貝斯起音前的手指 / 撥弦雜音
+ * 就超過 1%,真正的音晚 9–25ms 才出來(每顆不一樣),鋼琴晚 3–10ms;tools/samples/onset_check.mjs 量的。
+ * 往前留 2ms:撥弦的那一下還在,只是不再拖拍。每個 buffer 算一次
+ */
 const LEAD = new WeakMap();
 export function leadOf(b) {
   if (LEAD.has(b)) return LEAD.get(b);
-  const d = b.getChannelData(0);
+  const d = b.getChannelData(0), d2 = b.numberOfChannels > 1 ? b.getChannelData(1) : d;
+  const win = Math.min(d.length, Math.round(0.15 * b.sampleRate));
   let peak = 0;
-  for (let i = 0; i < d.length; i++) peak = Math.max(peak, Math.abs(d[i]));
+  for (let i = 0; i < win; i++) peak = Math.max(peak, Math.abs(d[i]), Math.abs(d2[i]));
   let i = 0;
-  while (i < d.length && Math.abs(d[i]) < peak * 0.01) i++;
-  const lead = Math.max(0, i / b.sampleRate - 0.001);
+  while (i < win && Math.abs(d[i]) < peak * 0.1 && Math.abs(d2[i]) < peak * 0.1) i++;
+  const lead = Math.max(0, i / b.sampleRate - 0.002);
   LEAD.set(b, lead);
   return lead;
 }

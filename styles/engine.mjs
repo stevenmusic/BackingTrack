@@ -595,6 +595,12 @@ export function render(data, styleId, opt = {}) {
    * - 每一下自己的抖動:各鼓件的比例照資料,整體大小錨在規格的 σ(timingSigmaMs)
    * - 和弦不同時落下(POP909 spread),頂音較大聲;吉他照 GuitarSet 下刷 / 上刷的先後
    * 有 swing 的曲風,奇數格的系統偏差交給 swing,不重複加
+   *
+   * **總量錨在規格的 σ**(2026-10-08 修正,Steven:「拍子不準確」):以前三層各自用滿 σ 再疊起來,
+   * 總偏差變成 1.4–2σ,樂器之間差到 20–33ms(tools/feel/timing_check.mjs 量的)。現在
+   * 整團一起飄 0.8σ,每一下自己的部分(位置偏差 + 抖動)0.6σ,照資料的比例分(0.8² + 0.6² = 1);
+   * 所以離格子的總量 = σ、兩件樂器之間的差 ≈ 0.85σ(合奏的人彼此跟得比跟節拍器緊)。貝斯落在大鼓同一格時用大鼓的時間(同一條);
+   * 和弦裡各音以落點為中心散開(不是全部往後),總寬 ≤ 10ms
    */
   const rnd = mulberry32(o.seed);
   const gauss = () => {
@@ -605,8 +611,10 @@ export function render(data, styleId, opt = {}) {
   const K0 = hz.timingSigmaMs ?? 6;
   const DR = F?.drums;
   const drift = new Map();
+  const SHARED = 0.8, OWN = 0.6;
+  const rms = a => (a?.length ? Math.sqrt(a.reduce((x, y) => x + y * y, 0) / a.length) : 0);
   {
-    const phi = DR?.drift.phi ?? 0, sd = (DR?.drift.sdRel ?? 0) * K0;
+    const phi = DR?.drift.phi ?? 0, sd = DR ? K0 * SHARED : 0;
     let d = 0;
     for (let b = -1; b <= o.bars; b++) {
       d = phi * d + Math.sqrt(1 - phi * phi) * gauss() * sd;
@@ -614,23 +622,32 @@ export function render(data, styleId, opt = {}) {
     }
   }
   const KEYS_LIKE = ["keys", "keys2", "pad", "guitar"];
+  const kickAt = new Map(); // 大鼓的時間:貝斯落在同一格就用它
+  events.sort((a, b) => (a.track === "drums" ? 0 : 1) - (b.track === "drums" ? 0 : 1));
   for (const e of events) {
     const ov = hz.overrides?.[e.piece ?? e.track] ?? {};
     const vr = ov.velocityRand ?? hz.velocityRand ?? 8;
     if (!o.humanize) { e.time = e.gridTime; continue; }
     const k = ov.timingSigmaMs ?? K0;
     const odd = e.cell % 2 === 1 && o.swing > 50;
-    let sys = 0, jit = 1, acc = 1;
+    let sys = 0, jit = 1, acc = 1, sysArr = null;
     const dk = e.track === "drums" ? (e.piece === "clap" ? "snare" : e.piece) : e.track === "bass" ? "kick" : null;
     if (DR && dk && DR.jitterRel[dk] != null) {
       jit = DR.jitterRel[dk];
-      sys = odd ? 0 : DR.sysRel[dk][e.cell] * K0;
+      sysArr = DR.sysRel[dk];
+      sys = odd ? 0 : sysArr[e.cell];
       acc = e.track === "drums" ? e.acc ?? 1 : DR.accent.hat ? DR.accent.hat[e.cell] ** 0.5 : 1;
     } else if (F?.keys && KEYS_LIKE.includes(e.track)) {
-      sys = odd ? 0 : F.keys.sysRel[e.cell] * K0;
+      sysArr = F.keys.sysRel;
+      sys = odd ? 0 : sysArr[e.cell];
       acc = e.track === "pad" || !F.keys.accent ? 1 : F.keys.accent[e.cell] ** 0.6;
     }
-    const j = drift.get(e.bar) + sys + clampMs(gauss() * jit * k) + (ov.offsetMs ?? 0);
+    // 每一下自己的部分(位置偏差 + 抖動)的總量 = 0.6k,位置偏差與抖動照資料的比例分
+    const own = (DR || F?.keys) ? (k * OWN) / Math.max(1e-6, Math.hypot(rms(sysArr), jit)) : k;
+    let j = drift.get(e.bar) + clampMs(sys * own + gauss() * jit * own) + (ov.offsetMs ?? 0);
+    const gk = e.gridTime.toFixed(4);
+    if (e.track === "drums" && e.piece === "kick") kickAt.set(gk, j);
+    else if (e.track === "bass" && kickAt.has(gk)) j = kickAt.get(gk); // 貝斯跟大鼓同一格:同一個時間
     e.time = Math.max(0, e.gridTime + j / 1000);
     e.vel = Math.max(1, Math.min(127, Math.round(e.vel * acc + clampMs(gauss() * vr / 2, vr))));
     // 和弦裡各音的先後與頂音
@@ -644,9 +661,10 @@ export function render(data, styleId, opt = {}) {
         lowFirst = rnd() < F.keys.lowFirstShare;
         dt = (F.keys.spreadMs.median / (n - 1)) * (0.5 + rnd());
       } else continue;
+      dt = Math.min(dt, 10 / (n - 1)) * Math.min(1, K0 / 6); // 和弦總寬 ≤ 10ms;程式打的曲風(K-pop 舞曲 σ 2ms)跟著縮
       const order = e.notes.map((p, i) => i).sort((a, b) => (lowFirst ? e.notes[a] - e.notes[b] : e.notes[b] - e.notes[a]));
       e.noteDt = e.notes.map(() => 0);
-      order.forEach((i, r) => { e.noteDt[i] = (r * dt) / 1000; });
+      order.forEach((i, r) => { e.noteDt[i] = ((r - (n - 1) / 2) * dt) / 1000; }); // 以落點為中心散開
       const topI = e.notes.indexOf(Math.max(...e.notes));
       e.noteVel = e.notes.map((p, i) => Math.max(1, Math.min(127, e.vel + (i === topI ? (F.keys?.topVel ?? 0) : 0))));
     }

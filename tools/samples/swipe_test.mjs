@@ -67,6 +67,17 @@ for (const touch of [true, false]) {
   else await page.mouse.click(b[1].x + b[1].width / 2, b[1].y + b[1].height / 2);
   await page.waitForTimeout(100);
   ok(await page.$$eval("#beLane .be-block", els => els[1].classList.contains("sel")), `${tag} 點一下 = 選那一顆`);
+  // 6. 一小節只有一顆:往左滑到第 3 格 → 撐 3 拍,剩 1 拍是同一個和弦,選到新的那顆
+  await set("C | F");
+  await page.click("#barsGrid > *:first-child").catch(() => {});
+  c = await cells();
+  await drag(c[3].x + c[3].width / 2, y, c[2].x + c[2].width / 2, y);
+  ok((await text()).replace(/\s+/g, " ").startsWith("C / / C |"), `${tag} 一顆的時候往左滑到第 3 格 → 「${await text()}」`);
+  ok(await page.$$eval("#beLane .be-block", els => els.length === 2 && els[1].classList.contains("sel")), `${tag} 切出來的那顆被選到`);
+  await set("C | F");
+  c = await cells();
+  await drag(c[3].x + c[3].width / 2, y, c[3].x + c[3].width / 2 - 20, y);
+  ok((await text()).replace(/\s+/g, " ").startsWith("C | F"), `${tag} 一顆的時候滑回第 4 格 = 不切`);
   // 5. 寫回去的字讀回來要一樣:1 拍 + 3 拍的那一格,編輯條上兩塊的寬度是 1:3
   await set("C G / / | F G");
   b = await page.$$eval("#beLane .be-block", els => els.map(e => e.getBoundingClientRect().width));

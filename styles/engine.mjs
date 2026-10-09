@@ -151,7 +151,9 @@ function shapesFor(type, c, next) {
     case "triad_add9": {
       if (c.quality === "m7♭5") return shapesFor("triad", c, next);
       const n9 = t[9] === 13 ? 13 : 14;
-      return [[[t[3], t[5], n9], [t[5], n9, t[3]]], [[n9, t[3], t[5]]]];
+      // 九度留在中間當色彩,頂音一定是和弦音(Steven 2026-10-09:「思考 9 音在上面的必要性,拿掉可能更好」)
+      // 備案:沒有九度的三和弦第一轉位(頂音根音)
+      return [[[n9, t[3], t[5]], [t[5], n9, t[3]]], [[t[3], t[5], 12]]];
     }
     case "shell":
       return [sev != null ? [[t[3], sev], [sev, t[3]]] : [[0, t[3]], [t[3], 0]]];
@@ -162,8 +164,9 @@ function shapesFor(type, c, next) {
       // 屬七往下五度解決到小和弦用 ♭9;其餘自然九度
       const nine = t[9] ?? (c.quality === "m7♭5" ? 12
         : isDom(c) && next && next.root === mod12(c.root + 5) && next.iv[3] === 3 ? 13 : 14);
-      const A = [t[3], five, seven, nine], B = [seven, nine, t[3], five];
-      return [[A, B], [[five, seven, nine, t[3]], [nine, t[3], five, seven]]];
+      // 頂音不放九度(九度留在中間):B 型頂音五度、另一個轉位頂音七度;備案頂音三度
+      const B = [seven, nine, t[3], five];
+      return [[B, [nine, t[3], five, seven]], [[five, seven, nine, t[3]]]];
     }
     case "arp_rh": {
       // 分解和弦的右手:和弦音(有七度用 3、5、7,沒有用 1、3、5)的三個轉位,只用和弦音
@@ -387,7 +390,7 @@ export function render(data, styleId, opt = {}) {
       range: lowCap && densityAt(o, s.bar) === "low" ? [range[0], Math.min(range[1], RANGE.lowKeysMax)] : range,
       fresh: s.from === 0 && (s.bar + base) % 8 === 0,
     }));
-    return planVoicings(type, items).map((notes, i) => ({ bar: slots[i].bar, from: slots[i].from, notes, fresh: items[i].fresh,
+    return planVoicings(type, items).map((notes, i) => ({ bar: slots[i].bar, from: slots[i].from, notes, fresh: items[i].fresh, chord: slots[i].chord,
       ...(RH_OF.has(items[i]) ? { rh: RH_OF.get(items[i]) } : {}) }));
   };
   const kType = st.voicing.keys;

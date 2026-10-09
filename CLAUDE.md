@@ -161,9 +161,9 @@
 - 改規則要跑 scratchpad 式的機器驗證(`tools/realism/mood_check.mjs`、`harmony.mjs`),不要靠讀
 
 ## 旋律只准用和弦音(唯一例外見下)
-- **2026-10-08 起這一節對新引擎不成立,【待 Steven 決定】**:規格書的聲位 `triad_add9` / `rootless4` 頂音本來就常是九度。
-  審查員量 `Fmaj7|E7|Am7|C7` 和聲層頂音不在和弦內:pop 8/16、citypop 4/8、rnb_neosoul 10/12、lofi 6/8、kpop_ballad 16/64。
-  **不准自己在引擎加 melodyOk 過濾**,等 Steven 決定(`docs/REVIEW.md`);下面是舊引擎的規則
+- **新引擎(2026-10-09 Steven 決定:「思考 9 音在上面的必要性,拿掉可能更好」)**:和聲層的頂音一律是和弦音,
+  九 / 十一 / 十三度留在中間當色彩(`triad_add9` 改成 9 在中間、`rootless4` 拿掉頂音九度的那個轉位)。
+  驗證 `node tools/feel/top_check.mjs`(每個曲風 0 個;改之前 pop / jpop / citypop / rnb / lofi 有 42–44% 的頂音是九度)。下面是舊引擎的規則
 - 「旋律」= 每一下和聲的頂音(鋼琴、兩把吉他、鋪底、銅管、人聲切片、lead)+ 單音線條(arp、第二把吉他)。貝斯不算
 - **唯一的例外(Steven 2026-09-26)**:City Pop 切音吉他照ギター・マガジン的指型(`parts.chopForms`,`docs/SOURCES.md` G1)時,
   **吉他和弦的頂音可以是九度**(只在九度在調內、和弦沒有 ♭9/♯9 時);鋼琴、鋪底、銅管、第二把吉他的單音線不放寬。驗證加 `HARM_GTR9=1`

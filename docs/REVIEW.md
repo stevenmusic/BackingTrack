@@ -913,3 +913,14 @@ Steven:「整體聲音(所有樂器之間)還是沒有融合在一起的感覺�
 - Audiobox 的 CE / PQ(**旁證**,每個曲風 1 段;模型本身的誤差沒量)
 - Lo-fi 底噪:`render_styles.mjs /tmp/lofi lofi::auto:16 lofi::auto:16::off=vinyl`,兩個相減 = 底噪,BS.1770 比音樂小 33.1 LU
 - **【待 Steven 聽過】**:以上全部;K-pop 舞曲「鼓拍子不準」引擎與取樣兩邊量起來都準(±2ms),如果還是覺得不準,請講哪一段、哪個鼓件
+
+### 第 2 輪審查(reviewer,medium):阻擋 2 條 → 已修
+- B1 主網頁踏板截斷沒作用(btPlay 用 cells 算音長,引擎只改了 dur)→【同意】cells 一起改;踏板音改成單音事件(S1);
+  engine.test 加「用 cells 算、同音不疊、cells 與 dur 一致」那一條(21 pass)
+- B2 balance_ref 不能重現 →【同意】`tools/mix/make_balance_ref.sh`(git worktree 取 5adb7c5、補 raw、high 密度、BS.1770),重新產生後重解音量與響度
+- S2 殘響送出低通同階數、S3 arp_rh 不用十三度、S4 右手計畫附在 plans、S5 撤回貝斯送殘響那一條、S6 標趨勢 / 旁證並附指令、S7 onset_check 加 kpop_ballad →【同意】已修
+- S8 每段第一格不能提早(main 就有)→ 這次不處理
+- 重跑:timing_check、arp_check、smoke_main(CPU 6× 來不及 0)、smoke_live、swipe_test 全過;onset_check 剩 Lo-fi 整條一起晚 4.5ms
+  (整首的飽和 4 倍超取樣的固定延遲,鼓 / 貝斯 / 鍵盤一樣,彼此還是齊的)、抒情分解和弦(踏板重疊量不準,中位數 4ms)、弦樂鋪底(慢起音)
+- listen.py(對齊 −14 LUFS,趨勢):削波 0;200–500Hz 9 個曲風都不比 main 多;40–80Hz 8 個曲風比 main 飽(Lo-fi 因為整首低通 + 飽和少 1.5dB);
+  Lo-fi 的「斷音」都在音樂結束後的尾巴(50.3–52.3 秒),不是中間斷掉

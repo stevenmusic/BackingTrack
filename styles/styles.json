@@ -59,7 +59,7 @@
     {
       "id": "mandopop_ballad",
       "space": {"sends": {"drums": {"room": 0, "plate": 0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0, "plate": 0}, "keys": {"room": 0.187, "plate": 0.218}, "keys2": {"room": 0.481, "plate": 0.561}, "pad": {"room": 0.088, "plate": 0.211}}, "drumRoomDb": -6},
-      "master": { "gainDb": 1.1 },
+      "master": { "gainDb": 3.6 },
       "name": { "zh": "華語抒情", "en": "Mandopop Ballad" },
       "bpm": { "default": 72, "min": 60, "max": 80 },
       "swing": 50,
@@ -97,7 +97,7 @@
     {
       "id": "jpop",
       "space": {"sends": {"drums": {"room": 0, "plate": 0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0, "plate": 0}, "keys": {"room": 0.29, "plate": 0.339}, "guitar": {"room": 0.661, "plate": 0.189}}, "drumRoomDb": -6},
-      "master": { "gainDb": 5.0 },
+      "master": { "gainDb": 4.0 },
       "name": { "zh": "J-pop／動畫", "en": "J-Pop / Anime" },
       "bpm": { "default": 140, "min": 120, "max": 170 },
       "swing": 50,
@@ -133,7 +133,7 @@
     {
       "id": "citypop",
       "space": {"sends": {"drums": {"room": 0, "plate": 0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0, "plate": 0}, "keys": {"room": 0.323, "plate": 0.377}, "guitar": {"room": 0.617, "plate": 0.176}}, "drumRoomDb": -6},
-      "master": { "gainDb": 5.5 },
+      "master": { "gainDb": 5.3 },
       "name": { "zh": "City Pop", "en": "City Pop" },
       "bpm": { "default": 108, "min": 100, "max": 118 },
       "swing": 54,
@@ -171,7 +171,7 @@
     {
       "id": "kpop_dance",
       "space": {"sends": {"drums": {"room": 0.701, "plate": 0.0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0, "plate": 0}, "keys": {"room": 0.34, "plate": 0.397}, "pad": {"room": 0.119, "plate": 0.286}}},
-      "master": { "gainDb": 4.7 },
+      "master": { "gainDb": 5.3 },
       "name": { "zh": "K-pop 舞曲", "en": "K-Pop Dance" },
       "bpm": { "default": 120, "min": 100, "max": 128 },
       "swing": 50,
@@ -208,7 +208,7 @@
       "id": "kpop_ballad",
       "mix": {"drums": 0.0, "bass": -2.6, "keys": 2.7, "pad": -1.8, "keys2": 3.0},
       "space": {"sends": {"drums": {"room": 0, "plate": 0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0, "plate": 0}, "keys": {"room": 0.201, "plate": 0.234}, "keys2": {"room": 0.254, "plate": 0.296}, "pad": {"room": 0.087, "plate": 0.21}}, "drumRoomDb": -6},
-      "master": { "gainDb": 1.5 },
+      "master": { "gainDb": 4.0 },
       "inherits": "mandopop_ballad",
       "name": { "zh": "K-pop 抒情", "en": "K-Pop Ballad" },
       "bpm": { "default": 70, "min": 60, "max": 80 },
@@ -221,7 +221,7 @@
     {
       "id": "rnb_neosoul",
       "space": {"sends": {"drums": {"room": 0, "plate": 0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0, "plate": 0}, "keys": {"room": 0.239, "plate": 0.279}}, "drumRoomDb": -6},
-      "master": { "gainDb": 6.7 },
+      "master": { "gainDb": 6.6 },
       "name": { "zh": "R&B／Neo-soul", "en": "R&B / Neo-Soul" },
       "bpm": { "default": 80, "min": 65, "max": 90 },
       "swing": 58,
@@ -304,7 +304,7 @@
     {
       "id": "reggaeton",
       "space": {"sends": {"drums": {"room": 0.875, "plate": 0.0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0, "plate": 0}, "keys": {"room": 0.347, "plate": 0.405}}},
-      "master": { "gainDb": 5.9 },
+      "master": { "gainDb": 6.0 },
       "name": { "zh": "Reggaeton／Latin", "en": "Reggaeton / Latin" },
       "bpm": { "default": 95, "min": 88, "max": 100 },
       "swing": 50,

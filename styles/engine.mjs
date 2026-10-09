@@ -290,7 +290,15 @@ function arpInv(items) {
     const r = [...rh[i]].sort((a, b) => a - b);
     RH_OF.set(it, r);
     // 第五個音:左手低音的高八度(抒情鋼琴常見的 1–8–和弦音);右手的頂音就一直是那三個和弦音裡最高的,走向穩
-    return [lh, ...[...r, lh + 12].sort((a, b) => a - b)];
+    // 跟右手撞同一個音(指型會原地重敲)就改用左手低音與右手最低音之間、最高的那個和弦音
+    let oct = lh + 12;
+    if (r.includes(oct)) {
+      const pcs = new Set(r.map(mod12).concat(mod12(lh)));
+      oct = null;
+      for (let p = r[0] - 1; p > lh; p--) if (pcs.has(mod12(p)) && !r.includes(p)) { oct = p; break; }
+      oct ??= lh + 7; // 左手與右手之間放不下和弦音(實際不會發生:兩手至少差 8 半音)
+    }
+    return [lh, ...[...r, oct].sort((a, b) => a - b)];
   });
 }
 
@@ -634,7 +642,9 @@ export function render(data, styleId, opt = {}) {
       for (let j = i + 1; j < ks.length && ks[j].gridTime < end; j++)
         if (ks[j].notes.some(p => e.notes.includes(p))) {
           // dur(秒)與 cells(格)都要改:主網頁照 cells × 現在的拍長算音長(可以中途換速度),只改 dur 的話主網頁會疊音
-          if (ks[j].bar !== e.bar) throw new Error("踏板截斷跨了小節"); // slot 在同一小節裡,不會發生
+          // 前提:slot 一定在同一小節裡(slots 是每小節各自切的),所以重彈的那一顆一定同小節;
+          // 萬一以後 slot 可以跨小節,這裡寧可不截(多響一點),也不要丟錯讓主網頁整圈停掉
+          if (ks[j].bar !== e.bar) break;
           e.dur = ks[j].gridTime - e.gridTime;
           e.cells = ks[j].cell - e.cell;
           break;

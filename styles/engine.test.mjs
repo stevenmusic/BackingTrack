@@ -286,6 +286,18 @@ test("踏板(arp_inv):用 cells 算音長(主網頁的算法),同一個音不准
         assert.ok(abs(e) + e.cells <= abs(f) + 1e-9, `${st.id} ${meter} ${dens} 第 ${e.bar} 小節第 ${e.cell} 格的 ${e.notes} 疊到第 ${f.cell} 格`);
       }
       assert.ok(ks.every(e => Math.abs(e.cells * r.meta.cellSec - e.dur) < 1e-6), `${st.id} ${meter} ${dens} cells 與 dur 對不上`);
+      // 沒被同音重彈截斷的踏板音,要撐到換和弦(該 slot 的結尾)
+      for (const e of ks) {
+        const restruck = ks.some(f => f !== e && f.bar === e.bar && f.cell > e.cell && f.notes[0] === e.notes[0] && f.cell < e.cell + e.cells + 1e-9);
+        const slotEnd = r.plans.keys.filter(p => p.bar === e.bar && p.from <= e.cell).at(-1);
+        const nextFrom = r.plans.keys.find(p => p.bar === e.bar && p.from > e.cell)?.from ?? cellsPerBar;
+        if (!restruck && slotEnd) {
+          const later = ks.find(f => f.bar === e.bar && f.cell > e.cell && f.cell < nextFrom && f.notes[0] === e.notes[0]);
+          if (!later) assert.equal(e.cell + e.cells, nextFrom, `${st.id} ${meter} ${dens} 第 ${e.bar} 小節第 ${e.cell} 格 ${e.notes} 沒撐到換和弦`);
+        }
+      }
+      // 五個音不重複(指型不會原地重敲)
+      for (const p of r.plans.keys) assert.equal(new Set(p.notes).size, p.notes.length, `${st.id} ${meter} ${dens} 第 ${p.bar} 小節 ${p.notes} 有重複的音`);
     }
   }
 });

@@ -1,7 +1,7 @@
 """從 analysis.json 算出各曲風的音量校正(dB),寫進 styles.json 的 mix 欄位。
 用法:python3 tools/mix/solve_balance.py <analysis.json> [--write]
-目標:各軌相對鼓的響度 = tools/mix/balance_ref.json(main 5ec9068,Steven 長期在聽、沒有說不好的那一版,
-跳過母帶鏈量的)。2026-10-08 改:以前的目標是「鼓 = 貝斯 = 鍵盤」,但 BS.1770 的 K-weighting 低頻算得輕,
+目標:各軌相對鼓的響度 = tools/mix/balance_ref.json(它的 "ref" 寫的版本,現在是 5adb7c5;Steven 長期在聽、沒有說不好的那一版;
+high 密度、跳過母帶鏈量的,由 tools/mix/make_balance_ref.sh 產生)。2026-10-08 改:以前的目標是「鼓 = 貝斯 = 鍵盤」,但 BS.1770 的 K-weighting 低頻算得輕,
 響度一樣的貝斯聽起來偏弱(Steven:「bass 聲音很扁」),鍵盤拉高後 Rhodes 的 200–500Hz 讓整體變悶。
 balance_ref 沒寫的軌照舊規則(鋪底 = 鍵盤 −3、第二鍵盤 = 鍵盤 −5、吉他 = 鍵盤 −7)
 目前的校正值會一起算進去(analysis 量的是加了舊校正的結果)

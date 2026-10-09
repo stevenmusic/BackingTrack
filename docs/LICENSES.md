@@ -34,6 +34,7 @@
 | 鼓的節奏(Pop、City Pop、Funk、Blues、Swing);`styles/feel.json` 的鼓與合奏律動統計 | Groove MIDI Dataset(Google Magenta) | CC BY 4.0 | ✅ 可以 | 要署名 + 附授權連結 + 標明有修改 |
 | `styles/feel.json` 的吉他刷弦統計 | GuitarSet(Xi et al. 2018,Zenodo 3371780) | CC BY 4.0 | ✅ 可以 | 要署名 + 附授權連結 |
 | 貝斯彈法庫(City Pop 的 `bassPhr`) | 12 首商業 City Pop 唱片的貝斯分軌,經 Basic Pitch 轉譜萃取的半小節音型 | 原曲有著作權 | ⚠️ **不確定** | — |
+| 殘響 IR(`styles/ir/room.wav`、`plate.wav`) | Conner's Impulse Response Library(itsmusician/IR-Library,Conner):Arroyo House Living Room Mid A、Conner Plate I;`tools/mix/make_ir.py` 去直達聲、轉 44.1k、修板式殘響的衰減 | MIT | ✅ 可以 | 附 MIT 聲明(Copyright (c) 2022 Conner) |
 | 字型 | Noto Serif TC / Noto Sans TC(Google Fonts) | SIL OFL 1.1 | ✅ 可以 | 附 OFL |
 | `styles/feel.json` 的鍵盤力度位置與搶拍比例 | POP909 | MIT | ✅ 可以 | 附 MIT 聲明;作者要求論文引用 |
 

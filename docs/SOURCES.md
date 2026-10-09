@@ -119,6 +119,14 @@ https://bassmagazine.jp/player/interveiw-itokoki202204/
 - **沒有找到的**:授權可商用、而且是真人演奏的流行貝斯資料庫(Lakh MIDI 多是量化的編曲檔)。貝斯的時間跟著鼓手的大鼓走,
   多踩的大鼓貝斯跟著彈根音(節奏組「貝斯鎖大鼓」的做法)
 
+### M1 空間與距離感(`styles/` 的空間設計,2026-10-08)
+- 直達/擴散比的估計:O. Thiergart, G. Del Galdo, E. A. P. Habets, "On the spatial coherence in mixtures of sound fields and its application
+  to signal-to-diffuse ratio estimation", JASA 132(4), 2012。兩聲道的相干性 = 直達(相干 1)與擴散場(相干 Γ_diff)依能量比例的混合;
+  我們的 IR 左右幾乎不相干,取 Γ_diff = 0,`tools/mix/space.py` 只用它拆「取樣本身」的那一份;加的殘響能量直接量
+- 距離的線索是直達/殘響比,pre-delay 越長聽起來越近(直達聲跟反射分開);低頻樂器(大鼓、貝斯)留乾、留中間:混音教科書的通用做法
+  (B. Owsinski, *The Mixing Engineer's Handbook*,「Adding Effects / Depth」章)。這一條是方向,數字(+8、+1、−1、−3)是我們的舞台設計
+- 鼓組匯流排壓縮 3–4dB、總線黏著 1–2dB:同書「Compression」章的常用範圍;用 `render_styles.mjs` 的 `probe` 量,不是猜
+
 ## 還缺的(權威但沒讀到)
 - ギター・マガジン 2019 年 4 月號本體(62 段切音譜例)、2020 年 1 月號(山下達郎與切音)
 - ドラム・マガジン 1986 年 4 月號(青山純奏法分析)

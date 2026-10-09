@@ -19,16 +19,23 @@ function fetchDecode(ctx, bases, path, onDone) {
   }).finally(onDone);
 }
 
-/** 起音前的空白:第一個超過峰值 1%(−40dB)的位置往前 1ms;每個 buffer 算一次 */
+/**
+ * 起音前要跳過的長度:**對到音真的起來的地方**,不是「開始有聲音」的地方。
+ * 量法:前 150ms 的最大值(低音的峰值可能在 300ms 後,不能用整顆的峰值)的 10%,第一個超過的位置往前 2ms。
+ * 2026-10-08 改(Steven:「拍子不準確」「bass 聲音很扁」):以前用整顆峰值的 1%,電貝斯起音前的手指 / 撥弦雜音
+ * 就超過 1%,真正的音晚 9–25ms 才出來(每顆不一樣),鋼琴晚 3–10ms;tools/samples/onset_check.mjs 量的。
+ * 往前留 2ms:撥弦的那一下還在,只是不再拖拍。每個 buffer 算一次
+ */
 const LEAD = new WeakMap();
 export function leadOf(b) {
   if (LEAD.has(b)) return LEAD.get(b);
-  const d = b.getChannelData(0);
+  const d = b.getChannelData(0), d2 = b.numberOfChannels > 1 ? b.getChannelData(1) : d;
+  const win = Math.min(d.length, Math.round(0.15 * b.sampleRate));
   let peak = 0;
-  for (let i = 0; i < d.length; i++) peak = Math.max(peak, Math.abs(d[i]));
+  for (let i = 0; i < win; i++) peak = Math.max(peak, Math.abs(d[i]), Math.abs(d2[i]));
   let i = 0;
-  while (i < d.length && Math.abs(d[i]) < peak * 0.01) i++;
-  const lead = Math.max(0, i / b.sampleRate - 0.001);
+  while (i < win && Math.abs(d[i]) < peak * 0.1 && Math.abs(d2[i]) < peak * 0.1) i++;
+  const lead = Math.max(0, i / b.sampleRate - 0.002);
   LEAD.set(b, lead);
   return lead;
 }
@@ -48,6 +55,8 @@ export class Sampler {
     this.failed = new Set();
     this.rr = new Map();
     this.chokes = new Map();   // 開放 hi-hat 被下一顆閉合 hi-hat 掐掉
+    this.roomOf = new WeakMap(); // 鼓件的匯流排 → 房間麥的匯流排(Player.buildBuses 登記;沒登記就不播房間麥)
+    this.roomGain = 0;         // 房間麥相對中距離麥的大小(線性;Player 照 styles.json 的 space 設)
     this.progress = { total: 0, done: 0, failed: 0 };
     this.onProgress = () => {};
   }
@@ -76,7 +85,13 @@ export class Sampler {
       files.forEach((f, i) => (i === 0 ? first : rest).set(src[0] + f, [src, f]));
     };
     for (const n of notes) {
-      if (n.piece) { const l = this.pieceLayer(n.instr, n.piece, n.vel); if (l) add(n.instr, l); }
+      if (n.piece) {
+        const l = this.pieceLayer(n.instr, n.piece, n.vel);
+        if (l) add(n.instr, l);
+        // 房間麥全部背景補:開頭幾拍沒有房間麥只是比較乾,不擋播放
+        const R = this.m[n.instr].room;
+        if (l && R) l.forEach(f => rest.set(R.src[0] + this.roomFile(R, f), [R.src, this.roomFile(R, f)]));
+      }
       else {
         add(n.instr, this.zoneFor(n.instr, n.midi, n.vel).files);
         const RN = this.m[n.instr].releaseNoise;
@@ -110,13 +125,15 @@ export class Sampler {
 
   ready(instr, files) {
     const src = this.m[instr].src;
-    const loaded = files.map(f => this.buf.get(src[0] + f)).filter(b => b instanceof AudioBuffer);
+    const loaded = files.filter(f => this.buf.get(src[0] + f) instanceof AudioBuffer);
     if (!loaded.length) return null;
     const k = instr + files[0];
     const i = this.rr.get(k) ?? 0;
     this.rr.set(k, i + 1);
-    return loaded[i % loaded.length];
+    this.lastFile = loaded[i % loaded.length]; // 房間麥要對到同一顆 round robin
+    return this.buf.get(src[0] + this.lastFile);
   }
+  roomFile(R, f) { return f.replace(R.from, R.to); }
 
   /** 循環用的長取樣(例:黑膠底噪) */
   async loopBuffer(instr) {
@@ -188,15 +205,30 @@ export class Sampler {
     const trim = (this.trims[kit + "." + piece] ?? 1) * (this.trims[kit] ?? 1);
     g.gain.value = trim * (0.3 + 0.7 * (vel / 127) ** 1.4);
     src.connect(g).connect(dest);
+    const lead = leadOf(b), gs = [g];
+    // 房間麥:同一次敲擊的另一對麥克風。兩對麥是同步錄的,用中距離麥的起音位置一起跳,
+    // 房間麥比較晚到的那幾毫秒(真的距離)就留著
+    const R = this.m[kit].room, roomDest = this.roomOf.get(dest);
+    if (R && roomDest && this.roomGain > 0) {
+      const rb = this.buf.get(R.src[0] + this.roomFile(R, this.lastFile));
+      if (rb instanceof AudioBuffer) {
+        const rs = ctx.createBufferSource(), rg = ctx.createGain();
+        rs.buffer = rb;
+        rg.gain.value = g.gain.value * this.roomGain;
+        rs.connect(rg).connect(roomDest);
+        rs.start(when, lead);
+        gs.push(rg);
+      }
+    }
     if (piece === "hat" || piece === "openhat") {
       const prev = this.chokes.get(kit);
-      if (prev && prev.until > when) {
-        prev.g.gain.setValueAtTime(prev.g.gain.value, when);
-        prev.g.gain.setTargetAtTime(0, when, 0.012);
+      if (prev && prev.until > when) for (const pg of prev.gs) {
+        pg.gain.setValueAtTime(pg.gain.value, when);
+        pg.gain.setTargetAtTime(0, when, 0.012);
       }
-      this.chokes.set(kit, piece === "openhat" ? { g, until: when + b.duration } : null);
+      this.chokes.set(kit, piece === "openhat" ? { gs, until: when + b.duration } : null);
     }
-    src.start(when, leadOf(b));
+    src.start(when, lead);
     return true;
   }
 }

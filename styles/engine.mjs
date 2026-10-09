@@ -165,6 +165,11 @@ function shapesFor(type, c, next) {
       const A = [t[3], five, seven, nine], B = [seven, nine, t[3], five];
       return [[A, B], [[five, seven, nine, t[3]], [nine, t[3], five, seven]]];
     }
+    case "arp_rh": {
+      // 分解和弦的右手:和弦音(有七度用 3、5、7,沒有用 1、3、5)的三個轉位,只用和弦音
+      const tri = sev != null ? [t[3], t[5], sev] : [0, t[3], t[5]]; // 不用十三度(旋律只用和弦音那條還待 Steven 決定)
+      return [[tri, [tri[1], tri[2], tri[0]], [tri[2], tri[0], tri[1]]]];
+    }
     default:
       throw new Error(`不支援的聲位類型:${type}`);
   }
@@ -208,6 +213,7 @@ export function planVoicings(type, items) {
     let prev = null;
     return items.map(it => (prev = arp5(it.chord, prev)));
   }
+  if (type === "arp_inv") return arpInv(items);
   const layers = items.map(it => {
     const cs = candidates(type, it.chord, it.next, it.range);
     if (!cs.length) throw new Error(`音域 ${it.range.join("–")} 放不下 ${it.chord.sym}`);
@@ -263,6 +269,37 @@ function arp5(c, prev) {
     return p;
   });
   return [n1, ...rest.sort((a, b) => a - b)];
+}
+
+/**
+ * arp_inv(Steven 2026-10-08:「分解和弦應該找近的位置(轉位,而不是跟著和弦名稱彈原位),而且有 bass 撐住彈低音」):
+ *   [左手低音, 低音高八度 + 右手三個和弦音(由低到高)]
+ * 左手:和弦的低音(斜線和弦就是斜線那個音,和弦名稱不變),36–47 裡離上一顆最近,換和弦時重彈、踩著撐到換和弦
+ * 右手:跟方塊和弦同一套 Viterbi,挑離上一顆最近的轉位(55–69),只用和弦音
+ * 指型的 1–5 = 這五個音
+ */
+const RH_OF = new WeakMap();
+function arpInv(items) {
+  const rh = planVoicings("arp_rh", items.map(it => ({ ...it, range: [55, 69] })));
+  let prevL = 40;
+  return items.map((it, i) => {
+    const cands = [];
+    for (let p = 36; p <= 47; p++) if (mod12(p) === it.chord.bass) cands.push(p);
+    const lh = cands.sort((a, b) => Math.abs(a - prevL) - Math.abs(b - prevL) || a - b)[0];
+    prevL = lh;
+    const r = [...rh[i]].sort((a, b) => a - b);
+    RH_OF.set(it, r);
+    // 第五個音:左手低音的高八度(抒情鋼琴常見的 1–8–和弦音);右手的頂音就一直是那三個和弦音裡最高的,走向穩
+    // 跟右手撞同一個音(指型會原地重敲)就改用左手低音與右手最低音之間、最高的那個和弦音
+    let oct = lh + 12;
+    if (r.includes(oct)) {
+      const pcs = new Set(r.map(mod12).concat(mod12(lh)));
+      oct = null;
+      for (let p = r[0] - 1; p > lh; p--) if (pcs.has(mod12(p)) && !r.includes(p)) { oct = p; break; }
+      oct ??= lh + 7; // 左手與右手之間放不下和弦音(實際不會發生:兩手至少差 8 半音)
+    }
+    return [lh, ...[...r, oct].sort((a, b) => a - b)];
+  });
 }
 
 // ───────── 亂數 ─────────
@@ -350,10 +387,13 @@ export function render(data, styleId, opt = {}) {
       range: lowCap && densityAt(o, s.bar) === "low" ? [range[0], Math.min(range[1], RANGE.lowKeysMax)] : range,
       fresh: s.from === 0 && (s.bar + base) % 8 === 0,
     }));
-    return planVoicings(type, items).map((notes, i) => ({ bar: slots[i].bar, from: slots[i].from, notes, fresh: items[i].fresh }));
+    return planVoicings(type, items).map((notes, i) => ({ bar: slots[i].bar, from: slots[i].from, notes, fresh: items[i].fresh,
+      ...(RH_OF.has(items[i]) ? { rh: RH_OF.get(items[i]) } : {}) }));
   };
   const kType = st.voicing.keys;
-  const kRange = st.ranges?.keys ?? (kType === "arp5" ? RANGE.arp : RANGE.keys);
+  // 分解和弦(arp_inv)一律踩延音踏板(Steven 2026-10-08:「音跟音之間斷掉了」)
+  const PEDAL = kType === "arp_inv";
+  const kRange = st.ranges?.keys ?? (kType === "arp5" || kType === "arp_inv" ? RANGE.arp : RANGE.keys);
   if (T.keys || T.guitar) {
     plans.keys = plan(kType, kRange, true);
     plans.keysShell = plan("shell", kRange, true);
@@ -415,7 +455,7 @@ export function render(data, styleId, opt = {}) {
   const progScale = Math.min(1, (hz.timingSigmaMs ?? 6) / 6); // 程式打的曲風(K-pop 舞曲)變化少
   const kickAdds = {};
   const pushAt = {};
-  if (vary && F.keys?.anticipation && st.voicing.keys !== "arp5") {
+  if (vary && F.keys?.anticipation && !st.voicing.keys.startsWith("arp")) {
     const A = F.keys.anticipation, at = BAR - Math.max(1, Math.round(A.beatsEarly * 4 / 2) * 2);
     for (let b = 0; b + 1 < o.bars; b++) {
       if ((b + base) % 8 === 7) continue; // 過門小節不搶
@@ -532,7 +572,13 @@ export function render(data, styleId, opt = {}) {
           else if (ch === "S") notes = plans.keysShell[idx].notes;
           else if (ch === "U") notes = v.slice(-3);
           else notes = [v[Math.min(+ch, v.length) - 1]];
-          note(track, b, cell, capKeys(track, n), notes, { symbol: ch });
+          if (PEDAL && track === "keys") {
+            // 踩著延音踏板:每個音撐到換和弦;換和弦的那一格左手低音一定要彈(指型那一格不是 1 也補上)
+            const sl = slots[idx];
+            if (cell === sl.from && !notes.includes(v[0])) notes = [v[0], ...notes];
+            // 每個音各自一個事件:同音重彈時只停那一個音(左手低音不會被右手重彈連帶停掉)
+            for (const p of notes) note(track, b, cell, sl.to - cell, [p], { symbol: ch, pedal: true });
+          } else note(track, b, cell, capKeys(track, n), notes, { symbol: ch });
         });
       }
     }
@@ -588,6 +634,24 @@ export function render(data, styleId, opt = {}) {
     return adds;
   }
 
+  // 踏板下同一個音再彈:前一顆在新的那一下停(真的鋼琴是同一根弦重敲,不會兩顆疊在一起越來越大聲)
+  if (PEDAL) {
+    const ks = events.filter(e => e.pedal).sort((a, b) => a.gridTime - b.gridTime);
+    for (let i = 0; i < ks.length; i++) {
+      const e = ks[i], end = e.gridTime + e.dur;
+      for (let j = i + 1; j < ks.length && ks[j].gridTime < end; j++)
+        if (ks[j].notes.some(p => e.notes.includes(p))) {
+          // dur(秒)與 cells(格)都要改:主網頁照 cells × 現在的拍長算音長(可以中途換速度),只改 dur 的話主網頁會疊音
+          // 前提:slot 一定在同一小節裡(slots 是每小節各自切的),所以重彈的那一顆一定同小節;
+          // 萬一以後 slot 可以跨小節,這裡寧可不截(多響一點),也不要丟錯讓主網頁整圈停掉
+          if (ks[j].bar !== e.bar) break;
+          e.dur = ks[j].gridTime - e.gridTime;
+          e.cells = ks[j].cell - e.cell;
+          break;
+        }
+    }
+  }
+
   /*
    * 人性化(取代規格 2.6 的「每一下獨立高斯 + 力度均勻亂數」):
    * - 整團一起飄:每小節一個共同偏移,AR(1)(feel.drums.drift),所有樂器共用,不會彼此打架
@@ -595,6 +659,12 @@ export function render(data, styleId, opt = {}) {
    * - 每一下自己的抖動:各鼓件的比例照資料,整體大小錨在規格的 σ(timingSigmaMs)
    * - 和弦不同時落下(POP909 spread),頂音較大聲;吉他照 GuitarSet 下刷 / 上刷的先後
    * 有 swing 的曲風,奇數格的系統偏差交給 swing,不重複加
+   *
+   * **總量錨在規格的 σ**(2026-10-08 修正,Steven:「拍子不準確」):以前三層各自用滿 σ 再疊起來,
+   * 總偏差變成 1.4–2σ,樂器之間差到 20–33ms(tools/feel/timing_check.mjs 量的)。現在
+   * 整團一起飄 0.8σ,每一下自己的部分(位置偏差 + 抖動)0.6σ,照資料的比例分(0.8² + 0.6² = 1);
+   * 所以離格子的總量 = σ、兩件樂器之間的差 ≈ 0.85σ(合奏的人彼此跟得比跟節拍器緊)。貝斯落在大鼓同一格時用大鼓的時間(同一條);
+   * 和弦裡各音以落點為中心散開(不是全部往後),總寬 ≤ 10ms
    */
   const rnd = mulberry32(o.seed);
   const gauss = () => {
@@ -605,8 +675,10 @@ export function render(data, styleId, opt = {}) {
   const K0 = hz.timingSigmaMs ?? 6;
   const DR = F?.drums;
   const drift = new Map();
+  const SHARED = 0.8, OWN = 0.6;
+  const rms = a => (a?.length ? Math.sqrt(a.reduce((x, y) => x + y * y, 0) / a.length) : 0);
   {
-    const phi = DR?.drift.phi ?? 0, sd = (DR?.drift.sdRel ?? 0) * K0;
+    const phi = DR?.drift.phi ?? 0, sd = DR ? K0 * SHARED : 0;
     let d = 0;
     for (let b = -1; b <= o.bars; b++) {
       d = phi * d + Math.sqrt(1 - phi * phi) * gauss() * sd;
@@ -614,23 +686,32 @@ export function render(data, styleId, opt = {}) {
     }
   }
   const KEYS_LIKE = ["keys", "keys2", "pad", "guitar"];
+  const kickAt = new Map(); // 大鼓的時間:貝斯落在同一格就用它
+  events.sort((a, b) => (a.track === "drums" ? 0 : 1) - (b.track === "drums" ? 0 : 1));
   for (const e of events) {
     const ov = hz.overrides?.[e.piece ?? e.track] ?? {};
     const vr = ov.velocityRand ?? hz.velocityRand ?? 8;
     if (!o.humanize) { e.time = e.gridTime; continue; }
     const k = ov.timingSigmaMs ?? K0;
     const odd = e.cell % 2 === 1 && o.swing > 50;
-    let sys = 0, jit = 1, acc = 1;
+    let sys = 0, jit = 1, acc = 1, sysArr = null;
     const dk = e.track === "drums" ? (e.piece === "clap" ? "snare" : e.piece) : e.track === "bass" ? "kick" : null;
     if (DR && dk && DR.jitterRel[dk] != null) {
       jit = DR.jitterRel[dk];
-      sys = odd ? 0 : DR.sysRel[dk][e.cell] * K0;
+      sysArr = DR.sysRel[dk];
+      sys = odd ? 0 : sysArr[e.cell];
       acc = e.track === "drums" ? e.acc ?? 1 : DR.accent.hat ? DR.accent.hat[e.cell] ** 0.5 : 1;
     } else if (F?.keys && KEYS_LIKE.includes(e.track)) {
-      sys = odd ? 0 : F.keys.sysRel[e.cell] * K0;
+      sysArr = F.keys.sysRel;
+      sys = odd ? 0 : sysArr[e.cell];
       acc = e.track === "pad" || !F.keys.accent ? 1 : F.keys.accent[e.cell] ** 0.6;
     }
-    const j = drift.get(e.bar) + sys + clampMs(gauss() * jit * k) + (ov.offsetMs ?? 0);
+    // 每一下自己的部分(位置偏差 + 抖動)的總量 = 0.6k,位置偏差與抖動照資料的比例分
+    const own = (DR || F?.keys) ? (k * OWN) / Math.max(1e-6, Math.hypot(rms(sysArr), jit)) : k;
+    let j = drift.get(e.bar) + clampMs(sys * own + gauss() * jit * own) + (ov.offsetMs ?? 0);
+    const gk = e.gridTime.toFixed(4);
+    if (e.track === "drums" && e.piece === "kick") kickAt.set(gk, j);
+    else if (e.track === "bass" && kickAt.has(gk)) j = kickAt.get(gk); // 貝斯跟大鼓同一格:同一個時間
     e.time = Math.max(0, e.gridTime + j / 1000);
     e.vel = Math.max(1, Math.min(127, Math.round(e.vel * acc + clampMs(gauss() * vr / 2, vr))));
     // 和弦裡各音的先後與頂音
@@ -644,9 +725,10 @@ export function render(data, styleId, opt = {}) {
         lowFirst = rnd() < F.keys.lowFirstShare;
         dt = (F.keys.spreadMs.median / (n - 1)) * (0.5 + rnd());
       } else continue;
+      dt = Math.min(dt, 10 / (n - 1)) * Math.min(1, K0 / 6); // 和弦總寬 ≤ 10ms;程式打的曲風(K-pop 舞曲 σ 2ms)跟著縮
       const order = e.notes.map((p, i) => i).sort((a, b) => (lowFirst ? e.notes[a] - e.notes[b] : e.notes[b] - e.notes[a]));
       e.noteDt = e.notes.map(() => 0);
-      order.forEach((i, r) => { e.noteDt[i] = (r * dt) / 1000; });
+      order.forEach((i, r) => { e.noteDt[i] = ((r - (n - 1) / 2) * dt) / 1000; }); // 以落點為中心散開
       const topI = e.notes.indexOf(Math.max(...e.notes));
       e.noteVel = e.notes.map((p, i) => Math.max(1, Math.min(127, e.vel + (i === topI ? (F.keys?.topVel ?? 0) : 0))));
     }

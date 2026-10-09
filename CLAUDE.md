@@ -24,7 +24,10 @@
 - 試聽頁 `styles/index.html`:`sampler.mjs`(取樣樂器)+ `player.mjs`(即時排程與 `renderOffline`);主網頁也用同一個引擎(見最上面一節)
 - **全部用錄音取樣,不准即時合成的音色**(Steven 2026-10-08:「合成音色一定要換成真實取樣樂器,否則就乾脆不要。最少要做到 Band-in-a-Box 的品質」)。
   找不到授權清楚的真樂器取樣 → 那一層拿掉,不准用合成頂替(效果器、調變訊號不算音色)
-- **混音與母帶**:混音(各軌音量、EQ、兩種空間、鼓件擺位)照數學檢查調;母帶 = 黏著壓縮 → 各曲風 `master.gainDb` → 預讀限幅器
+- **空間(融合)照數學算,不邊聽邊調**(Steven 2026-10-08):殘響是真實錄音的 IR(`styles/ir/`);原聲鼓的空間來自自己的房間麥;
+  其他軌的送出量由 `tools/mix/space.py` 照舞台(`styles.json` 的 `space.stage`,相對鼓手房間的距離)閉式解出,寫進各曲風 `space.sends`。
+  改了音色、聲位、EQ、送出的基準 → 重跑 `space.py --write`,不准手改 `space.sends`;方法與數字在 `styles/README.md`「空間與融合」
+- **混音與母帶**:混音(各軌音量、EQ、兩種空間、鼓件擺位)照數學檢查調;母帶 = 黏著壓縮 → 各曲風 `master.gainDb` → 總線飽和 → 預讀限幅器
   (`styles/limiter.mjs`,−1 dBTP),目標 −14 LUFS;改了聲音就重跑 `tools/mix/solve_loudness.py`
 - **拍號**:`styles/` 的 3/4、6/8 寫在 `meters[拍號].tracks`(12 格);只有 4/4 的曲風不准硬套
 - 取樣清單 `styles/samples.json` 由 `tools/samples/build_manifest.py` 從實際檔案列表產生,手改會被蓋掉;
@@ -34,6 +37,17 @@
   由 `tools/feel/*.py` 從 Groove MIDI(鼓)、GuitarSet(吉他)、POP909(鍵盤力度、搶拍比例)統計產生,出處與數字在 `docs/SOURCES.md` R1。
   規格 2.6 的「每一下獨立高斯 + 力度均勻亂數」已換成:整團一起飄(AR1)+ 位置的系統偏差與強弱 + 每一下的抖動;大小錨在規格 σ。
   **不要改回獨立亂數**;POP909 的時間是量化過的,不准拿它當時間來源
+- **人性化總量錨在規格 σ**(Steven 2026-10-08:「拍子不準確」):整團一起飄 0.8σ、每一下自己的(位置偏差 + 抖動)0.6σ,
+  貝斯落在大鼓同一格用大鼓的時間,和弦各音以落點為中心散開(總寬 ≤ 10ms × σ/6)。不准再讓各層各自用滿 σ 疊起來。
+  驗證 `node tools/feel/timing_check.mjs`(樂器之間 95% ≤ 2σ、離格子 ≤ 2.5σ)
+- **取樣起音對到音真的起來的地方**(`leadOf`:前 150ms 最大值的 10% 往前 2ms;電貝斯起音前有 9–25ms 手指雜音)。
+  驗證 `node tools/samples/onset_check.mjs`(每軌中位數 ≤ 3ms)
+- **抒情的分解和弦 = `arp_inv`**:左手和弦低音撐住(斜線和弦用斜線音)+ 右手最近轉位,一律踩踏板;驗證 `node tools/feel/arp_check.mjs`
+- **貝斯不送殘響**(`space.stage.bass.dry`);**各軌音量比例照 main**(`tools/mix/balance_ref.json`,跳過母帶鏈量的),
+  不准改回「鼓 = 貝斯 = 鍵盤」(K-weighting 低頻算得輕,貝斯會變扁)
+- **整首一起過的效果用 `bus: "all"`**(Lo-fi 的低通 / 飽和):鼓、貝斯、鍵盤、底噪、殘響都經過同一條;底噪的 `db` 是最後輸出的 dBFS
+- 改聲音之後的檢查順序(Steven 2026-10-08:「浪費很多時間,卻沒有做好」):先跑幾秒鐘的針對性檢查
+  (timing_check、onset_check、arp_check),9 個曲風都跑;全部過了才做整套混音 / 響度,最後 `tools/mix/listen.py` 前後比對
 - **不是只有過門才變化**:鼓每小節照資料多打 / 省略(大鼓第一拍、小鼓 2 4、X、過門小節不動),貝斯跟多踩的大鼓,鍵盤偶爾搶拍;`vary:false` 關掉
 - **混音要用數學檢查**(Steven 2026-10-08):改音色、EQ、殘響、音量之後跑 `tools/mix/analyze.py`(BS.1770 響度、1/3 八度、遮蔽、左右相關、殘響/乾),
   音量用 `tools/mix/solve_balance.py` 寫進 `styles.json` 的 `mix`;取樣很乾,不准不加空間就直接相加

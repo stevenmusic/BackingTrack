@@ -889,3 +889,47 @@ Steven 聽完第十五輪與〈Plastic Love〉對照後說「所有樂器都不�
   ②加 melodyOk 把頂音的九度換成和弦音(更穩,但規格書的聲位會被改掉)
 - **【待 Steven 聽過】**:自動判斷會判到 R&B / Lo-fi;舊曲風對照(Blues→Pop、Swing→Lo-fi、Bossa/Funk→R&B);
   華語 / K-pop 抒情用取樣弦樂鋪底(以前盲聽退回過取樣弦樂,這次照「全部換取樣」);City Pop 不再是 bd80000 那一版
+
+## 2026-10-08 空間與融合(PR:claude/mix-blend)
+Steven:「整體聲音(所有樂器之間)還是沒有融合在一起的感覺……不要跟之前一樣重複試錯」。做法與數字在 `styles/README.md`「空間與融合」。
+- 第 1 輪審查(reviewer):阻擋 2 條
+  - B1 鼓組壓縮的 6ms 預讀延遲沒補(鼓整組晚 6ms)→【同意】不過鼓組壓縮的軌與殘響送出一起晚 6ms(`COMP_LAT`);
+    `tools/samples/align_check.mjs` 量大鼓 / 貝斯 / 鍵盤峰值差 0.023ms(修之前 6ms)
+  - B2 README 的壓縮參數與數字對不上程式 →【同意】改成現在的參數與 95 百分位、附指令,數字用最後一輪重量的
+  - 建議 S1 IR 快取綁取樣率、S2 IR fetch 逾時、S3 板式殘響左右不對稱(原檔左 1.77 / 右 3.59 秒)、S4 重跑 space.py、
+    S5 這一段、S6 預備拍帶房間麥 → 全部【同意】已修;S3 改成每個聲道各自修到 1.8 秒、能量拉平
+- **【待 Steven 聽過】**(數學只保證每軌放到設計的距離,距離本身是設計):
+  ~~貝斯的房間送出從 0.05 變約 0.7、貝斯音量相對鼓降約 5dB~~(已撤回:Steven 回報「bass 很扁」後貝斯改全乾、音量比例照 main);
+  舞台距離 +8 / +1 / −1 / −3 與 pre-delay;原聲鼓改用房間麥 −6dB、不送人工殘響;總線飽和;808 的房間送出 1.3 → 約 2.7
+
+### 2026-10-08 Steven 聽過的回報(J-pop / 華語抒情 / K-pop / Lo-fi)與修正
+- 「J-pop bass 很扁、鋼琴有延遲或提早」「K-pop 鼓拍子不準、bass 很扁」→ 人性化總量錨回 σ、貝斯跟大鼓同時間、
+  取樣起音改對到真的起音(電貝斯以前晚 9–25ms)、貝斯不送殘響、音量比例照 main;timing_check 27/27、onset_check 全過
+- 「華語抒情 sustain 的鋼琴音沒連在一起;分解和弦應該找近的位置,有 bass 撐住」→ arp_inv + 延音踏板;arp_check 全過(空檔 0、右手平均移動 1.0–1.5 半音)
+- 「Lo-fi 底噪太吵,跟樂器沒融合」→ 整首過同一條老錄音、底噪比音樂小 33LU;Audiobox CE 6.60 → 7.27、PQ 6.95 → 7.79(旁證)
+- 前後比對(listen.py,對齊 −14 LUFS;**趨勢,不是統計結論**:每個曲風 1 段 16 小節、種子 7、auto 密度):
+  9 個曲風削波 0、200–500Hz 都不比 main 多、40–80Hz 多數變飽。指令:`render_styles.mjs /tmp/ab/after <曲風>::auto:16` 後
+  `python3 tools/mix/listen.py /tmp/ab/before /tmp/ab/after`
+- Audiobox 的 CE / PQ(**旁證**,每個曲風 1 段;模型本身的誤差沒量)
+- Lo-fi 底噪:`render_styles.mjs /tmp/lofi lofi::auto:16 lofi::auto:16::off=vinyl`,兩個相減 = 底噪,BS.1770 比音樂小 33.1 LU
+- **【待 Steven 聽過】**:以上全部;K-pop 舞曲「鼓拍子不準」引擎與取樣兩邊量起來都準(±2ms),如果還是覺得不準,請講哪一段、哪個鼓件
+
+### 第 2 輪審查(reviewer,medium):阻擋 2 條 → 已修
+- B1 主網頁踏板截斷沒作用(btPlay 用 cells 算音長,引擎只改了 dur)→【同意】cells 一起改;踏板音改成單音事件(S1);
+  engine.test 加「用 cells 算、同音不疊、cells 與 dur 一致」那一條(21 pass)
+- B2 balance_ref 不能重現 →【同意】`tools/mix/make_balance_ref.sh`(git worktree 取 5adb7c5、補 raw、high 密度、BS.1770),重新產生後重解音量與響度
+- S2 殘響送出低通同階數、S3 arp_rh 不用十三度、S4 右手計畫附在 plans、S5 撤回貝斯送殘響那一條、S6 標趨勢 / 旁證並附指令、S7 onset_check 加 kpop_ballad →【同意】已修
+- S8 每段第一格不能提早(main 就有)→ 這次不處理
+- 重跑:timing_check、arp_check、smoke_main(CPU 6× 來不及 0)、smoke_live、swipe_test 全過;onset_check 剩 Lo-fi 整條一起晚 4.5ms
+  (整首的飽和 4 倍超取樣的固定延遲,鼓 / 貝斯 / 鍵盤一樣,彼此還是齊的)、抒情分解和弦(踏板重疊量不準,中位數 4ms)、弦樂鋪底(慢起音)
+- listen.py(對齊 −14 LUFS,趨勢):削波 0;200–500Hz 9 個曲風都不比 main 多;40–80Hz 8 個曲風比 main 飽(Lo-fi 因為整首低通 + 飽和少 1.5dB);
+  Lo-fi 的「斷音」都在音樂結束後的尾巴(50.3–52.3 秒),不是中間斷掉
+
+### 第 3 輪審查(reviewer,medium):**無阻擋、✅ 可合併**
+- B1、B2 審查員自己重現:主網頁算法 11700 個踏板事件同音疊 0 次;balance_ref.json 完全重現(差 0.0);mix / gainDb 收斂在 0.2 / 0.1 dB
+- S1 solve_balance 說明改照 balance_ref 的 ref、S3 踏板測試補「沒被重彈就撐到換和弦」與「五個音不重複」的斷言、
+  S4 跨小節不 throw(寧可不截)→【同意】已修
+- S2 分解和弦第五個音(左手高八度)跟右手撞音、指型原地重敲(4–6/19 顆和弦)→【同意】已修(撞到時改用兩手之間最高的和弦音),
+  engine.test 加斷言;明顯是缺陷所以沒有等 Steven
+- **【待 Steven 聽過】**:抒情兩曲風照 5adb7c5 的 high 密度比例,貝斯、鍵盤相對鼓各降約 4.5dB(母帶補回 2.5dB);
+  以及前面列的(拍子、分解和弦、Lo-fi、IR 拉平、跳過起音前雜音)

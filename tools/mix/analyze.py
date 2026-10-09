@@ -1,6 +1,6 @@
 """混音的數學檢查(用 tools/samples/render_styles.mjs 算出的分軌與全混音 WAV)。
 用法:python3 tools/mix/analyze.py <WAV 資料夾> <style> [...]
-檔名:<style>__high_8.wav(全混音)、<style>__high_8__dry.wav(不加殘響)、<style>__high_8_<軌>.wav(分軌)
+檔名:<style>__high_8.wav(全混音)、<style>__high_8__dry.wav(不加殘響)、<style>__high_8_<軌>_raw.wav(分軌,跳過母帶鏈;沒有才用 <style>__high_8_<軌>.wav)
 
 1. 響度:ITU-R BS.1770-4 的 K-weighting + 400ms 區塊 + 絕對 / 相對門檻 → LUFS;各軌相對全混音幾 LU
 2. 頻率飽滿:1/3 八度頻帶能量(Welch PSD),對 63Hz–8kHz 擬合一條斜線,偏離 ±6dB 以上的頻帶標出來;
@@ -64,7 +64,10 @@ def main():
         dry, _ = load(base + "__dry.wav")
         stems = {}
         for t in ["drums", "bass", "keys", "keys2", "pad", "guitar"]:
-            p = f"{base}_{t}.wav"
+            # 分軌優先用 raw(跳過母帶鏈)的:單獨一軌過黏著壓縮 / 限幅器會被壓得跟在全混音裡不一樣
+            # (鼓單獨時壓最多、量起來偏小),各軌的比例會量歪(2026-10-08 自動聆聽檢查抓到的)
+            p = f"{base}_{t}_raw.wav"
+            if not os.path.exists(p): p = f"{base}_{t}.wav"
             if os.path.exists(p):
                 x, _ = load(p)
                 if np.abs(x).max() > 1e-4: stems[t] = x

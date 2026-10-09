@@ -1,0 +1,48 @@
+{
+ "_說明": "各軌相對鼓的響度(LU,BS.1770,跳過母帶鏈)。參考版本 5adb7c5(Steven 長期在聽的那一版),high 密度 8 小節,跟 tools/mix/analyze.py 同一種量法。由 tools/mix/make_balance_ref.sh 產生,不要手改",
+ "ref": "5adb7c5",
+ "styles": {
+  "pop": {
+   "bass": 2.4,
+   "keys": -2.1
+  },
+  "mandopop_ballad": {
+   "bass": 4.2,
+   "keys": 0.9,
+   "keys2": -2.7,
+   "pad": -0.3
+  },
+  "jpop": {
+   "bass": 3.2,
+   "keys": -1.7
+  },
+  "citypop": {
+   "bass": 2.3,
+   "keys": -7.3,
+   "guitar": -6.9
+  },
+  "kpop_dance": {
+   "bass": 1.3,
+   "keys": -3.7,
+   "pad": -3.3
+  },
+  "kpop_ballad": {
+   "bass": 3.6,
+   "keys": 0.7,
+   "keys2": -2.2,
+   "pad": -0.5
+  },
+  "rnb_neosoul": {
+   "bass": 2.4,
+   "keys": -7.5
+  },
+  "lofi": {
+   "bass": 2.4,
+   "keys": -2.5
+  },
+  "reggaeton": {
+   "bass": 1.2,
+   "keys": -3.6
+  }
+ }
+}

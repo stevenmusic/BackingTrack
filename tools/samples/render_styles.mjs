@@ -1,6 +1,7 @@
 // 用無頭 Chromium 把 styles/ 的風格離線算成 WAV,並量 peak / RMS。
 // CDN 的取樣請求導到本機 blobless clone(/tmp/smp,git show 現抓)。
-// 用法:node tools/samples/render_styles.mjs <輸出資料夾> [style[:progression[:density]] ...]
+// 用法:node tools/samples/render_styles.mjs <輸出資料夾> [style[:progression[:density[:bars[:only[:flag]]]]]] ...]
+// flag 用 / 串:dry(不加空間)、raw(跳過母帶鏈)、wet(只要殘響)、probe(印出鼓組 / 黏著壓縮在壓的時候壓幾 dB:95 百分位)、grid(不加人性化,量取樣本身的起音)、on=a+b / off=a+b(開 / 關可選聲部,例:off=vinyl)
 import { chromium } from "playwright";
 import { execFileSync } from "node:child_process";
 import { createServer } from "node:http";
@@ -65,18 +66,23 @@ for (const job of jobs) {
   const [style, progression, density = "auto", bars = "16", only, flag] = job.split(":");
   const r = await page.evaluate(async ({ style, progression, density, bars, only, flag }) => {
     const p = window.__player;
-    const o = { density, seed: 7, ...(progression ? { progression } : {}), ...(only ? { only: only.split(",") } : {}), ...(flag === "dry" ? { noReverb: true } : {}),
-      ...(flag?.startsWith("on=") ? { parts: Object.fromEntries(flag.slice(3).split("+").map(k => [k, true])) } : {}) };
-    const { buffer, meta, failed } = await p.renderOffline(style, o, +bars);
+    const fl = (flag ?? "").split("/"), on = fl.find(f => f.startsWith("on=")), off = fl.find(f => f.startsWith("off="));
+    const o = { density, seed: 7, ...(progression ? { progression } : {}), ...(only ? { only: only.split(",") } : {}),
+      noReverb: fl.includes("dry"), raw: fl.includes("raw"), ...(fl.includes("grid") ? { humanize: false } : {}), wetOnly: fl.includes("wet"), probe: fl.includes("probe"),
+      parts: { ...(on ? Object.fromEntries(on.slice(3).split("+").map(k => [k, true])) : {}),
+        ...(off ? Object.fromEntries(off.slice(4).split("+").map(k => [k, false])) : {}) } };
+    const { buffer, meta, failed, gr } = await p.renderOffline(style, o, +bars);
+    // 壓縮量看「有在壓的時候」:95 百分位(平均會被鼓聲之間的空檔稀釋)
+    const avg = a => { if (!a.length) return 0; const b = [...a].sort((x, y) => x - y); return b[Math.floor(0.05 * (b.length - 1))]; };
     const chs = [buffer.getChannelData(0), buffer.getChannelData(1)];
     let peak = 0, ss = 0, clip = 0;
     for (const c of chs) for (const x of c) { const a = Math.abs(x); if (a > peak) peak = a; ss += x * x; if (a >= 0.999) clip++; }
-    return { peak, rms: Math.sqrt(ss / (2 * chs[0].length)), clip, failed, sr: buffer.sampleRate,
+    return { peak, rms: Math.sqrt(ss / (2 * chs[0].length)), clip, failed, sr: buffer.sampleRate, grD: avg(gr.drums), grG: avg(gr.glue), probe: o.probe,
       bpm: meta.bpm, l: Array.from(chs[0]), r: Array.from(chs[1]) };
   }, { style, progression, density, bars, only, flag });
-  const name = job.replace(/[:,]/g, "_");
+  const name = job.replace(/[:,/=+]/g, "_");
   writeFileSync(join(out, name + ".wav"), wav([r.l, r.r], r.sr));
-  console.log(`${name.padEnd(36)} bpm ${r.bpm}  peak ${r.peak.toFixed(3)}  rms ${(20 * Math.log10(r.rms)).toFixed(1)} dBFS  clip ${r.clip}  載不到 ${r.failed}`);
+  console.log(`${name.padEnd(36)} bpm ${r.bpm}  peak ${r.peak.toFixed(3)}  rms ${(20 * Math.log10(r.rms)).toFixed(1)} dBFS  clip ${r.clip}  載不到 ${r.failed}` + (r.probe ? `  鼓組壓 ${(-r.grD).toFixed(1)} dB  黏著壓 ${(-r.grG).toFixed(1)} dB` : ""));
 }
 console.log("route 404:", missing);
 await browser.close();

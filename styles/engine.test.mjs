@@ -79,6 +79,7 @@ test("3. 音域:bass 28–48、keys ≤ 72(low ≤ 69)、pad ≤ 67", () => {
         assert.ok(hi <= max, `${where} ${e.track} ${e.notes} > ${max} @${e.bar}:${e.cell}`);
       }
       if (e.track === "keys" && st.voicing.keys === "arp5") assert.ok(lo >= RANGE.arp[0] - 3 && hi <= RANGE.arp[1], `${where} arp ${e.notes}`);
+      if (e.track === "keys" && st.voicing.keys === "arp_inv") assert.ok(lo >= 36 && hi <= RANGE.lowKeysMax, `${where} arp_inv ${e.notes}`);
       if (e.track === "pad") assert.ok(hi <= RANGE.pad[1] && lo >= RANGE.pad[0], `${where} pad ${e.notes}`);
     }
   }
@@ -89,9 +90,11 @@ test("4. voice leading:相鄰和弦最高音差 ≤ 4(段落開頭除外;arp5 �
     for (const [track, plan] of Object.entries(r.plans)) {
       if (track === "keysShell") continue;
       if (track === "keys" && st.voicing.keys === "arp5") continue;
+      
+      const topOf = (n, pl) => pl.rh ? Math.max(...pl.rh) : n.at(-1); // arp_inv:直接比右手計畫的頂音
       for (let i = 1; i < plan.length - 1; i++) {
         if (plan[i].fresh) continue;
-        const d = Math.abs(plan[i].notes.at(-1) - plan[i - 1].notes.at(-1));
+        const d = Math.abs(topOf(plan[i].notes, plan[i]) - topOf(plan[i - 1].notes, plan[i - 1]));
         assert.ok(d <= 4, `${where} ${track} 第 ${plan[i].bar} 小節 ${plan[i - 1].notes}→${plan[i].notes}`);
       }
     }
@@ -267,4 +270,34 @@ test("沒有三度的和弦(C5)維持空五度,不補大三度", async () => {
   const r = render(data, "pop", { barSpans: [[{ chord: c, from: 0, to: 16 }]], bars: 2, humanize: false, vary: false, countIn: false });
   // 和聲層不能出現三度(E 或 E♭);add9 聲位加的九度(D)不算
   for (const e of r.events) if (e.notes && e.track !== "bass") assert.ok(e.notes.every(n => ![3, 4].includes(((n % 12) + 12) % 12)), JSON.stringify(e.notes));
+});
+
+test("踏板(arp_inv):用 cells 算音長(主網頁的算法),同一個音不准疊;左手低音沒被重彈時撐到換和弦", () => {
+  for (const st of data.styles) {
+    const S = resolveStyle(data, st.id);
+    if (S.voicing.keys !== "arp_inv") continue;
+    for (const meter of ["4/4", ...Object.keys(S.meters ?? {})]) for (const dens of ["low", "standard", "high"]) {
+      const r = render(data, st.id, { density: dens, bars: 8, humanize: false, countIn: false, meter });
+      const ks = r.events.filter(e => e.pedal);
+      const cellsPerBar = r.meta.barSec / r.meta.cellSec;
+      const abs = e => e.bar * cellsPerBar + e.cell;
+      for (const e of ks) for (const f of ks) {
+        if (f === e || f.notes[0] !== e.notes[0] || abs(f) <= abs(e)) continue;
+        assert.ok(abs(e) + e.cells <= abs(f) + 1e-9, `${st.id} ${meter} ${dens} 第 ${e.bar} 小節第 ${e.cell} 格的 ${e.notes} 疊到第 ${f.cell} 格`);
+      }
+      assert.ok(ks.every(e => Math.abs(e.cells * r.meta.cellSec - e.dur) < 1e-6), `${st.id} ${meter} ${dens} cells 與 dur 對不上`);
+      // 沒被同音重彈截斷的踏板音,要撐到換和弦(該 slot 的結尾)
+      for (const e of ks) {
+        const restruck = ks.some(f => f !== e && f.bar === e.bar && f.cell > e.cell && f.notes[0] === e.notes[0] && f.cell < e.cell + e.cells + 1e-9);
+        const slotEnd = r.plans.keys.filter(p => p.bar === e.bar && p.from <= e.cell).at(-1);
+        const nextFrom = r.plans.keys.find(p => p.bar === e.bar && p.from > e.cell)?.from ?? cellsPerBar;
+        if (!restruck && slotEnd) {
+          const later = ks.find(f => f.bar === e.bar && f.cell > e.cell && f.cell < nextFrom && f.notes[0] === e.notes[0]);
+          if (!later) assert.equal(e.cell + e.cells, nextFrom, `${st.id} ${meter} ${dens} 第 ${e.bar} 小節第 ${e.cell} 格 ${e.notes} 沒撐到換和弦`);
+        }
+      }
+      // 五個音不重複(指型不會原地重敲)
+      for (const p of r.plans.keys) assert.equal(new Set(p.notes).size, p.notes.length, `${st.id} ${meter} ${dens} 第 ${p.bar} 小節 ${p.notes} 有重複的音`);
+    }
+  }
 });

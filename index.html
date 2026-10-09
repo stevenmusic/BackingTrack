@@ -5285,7 +5285,7 @@ function btPlay(e, t){
     return;
   }
   const instr = btPlayer.instrOf(e.track, e), bus = buses[e.track].in;
-  const opt = e.track === "keys" && btPlayer.drift ? { detune: btPlayer.drift } : {};
+  const opt = btPlayer.detuneOpt(e.track);
   const dur = e.cells * btBeatSecNow() / btCellsPerBeat();
   e.notes.forEach((midi, i) => btPlayer.sampler.note(instr, midi, (e.noteVel && e.noteVel[i]) || e.vel,
     Math.max(t + ((e.noteDt && e.noteDt[i]) || 0), now), dur, bus, opt));

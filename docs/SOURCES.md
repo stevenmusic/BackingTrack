@@ -127,6 +127,16 @@ https://bassmagazine.jp/player/interveiw-itokoki202204/
   (B. Owsinski, *The Mixing Engineer's Handbook*,「Adding Effects / Depth」章)。這一條是方向,數字(+8、+1、−1、−3)是我們的舞台設計
 - 鼓組匯流排壓縮 3–4dB、總線黏著 1–2dB:同書「Compression」章的常用範圍;用 `render_styles.mjs` 的 `probe` 量,不是猜
 
+### A1 編曲手法(2026-10-09,`styles/` 的節奏型變化;讀到原文的標 ✔,只有搜尋摘要的標 △)
+- ✔ sleepfreaks-dtm.com〈ピアノバッキング 10 ステップ〉〈旬の J-POP 第 3 回〉〈ベース打ち込み〉〈シンコペーションで楽曲の表情を変える〉〈Strings の入り方〉
+- ✔ note craft sound studio(City Pop 鼓篇 n1108a1d6b9d5、貝斯篇 nae4a8769a10d)
+- ✔ ドラム・マガジン〈最強のドラム練習帳 Vol.02〉Jeff Porcaro;ベース・マガジン〈キホンのキ〉第 15 回(鬼音放在實音前一格)
+- △ NiceChord(1+3 配置、克萊德曼型)、Piano With Jonny、Yamaha Hub〈Playing Well With Others〉、mu chord(Far Out / hakwright)、
+  Drumeo、MusicRadar(reggaeton)、violetrecording(boom bap)、Wikipedia「Dembow beat」
+- 和弦進行核對:ja.wikipedia 王道進行 / カノン進行 / 丸サ進行 / 小室進行(✔)、Hooktheory(BLACKPINK〈Shut Down〉、Daddy Yankee〈Gasolina〉
+  F Phrygian、TWICE〈TT〉、Red Velvet)(△)、Vice / Wayne Marshall〈Despacito〉(△)、er-music.jp / ukutabs〈プラスティック・ラブ〉(△)、
+  chordwiki〈SPARKLE〉(△)、bilibili 雪嶺〈和弦走向〉(△)
+
 ## 還缺的(權威但沒讀到)
 - ギター・マガジン 2019 年 4 月號本體(62 段切音譜例)、2020 年 1 月號(山下達郎與切音)
 - ドラム・マガジン 1986 年 4 月號(青山純奏法分析)

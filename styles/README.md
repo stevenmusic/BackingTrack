@@ -121,3 +121,15 @@ Rhodes 是唯一例外(每 4 個白鍵一個取樣):量過移調 3 半音的泛�
 `黏著壓縮(2:1、門檻 −18dB、起音 30ms)→ 各曲風響度校正(styles.json 的 master.gainDb)→ 總線飽和 → 預讀限幅器(limiter.mjs,AudioWorklet,
 預讀 5ms、4 倍超取樣估 true peak、天花板 −1 dBTP)`;worklet 不能用時退回 DynamicsCompressor。
 目標 −14 LUFS(串流平台的標準響度)、true peak ≤ −1 dBTP;`tools/mix/solve_loudness.py` 量完寫回 `master.gainDb`
+
+
+## 彈法變化(Steven 2026-10-09:「所有樂器的彈法都太單一了。要真的聽起來像人在彈」)
+- **量化**:`tools/feel/variety_check.mjs` 量每件樂器 32 小節裡「節奏跟上一小節一樣」的比例。改之前貝斯 / 鍵盤 77–100%(一個型貼到底),
+  改之後多半 26–55%;真人參考 POP909 鋼琴 28.1%(下一小節整個一樣只有 2.4%)
+- **抒情鋼琴**:POP909(878 首、68838 小節)萃取的伴奏庫,節奏與左右手分工照真人抽(`tools/feel/pop909_patterns.py`)
+- **其他樂器**:每種密度 2–3 個型 + 句尾型,出處:
+  - 段落分工、左手先出、換和弦兩手齊、搶拍要全團一起、單數小節才搶:sleepfreaks〈ピアノバッキング 10 ステップ〉〈シンコペーション〉、craft sound studio(note)City Pop 鼓 / 貝斯篇
+  - 第 4 小節最後一拍開 hi-hat、開 hi-hat 下一下不打:Jeff Porcaro(ドラム・マガジン〈最強のドラム練習帳 Vol.02〉)
+  - 貝斯 1-5-8、第一拍根音、7→M7→8、九度與八度交替、死音:craft sound studio 貝斯篇、ベース・マガジン〈キホンのキ〉第 15 回
+  - Lo-fi 第 2 小節改一顆大鼓、reggaeton dembow 3+3+2 與小鼓型變化、Pop 大鼓每 4 小節換一顆:各教學站(摘要,見 `docs/SOURCES.md` A1)
+- **九度不放頂音**:mu chord(Steely Dan,二度貼在三度下面)、Piano With Jonny(頂上不放半音)、Yamaha Hub(頂音不跟歌手差半音);`tools/feel/top_check.mjs`

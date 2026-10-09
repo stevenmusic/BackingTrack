@@ -11,19 +11,21 @@ data.feel = JSON.parse(readFileSync(new URL("./feel.json", import.meta.url), "ut
 const ids = data.styles.map(s => s.id);
 const DENS = ["low", "standard", "high"];
 
+const variants = x => (!x ? [] : x.v ? [...x.v, ...(x.end ? [x.end] : [])] : [x]);
 // 每一條節奏型字串:[位置, 軌別, 字串, 是不是過門, 一小節幾格](4/4 在 tracks,其他拍號在 meters)
 function* lanes(st) {
   const all = [["4/4", st.tracks], ...Object.entries(st.meters ?? {}).map(([m, v]) => [m, v.tracks])];
   for (const [m, T] of all) {
     const bar = METERS[m].cells;
     for (const d of [...DENS, "fill"]) {
-      const kit = T.drums?.[d];
-      if (kit) for (const [p, s] of Object.entries(kit)) yield [`${st.id}.${m}.drums.${d}.${p}`, "drums", s, d === "fill", bar];
+      // 一種密度可以有好幾個型({ v: [...], end }),每個都要檢查
+      for (const [k, kit] of variants(T.drums?.[d]).entries())
+        for (const [p, s] of Object.entries(kit)) yield [`${st.id}.${m}.drums.${d}#${k}.${p}`, "drums", s, d === "fill", bar];
     }
     for (const t of ["bass", "keys", "keys2", "pad", "guitar"])
       for (const d of DENS) {
-        const s = T[t]?.[d];
-        if (s) yield [`${st.id}.${m}.${t}.${d}`, t === "bass" ? "bass" : t === "guitar" ? "guitar" : "keys", s, false, bar];
+        for (const [k, s] of variants(T[t]?.[d]).entries())
+          yield [`${st.id}.${m}.${t}.${d}#${k}`, t === "bass" ? "bass" : t === "guitar" ? "guitar" : "keys", s, false, bar];
       }
   }
 }
@@ -101,13 +103,23 @@ test("4. voice leading:相鄰和弦最高音差 ≤ 4(段落開頭除外;arp5 �
   }
 });
 
-test("5. N 提前切分:下一小節第 0 格不再攻擊", () => {
+test("5. 搶拍(N / 全團一起的 push):下一小節第 0 格鍵盤不再攻擊;push 時貝斯與大鼓也在同一格、下一小節第 0 格不再彈", () => {
   let seen = 0;
-  for (const [where, , r] of allRenders({ humanize: false })) {
+  // 全團搶拍很少(單數小節、照資料的比例):多跑幾個種子才碰得到
+  const extra = function* () { for (const id of ["jpop", "citypop", "pop"]) for (let seed = 1; seed <= 40; seed++)
+    yield [`${id}/seed${seed}`, null, render(data, id, { density: "standard", bars: 32, seed, humanize: false })]; };
+  for (const [where, , r] of [...allRenders({ humanize: false }), ...extra()]) {
     const atk = new Set(r.events.filter(e => e.track === "keys").map(e => `${e.bar}:${e.cell}`));
-    for (const e of r.events.filter(e => e.symbol === "N")) {
+    const at = tr => new Set(r.events.filter(e => (e.piece ?? e.track) === tr).map(e => `${e.bar}:${e.cell}`));
+    const bass = at("bass"), kick = at("kick");
+    for (const e of r.events.filter(e => e.symbol === "N" || e.symbol === "push")) {
       seen++;
       if (e.bar + 1 < r.meta.bars) assert.ok(!atk.has(`${e.bar + 1}:0`), `${where} 第 ${e.bar + 1} 小節第 0 格重彈`);
+      if (e.symbol === "push" && bass.size) {
+        assert.ok(bass.has(`${e.bar}:${e.cell}`), `${where} 第 ${e.bar} 小節搶拍那一格貝斯沒跟`);
+        if (e.bar + 1 < r.meta.bars) assert.ok(!bass.has(`${e.bar + 1}:0`), `${where} 第 ${e.bar + 1} 小節第 0 格貝斯重彈`);
+      }
+      if (e.symbol === "push" && kick.size) assert.ok(kick.has(`${e.bar}:${e.cell}`), `${where} 第 ${e.bar} 小節搶拍那一格沒有大鼓`);
     }
   }
   assert.ok(seen > 0, "沒有任何 N 被測到");

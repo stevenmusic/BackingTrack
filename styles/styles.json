@@ -21,7 +21,7 @@
     {
       "id": "pop",
       "space": {"sends": {"drums": {"room": 0, "plate": 0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0, "plate": 0}, "keys": {"room": 0.226, "plate": 0.264}}, "drumRoomDb": -6},
-      "master": { "gainDb": 5.1 },
+      "master": { "gainDb": 5.3 },
       "name": { "zh": "現代流行", "en": "Modern Pop" },
       "bpm": { "default": 104, "min": 95, "max": 120 },
       "swing": 50,
@@ -39,13 +39,21 @@
       ],
       "tracks": {
         "drums": {
-          "low":      { "kick": "X... .... X... ....", "rim": ".... x... .... x..." },
-          "standard": { "kick": "X... .... X.x. ....", "snare": ".... X... .... X...", "hat": "x.x. x.x. x.x. x.x." },
-          "high":     { "kick": "X... ..x. X.x. ....", "snare": ".... X... .... X...", "hat": "xoxo xoxo xoxo xoxo" },
-          "fill":     { "snare": "xxxx xxXX" }
+          "low": {"kick": "X... .... X... ....", "rim": ".... x... .... x..."},
+          "standard": {"v": [{"kick": "X... .... X.x. ....", "snare": ".... X... .... X...", "hat": "x.x. x.x. x.x. x.x."}, {"kick": "X... ..X. X... ....", "snare": ".... X... .... X...", "hat": "x.x. x.x. x.x. x.x."}, {"kick": "X... .... X.x. ..x.", "snare": ".... X... .... X...", "hat": "x.x. x.x. x.x. x.x."}]},
+          "high": {"v": [{"kick": "X... ..x. X.x. ....", "snare": ".... X... .... X...", "hat": "xoxo xoxo xoxo xoxo"}, {"kick": "X... ..X. X.X. ....", "snare": ".... X... .... X...", "hat": "xoxo xoxo xoxo xoxo"}, {"kick": "X... ..x. X... ..x.", "snare": ".... X... .... X...", "hat": "xoxo xoxo xoxo xoxo"}]},
+          "fill": {"snare": "xxxx xxXX"}
         },
-        "bass":  { "low": "R--- ---- R--- ----", "standard": "R.R. R.R. R.R. R.R.", "high": "R.R. R.5. R.R. 8.A." },
-        "keys":  { "low": "C--- ---- ---- ----", "standard": "C--- C--- C--- C---", "high": "C--C --C- --C- --C-" },
+        "bass": {
+          "low": {"v": ["R--- ---- R--- ----", "R--- ---- R--- --5-"], "end": "R--- ---- 5--- --A-"},
+          "standard": {"v": ["R.R. R.R. R.R. R.R.", "R.R. R.5. R.R. R.8.", "R..R ..R. R.R. R.5."], "end": "R.R. R.5. 8.5. R.A."},
+          "high": {"v": ["R.R. R.5. R.R. 8.A.", "R.R. R.R. 8.R. R.5.", "R.8. R.5. R.8. R.A."], "end": "R.R. R.5. 8.5. R.A."}
+        },
+        "keys": {
+          "low": {"v": ["C--- ---- ---- ----", "C--- ---- C--- ----"], "end": "C--- ---- ---- ----"},
+          "standard": {"v": ["C--- C--- C--- C---", "C--- --C- C--- --C-", "C--- C--- C-.C ----"], "end": "C--- C--- C--- ----"},
+          "high": {"v": ["C--C --C- --C- --C-", "C--- C-.C --C- C---", "C.C- C.C- C.C- C.C-"], "end": "C--C --C- C--- ----"}
+        },
         "keys2": null,
         "pad": null,
         "guitar": null
@@ -59,7 +67,7 @@
     {
       "id": "mandopop_ballad",
       "space": {"sends": {"drums": {"room": 0, "plate": 0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0, "plate": 0}, "keys": {"room": 0.187, "plate": 0.218}, "keys2": {"room": 0.481, "plate": 0.561}, "pad": {"room": 0.088, "plate": 0.211}}, "drumRoomDb": -6},
-      "master": { "gainDb": 3.6 },
+      "master": { "gainDb": 3.4 },
       "name": { "zh": "華語抒情", "en": "Mandopop Ballad" },
       "bpm": { "default": 72, "min": 60, "max": 80 },
       "swing": 50,
@@ -78,14 +86,31 @@
       "tracks": {
         "drums": {
           "low": null,
-          "standard": { "kick": "X... .... ..X. ....", "rim": ".... x... .... x...", "hat": "o.o. o.o. o.o. o.o." },
-          "high":     { "kick": "X... ..x. X... ....", "snare": ".... X... .... X...", "hat": "x.x. x.x. x.x. x.x." },
-          "fill":     { "snare": "..x. xxXX" }
+          "standard": {"v": [{"kick": "X... .... ..X. ....", "rim": ".... x... .... x...", "hat": "o.o. o.o. o.o. o.o."}, {"kick": "X... .... ..X. ..x.", "rim": ".... x... .... x...", "hat": "o.o. o.o. o.o. o.o."}]},
+          "high": {"v": [{"kick": "X... ..x. X... ....", "snare": ".... X... .... X...", "hat": "x.x. x.x. x.x. x.x."}, {"kick": "X... ..x. X... ..x.", "snare": ".... X... .... X...", "hat": "x.x. x.x. x.x. x.x."}, {"kick": "X... .... X.x. ....", "snare": ".... X... .... X...", "hat": "x.x. x.x. x.x. x.x."}]},
+          "fill": {"snare": "..x. xxXX"}
         },
-        "bass":  { "low": null, "standard": "R--- ---- R--- ----", "high": "R--- --5- R--- ----" },
-        "keys":  { "low": "1.2. 3.4. 5.4. 3.2.", "standard": "1234 5432 1234 5432", "high": "1234 5432 1234 5432" },
-        "keys2": { "low": null, "standard": null, "high": "U--- ---- U--- ----" },
-        "pad":   { "low": null, "standard": null, "high": "C--- ---- ---- ----", "optional": true },
+        "bass": {
+          "low": null,
+          "standard": {"v": ["R--- ---- R--- ----", "R--- ---- R--- --5-", "R--- --5- R--- ----"], "end": "R--- ---- 5--- --A-"},
+          "high": {"v": ["R--- --5- R--- ----", "R--- --5- R--- --8-", "R--- ---- R--5 ----"], "end": "R--- --5- 8--- 5-A-"}
+        },
+        "keys": {
+          "low": "1.2. 3.4. 5.4. 3.2.",
+          "standard": "1234 5432 1234 5432",
+          "high": "1234 5432 1234 5432"
+        },
+        "keys2": {
+          "low": null,
+          "standard": null,
+          "high": {"v": ["U--- ---- U--- ----", "U--- ---- ---- ----", "U--- ---- U--- --U-"], "end": "U--- ---- ---- ----"}
+        },
+        "pad": {
+          "low": null,
+          "standard": null,
+          "high": "C--- ---- ---- ----",
+          "optional": true
+        },
         "guitar": null
       },
       "eq": { "keys": { "highpass": 60 } },
@@ -98,7 +123,7 @@
     {
       "id": "jpop",
       "space": {"sends": {"drums": {"room": 0, "plate": 0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0, "plate": 0}, "keys": {"room": 0.29, "plate": 0.339}, "guitar": {"room": 0.661, "plate": 0.189}}, "drumRoomDb": -6},
-      "master": { "gainDb": 4.0 },
+      "master": { "gainDb": 3.9 },
       "name": { "zh": "J-pop／動畫", "en": "J-Pop / Anime" },
       "bpm": { "default": 140, "min": 120, "max": 170 },
       "swing": 50,
@@ -117,16 +142,31 @@
       ],
       "tracks": {
         "drums": {
-          "low":      { "kick": "X... .... X... ....", "snare": ".... X... .... X..." },
-          "standard": { "kick": "X... ..x. X.x. ....", "snare": ".... X... .... X...", "hat": "x.x. x.x. x.x. x.x." },
-          "high":     { "kick": "X... ..x. X.x. ....", "snare": ".... X... .... X...", "hat": "x... x... x... x...", "openhat": "..x. ..x. ..x. ..x." },
-          "fill":     { "snare": "xxxx xxXX" }
+          "low": {"kick": "X... .... X... ....", "snare": ".... X... .... X..."},
+          "standard": {"v": [{"kick": "X... ..x. X.x. ....", "snare": ".... X... .... X...", "hat": "x.x. x.x. x.x. x.x."}, {"kick": "X... ..x. X... ....", "snare": ".... X... .... X...", "hat": "x.x. x.x. x.x. x.x."}]},
+          "high": {"v": [{"kick": "X... ..x. X.x. ....", "snare": ".... X... .... X...", "hat": "x... x... x... x...", "openhat": "..x. ..x. ..x. ..x."}, {"kick": "X... X... X... X...", "snare": ".... X... .... X...", "hat": "x... x... x... x...", "openhat": "..x. ..x. ..x. ..x."}]},
+          "fill": {"snare": "xxxx xxXX"}
         },
-        "bass":  { "low": "R--- ---- R--- ----", "standard": "R.R. R.R. R.R. R.R.", "high": "R.R. 8.R. R.R. 5.A." },
-        "keys":  { "low": "C--- ---- ---- ----", "standard": "C--- --C- ---- --N-", "high": "C--C --C- --C- --N-" },
+        "bass": {
+          "low": "R--- ---- R--- ----",
+          "standard": {"v": ["R.R. R.R. R.R. R.R.", "R.R. R.R. R.R. 8.R.", "R.R. 8.R. R.R. R.5."], "end": "R.R. R.R. 8.5. R.A."},
+          "high": {"v": ["R.R. 8.R. R.R. 5.A.", "R.R. R.R. 8.R. R.R.", "R.R. 8.R. R.8. R.5."], "end": "R.R. 8.R. 8.5. R.A."}
+        },
+        "keys": {
+          "low": {"v": ["C--- ---- ---- ----", "C--- ---- C--- ----"], "end": "C--- ---- ---- ----"},
+          "standard": {"v": ["C--- --C- ---- ----", "C--- C--- C--- C---", "C--- --C- --C- ----"], "end": "C--- ---- ---- ----"},
+          "high": {"v": ["C.C. C.C. C.C. C.C.", "C--C --C- --C- ----", "C.C. C.C. C--- C.C."], "end": "C.C. C.C. C--- ----"}
+        },
         "keys2": null,
         "pad": null,
-        "guitar": { "low": null, "standard": null, "high": "x.x. x.x. x.x. x.x.", "optional": true, "default": false, "voicing": "power" }
+        "guitar": {
+          "low": null,
+          "standard": null,
+          "high": "x.x. x.x. x.x. x.x.",
+          "optional": true,
+          "default": false,
+          "voicing": "power"
+        }
       },
       "mix": {"drums": 0.0, "bass": -4.3, "keys": 1.1},
       "instruments": { "keys": "piano", "bass": "electric_bass", "drums": "acoustic_kit", "guitar": "di_guitar" },
@@ -136,7 +176,7 @@
     {
       "id": "citypop",
       "space": {"sends": {"drums": {"room": 0, "plate": 0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0, "plate": 0}, "keys": {"room": 0.323, "plate": 0.377}, "guitar": {"room": 0.617, "plate": 0.176}}, "drumRoomDb": -6},
-      "master": { "gainDb": 5.3 },
+      "master": { "gainDb": 5.2 },
       "name": { "zh": "City Pop", "en": "City Pop" },
       "bpm": { "default": 108, "min": 100, "max": 118 },
       "swing": 54,
@@ -157,16 +197,30 @@
       ],
       "tracks": {
         "drums": {
-          "low":      { "kick": "X... .... X... ....", "rim": ".... x... .... x...", "hat": "x.x. x.x. x.x. x.x." },
-          "standard": { "kick": "X... ...x X.x. ....", "snare": ".... X..o .o.. X...", "hat": "xoxo xoxo xoxo xoxo", "openhat": ".... .... .... ..x." },
-          "high":     { "kick": "X... ...x X.x. ....", "snare": ".o.. X..o .o.o X..o", "hat": "xoxo xoxo xoxo xoxo", "openhat": ".... .... .... ..x." },
-          "fill":     { "snare": "x.xx xXxX" }
+          "low": {"kick": "X... .... X... ....", "rim": ".... x... .... x...", "hat": "x.x. x.x. x.x. x.x."},
+          "standard": {"v": [{"kick": "X... ...x X.x. ....", "snare": ".... X... .... X...", "hat": "x.x. x.x. x.x. x.x."}, {"kick": "X... ...x X.x. ....", "snare": ".... X..o .o.. X...", "hat": "xoxo xoxo xoxo xoxo", "openhat": ".... .... .... ..x."}, {"kick": "X... ...x X.x. ...x", "snare": ".... X..o .o.. X..o", "hat": "xoxo xo.o xoxo xo.o", "openhat": ".... ..x. .... ..x."}]},
+          "high": {"v": [{"kick": "X... ...x X.x. ....", "snare": ".o.. X..o .o.o X..o", "hat": "xoxo xoxo xoxo xoxo", "openhat": ".... .... .... ..x."}, {"kick": "X... ...x X.x. ....", "snare": ".... X... .... X..x", "hat": "xoxo xoxo xoxo xoxo"}]},
+          "fill": {"snare": "x.xx xXxX"}
         },
-        "bass":  { "low": "R--- ---. R--- ---.", "standard": "R..8 ..R. ..R. 5.A.", "high": "R.8R .8.R .R8. R7.A" },
-        "keys":  { "low": "C--- ---- ---- ----", "standard": "..C- .... ..C- ....", "high": "..C- .C.. ..C- .C.N" },
+        "bass": {
+          "low": "R--- ---. R--- ---.",
+          "standard": {"v": ["R..8 ..R. ..R. 5.A.", "R..g .R.. R..8 ..5A", "R.8. R.8g R.8. R78A"], "end": "R..5 ..7. 8... ..gA"},
+          "high": {"v": ["R.8R .8.R .R8. R7.A", "R.8. R.8g R.8. R78A", "R.8R .8.R .R8. R.5A"], "end": "R..5 ..7. M.8. ..gA"}
+        },
+        "keys": {
+          "low": "C--- ---- ---- ----",
+          "standard": {"v": ["..C- .... ..C- ....", "..C. ..C- .... .C..", "C--- ---- ---- ---."], "end": "..C- .... C--- ----"},
+          "high": {"v": ["..C- .C.. ..C- .C..", "C... ..C. ..C. .C.C", "..C. ..C- .... .C.."], "end": "C... ..C. ..C- ----"}
+        },
         "keys2": null,
         "pad": null,
-        "guitar": { "low": null, "standard": null, "high": "..x. ..x. ..x. ..x.", "optional": true, "topNotes": 2 }
+        "guitar": {
+          "low": null,
+          "standard": null,
+          "high": {"v": ["..x. ..x. ..x. ..x.", ".... x... .... x..x", "..x. ..x. ..x. x.x."]},
+          "optional": true,
+          "topNotes": 2
+        }
       },
       "mix": {"drums": 0.0, "bass": -4.7, "keys": -5.7, "guitar": -3.3},
       "alternatives": [{ "id": "slap", "track": "bass", "instr": "slap_bass", "densities": ["high"], "default": false, "label": { "zh": "slap 貝斯(只在 high)", "en": "Slap bass (high only)" } }],
@@ -177,7 +231,7 @@
     {
       "id": "kpop_dance",
       "space": {"sends": {"drums": {"room": 0.701, "plate": 0.0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0, "plate": 0}, "keys": {"room": 0.34, "plate": 0.397}, "pad": {"room": 0.119, "plate": 0.286}}},
-      "master": { "gainDb": 5.3 },
+      "master": { "gainDb": 5.6 },
       "name": { "zh": "K-pop 舞曲", "en": "K-Pop Dance" },
       "bpm": { "default": 120, "min": 100, "max": 128 },
       "swing": 50,
@@ -195,15 +249,27 @@
       ],
       "tracks": {
         "drums": {
-          "low":      { "kick": "X... .... .... ...." },
-          "standard": { "kick": "X... ..x. ..X. ....", "clap": ".... X... .... X...", "hat": "x.x. x.x. x.x. x.x." },
-          "high":     { "kick": "X... X... X... X...", "clap": ".... X... .... X...", "hat": "xxxx xxxx xxxx xxrr" },
-          "fill":     { "hat": "rrrr rrrr", "clap": ".... x.x." }
+          "low": {"kick": "X... .... .... ...."},
+          "standard": {"v": [{"kick": "X... ..x. ..X. ....", "clap": ".... X... .... X...", "hat": "x.x. x.x. x.x. x.x."}, {"kick": "X... ..x. ..X. ..x.", "clap": ".... X... .... X...", "hat": "x.x. x.x. x.x. xxxx"}]},
+          "high": {"v": [{"kick": "X... X... X... X...", "clap": ".... X... .... X...", "hat": "xxxx xxxx xxxx xxrr"}, {"kick": "X... X... X... X...", "clap": ".... X... .... X...", "hat": "x.x. x.x. x.x. x.x."}]},
+          "fill": {"hat": "rrrr rrrr", "clap": ".... x.x."}
         },
-        "bass":  { "low": "R--- ---- ---- ----", "standard": "R..R ..R. R..R ..R.", "high": "R..R ..R. R..R .8A." },
-        "keys":  { "low": null, "standard": "C..C ..C. ..C. .C..", "high": "C..C ..C. ..C. .C.." },
+        "bass": {
+          "low": "R--- ---- ---- ----",
+          "standard": {"v": ["R..R ..R. R..R ..R.", "R..R ..R. R... ..R.", "R..R ..R. R..R .8A."]},
+          "high": {"v": ["R..R ..R. R..R .8A.", "R..R ..R. R..R ..R.", "R.R. ..R. R..R .8A."]}
+        },
+        "keys": {
+          "low": null,
+          "standard": {"v": ["C..C ..C. ..C. .C..", "C..C ..C. ..C. ....", "C... ..C. ..C. .C.."]},
+          "high": {"v": ["C..C ..C. ..C. .C..", "C..C ..C. C..C ..C.", "C... ..C. ..C. .C.."]}
+        },
         "keys2": null,
-        "pad":   { "low": "C--- ---- ---- ----", "standard": null, "high": "C--- ---- ---- ----" },
+        "pad": {
+          "low": "C--- ---- ---- ----",
+          "standard": null,
+          "high": "C--- ---- ---- ----"
+        },
         "guitar": null
       },
       "mix": {"drums": 0.0, "bass": -6.1, "keys": -1.3, "pad": -3.5},
@@ -215,7 +281,7 @@
       "id": "kpop_ballad",
       "mix": {"drums": 0.0, "bass": -2.6, "keys": 2.7, "pad": -1.8, "keys2": 3.0},
       "space": {"sends": {"drums": {"room": 0, "plate": 0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0, "plate": 0}, "keys": {"room": 0.201, "plate": 0.234}, "keys2": {"room": 0.254, "plate": 0.296}, "pad": {"room": 0.087, "plate": 0.21}}, "drumRoomDb": -6},
-      "master": { "gainDb": 4.0 },
+      "master": { "gainDb": 3.7 },
       "inherits": "mandopop_ballad",
       "name": { "zh": "K-pop 抒情", "en": "K-Pop Ballad" },
       "bpm": { "default": 70, "min": 60, "max": 80 },
@@ -228,7 +294,7 @@
     {
       "id": "rnb_neosoul",
       "space": {"sends": {"drums": {"room": 0, "plate": 0}, "kick": {"room": 0, "plate": 0}, "bass": {"room": 0, "plate": 0}, "keys": {"room": 0.239, "plate": 0.279}}, "drumRoomDb": -6},
-      "master": { "gainDb": 6.6 },
+      "master": { "gainDb": 6.8 },
       "name": { "zh": "R&B／Neo-soul", "en": "R&B / Neo-Soul" },
       "bpm": { "default": 80, "min": 65, "max": 90 },
       "swing": 58,
@@ -246,13 +312,21 @@
       ],
       "tracks": {
         "drums": {
-          "low":      { "kick": "X... .... ..X. ....", "rim": ".... x... .... x..." },
-          "standard": { "kick": "X... ...x ..X. ....", "snare": ".... X... .... X...", "hat": "x.o. x.o. x.o. x.oo" },
-          "high":     { "kick": "X... ...x ..X. ....", "snare": ".... X..o ..o. X.o.", "hat": "x.o. x.o. x.o. x.oo" },
-          "fill":     { "snare": ".o.x .oXx" }
+          "low": {"kick": "X... .... ..X. ....", "rim": ".... x... .... x..."},
+          "standard": {"v": [{"kick": "X... ...x ..X. ....", "snare": ".... X... .... X...", "hat": "x.o. x.o. x.o. x.oo"}, {"kick": "X... ...x ..X. ..x.", "snare": ".... X... .... X...", "hat": "x.o. x.o. x.o. x.oo"}]},
+          "high": {"v": [{"kick": "X... ...x ..X. ....", "snare": ".... X..o ..o. X.o.", "hat": "x.o. x.o. x.o. x.oo"}, {"kick": "X... ...x ..X. ..x.", "snare": ".... X..o ..o. X.o.", "hat": "x.o. x.o. x.o. x.oo"}]},
+          "fill": {"snare": ".o.x .oXx"}
         },
-        "bass":  { "low": "R--- ---- ---- ----", "standard": "R--- ...5 R-.. ..A.", "high": "R--. .5.7 R-.. .8A." },
-        "keys":  { "low": "C--- ---- ---- ----", "standard": "C--- --C- ---- ---P", "high": "C--. C-.C ---- .C-P" },
+        "bass": {
+          "low": "R--- ---- ---- ----",
+          "standard": {"v": ["R--- ...5 R-.. ..A.", "R... ..R. .... ..5A", "R--- ...5 R-.. .8A."]},
+          "high": {"v": ["R--. .5.7 R-.. .8A.", "R--- ...5 R-.7 ..A.", "R... ..R. ..5. .7A."]}
+        },
+        "keys": {
+          "low": "C--- ---- ---- ----",
+          "standard": {"v": ["C--- --C- ---- ---P", "..C- .... .C-- ..C.", "C--- ---- --C- ----"]},
+          "high": {"v": ["C--. C-.C ---- .C-P", "..C- .... .C-- ..C.", "C--. C-.C --C- ----"]}
+        },
         "keys2": null,
         "pad": null,
         "guitar": null
@@ -290,13 +364,21 @@
       ],
       "tracks": {
         "drums": {
-          "low":      { "kick": "X... .... ..X. ....", "snare": ".... X... .... X..." },
-          "standard": { "kick": "X... ...X ..X. ....", "snare": ".... X... .... X...", "hat": "x.x. x.x. x.x. x.x." },
-          "high":     { "kick": "X... ...X ..X. ....", "snare": ".... X... .... X...", "hat": "xoxo xoxo xoxo xoxo" },
-          "fill":     { "snare": "..x. .xX." }
+          "low": {"kick": "X... .... ..X. ....", "snare": ".... X... .... X..."},
+          "standard": {"v": [{"kick": "X... ...X ..X. ....", "snare": ".... X... .... X...", "hat": "x.x. x.x. x.x. x.x."}, {"kick": "X... .... ..X. .x..", "snare": ".... X... .... X...", "hat": "x.x. x.x. x.x. x.x."}]},
+          "high": {"v": [{"kick": "X... ...X ..X. ....", "snare": ".... X... .... X...", "hat": "xoxo xoxo xoxo xoxo"}, {"kick": "X... .... ..X. .x..", "snare": ".... X... .... X...", "hat": "xoxo xoxo xoxo xoxo"}]},
+          "fill": {"snare": "..x. .xX."}
         },
-        "bass":  { "low": "R--- ---- ---- ----", "standard": "R--- ---. ..R- 5-..", "high": "R--- --.R ..R- 5.A." },
-        "keys":  { "low": "C--- ---- ---- ----", "standard": "C--- --C- ---- ----", "high": "C--- --C- --.C ----" },
+        "bass": {
+          "low": "R--- ---- ---- ----",
+          "standard": {"v": ["R--- ---. ..R- 5-..", "R--- ---- ..R- ----", "R--- ---. ..R- 5-A."]},
+          "high": {"v": ["R--- --.R ..R- 5.A.", "R--- ---. ..R- 5-..", "R--- --.R ..R- ----"]}
+        },
+        "keys": {
+          "low": "C--- ---- ---- ----",
+          "standard": {"v": ["C--- --C- ---- ----", "C--- ---- ---- --C-", "C--- --C- --.C ----"]},
+          "high": {"v": ["C--- --C- --.C ----", "C--- ---- --C- ----", "C--- --C- ---- ..C-"]}
+        },
         "keys2": null,
         "pad": null,
         "guitar": null
@@ -329,13 +411,21 @@
       ],
       "tracks": {
         "drums": {
-          "low":      { "kick": "X... .... X... ....", "snare": "...X ..X. ...X ..X." },
-          "standard": { "kick": "X... X... X... X...", "snare": "...X ..X. ...X ..X.", "hat": "x.x. x.x. x.x. x.x." },
-          "high":     { "kick": "X... X... X... X...", "snare": "...X ..X. ...X ..X.", "hat": "xxxx xxxx xxxx xxxx" },
-          "fill":     { "snare": ".x.x xxXX" }
+          "low": {"kick": "X... .... X... ....", "snare": "...X ..X. ...X ..X."},
+          "standard": {"v": [{"kick": "X... X... X... X...", "snare": "...X ..X. ...X ..X.", "hat": "x.x. x.x. x.x. x.x."}, {"kick": "X... X... X... X...", "snare": "...X ..X. ...X ..XX", "hat": "x.x. x.x. x.x. x.x."}, {"kick": "X... X... X... X...", "snare": "...X ..X. .X.X ..X.", "hat": "x.x. x.x. x.x. x.x."}]},
+          "high": {"v": [{"kick": "X... X... X... X...", "snare": "...X ..X. ...X ..X.", "hat": "xxxx xxxx xxxx xxxx"}, {"kick": "X... X... X... X...", "snare": "...X ..X. ...X ..XX", "hat": "xxxx xxxx xxxx xxxx"}]},
+          "fill": {"snare": ".x.x xxXX"}
         },
-        "bass":  { "low": "R--- ---- R--- ----", "standard": "R... R... R... R...", "high": "R..R ..R. R..R ..R." },
-        "keys":  { "low": "C--- ---- ---- ----", "standard": "...C ..C. ...C ..C.", "high": "C..C ..C. C..C ..C." },
+        "bass": {
+          "low": "R--- ---- R--- ----",
+          "standard": {"v": ["R... R... R... R...", "R... R... R... R.8.", "R... R..R R... R..."]},
+          "high": {"v": ["R..R ..R. R..R ..R.", "R..R ..R. R... ..R.", "R..R ..R. R..R .8R."]}
+        },
+        "keys": {
+          "low": "C--- ---- ---- ----",
+          "standard": {"v": ["...C ..C. ...C ..C.", "...C ..C. .... ..C.", "...C ..C. ...C .CC."]},
+          "high": {"v": ["C..C ..C. C..C ..C.", "...C ..C. ...C ..C.", "C..C ..C. C... ..C."]}
+        },
         "keys2": null,
         "pad": null,
         "guitar": null

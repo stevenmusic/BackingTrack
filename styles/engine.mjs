@@ -13,7 +13,7 @@ export const METERS = {
   "3/4": { cells: 12, beat: 4, split: [8, 4] },
   "6/8": { cells: 12, beat: 6, split: [6, 6], straight: true },
 };
-export const SYMBOLS = { drums: "Xxor.", bass: "R3578A-.", keys: "CSU123456NP-.", guitar: "x." };
+export const SYMBOLS = { drums: "Xxor.", bass: "R35789MgA-.", keys: "CSU123456NP-.", guitar: "x." };
 export const DRUM_VEL = { X: 112, x: 88, o: 48, r: [70, 60] };
 export const RANGE = { bass: [28, 48], bassRoot: [31, 43], keys: [48, 72], arp: [43, 67], pad: [52, 67], lowKeysMax: 69 };
 export const TRACK_VEL = { bass: 100, keys: 84, keys2: 76, pad: 64, guitar: 70 };
@@ -353,6 +353,31 @@ export function render(data, styleId, opt = {}) {
   const BAR = MT.cells;
   // 這個拍號的節奏型:4/4 在 tracks,其他拍號在 meters[拍號].tracks;沒寫就是這個曲風不打這個拍號
   const T = meterKey === "4/4" ? st.tracks : st.meters?.[meterKey]?.tracks;
+  /*
+   * 每小節用哪一個節奏型(Steven 2026-10-09:「不要只是換個和弦複製貼上一樣的節奏型態」)。
+   * tracks[軌][密度] 可以是一個型(舊寫法,每小節一樣),或 { v: [型, …], end: 型 }:
+   *   樂句(4 小節)第 1 小節彈主型 v[0];中間的小節 28% 沿用上一小節的型(POP909 量到真人下一小節節奏一樣 28.1%),
+   *   否則照權重重抽(主型 2、其他 1);第 4 小節有 end 就 60% 用句尾型。同一小節問幾次都一樣(memo)
+   */
+  const laneMemo = new Map(), lanePrev = {};
+  const laneAt = (track, dens, bar) => {
+    const L = T?.[track]?.[dens];
+    if (!L || !L.v) return L ?? null;
+    if (o.vary === false) return L.v[0];          // 關掉變化 = 完全照規格(主型)
+    const key = track + "|" + dens + "|" + bar;
+    if (laneMemo.has(key)) return laneMemo.get(key);
+    const pos = (bar + base) % 4;
+    const r = mulberry32(((o.seed ?? 1) * 7919 + (bar + base) * 104729 + track.length * 31 + dens.length) >>> 0);
+    r(); const u1 = r(), u2 = r();
+    let pick;
+    if (pos === 0) pick = L.v[0];
+    else if (pos === 3 && L.end && u1 < 0.6) pick = L.end;
+    else if (lanePrev[track + dens] && u1 < 0.28) pick = lanePrev[track + dens];
+    else { const w = L.v.map((_, i) => (i === 0 ? 2 : 1)), tot = w.reduce((a, x) => a + x, 0); let t = u2 * tot, i = 0; while ((t -= w[i]) > 0) i++; pick = L.v[i]; }
+    lanePrev[track + dens] = pick;
+    laneMemo.set(key, pick);
+    return pick;
+  };
   if (!T) throw new Error(`${st.name?.zh ?? st.id} 沒有 ${meterKey} 拍`);
   if (MT.straight) o.swing = 50;
   const rules = st.rules ?? {};
@@ -407,7 +432,7 @@ export function render(data, styleId, opt = {}) {
   // 貝斯根音:優先 31–43、離上一顆近;這小節要彈 8 就挑彈得到高八度的那個八度
   let prevR = null;
   const bassR = slots.map(s => {
-    const lane = laneOf(T, "bass", densityAt(o, s.bar));
+    const lane = laneAt("bass", densityAt(o, s.bar), s.bar);
     const needs8 = lane ? cells(lane).includes("8") : false;
     const cands = [];
     for (let p = RANGE.bass[0]; p <= RANGE.bass[1]; p++) if (mod12(p) === s.chord.bass) cands.push(p);
@@ -507,7 +532,8 @@ export function render(data, styleId, opt = {}) {
     const A = F.keys.anticipation, at = BAR - Math.max(1, Math.round(A.beatsEarly * 4 / 2) * 2);
     for (let b = 0; b + 1 < o.bars; b++) {
       if ((b + base) % 8 === 7) continue; // 過門小節不搶
-      const cur = laneOf(T, "keys", densityAt(o, b)), nx = laneOf(T, "keys", densityAt(o, b + 1));
+      if ((b + base) % 2 === 1) continue; // 單數小節(第 1、3 小節)才搶,雙數不搶(craft sound studio:機械地每小節都搶會怪)
+      const cur = laneAt("keys", densityAt(o, b), b), nx = laneAt("keys", densityAt(o, b + 1), b + 1);
       if (!cur || !nx || !"CSU".includes(cells(nx)[0])) continue;
       const tail = cells(cur).slice(at);
       if (![...tail].every(ch => ch === "." || ch === "-")) continue;
@@ -521,13 +547,21 @@ export function render(data, styleId, opt = {}) {
     const dens = densityAt(o, b);
 
     // 鼓
-    const kit = T.drums?.[dens];
+    const kit = laneAt("drums", dens, b);
     if (kit) {
       const lanes = Object.fromEntries(Object.entries(kit).map(([k, v]) => [k, cells(v)]));
       if ((b + base) % 8 === 7 && T.drums.fill && fillOn(dens))
         for (const [piece, f] of Object.entries(T.drums.fill))
           lanes[piece] = (lanes[piece] ?? ".".repeat(BAR)).slice(0, BAR / 2) + cells(f);
       if ((b + base) % 8 === 0 && rules.crashOnSection !== false) hit("crash", b, 0, DRUM_VEL.X);
+      // 全團一起搶拍(sleepfreaks「シンコペーション」:全樂器のタイミングを合わせる):大鼓落在搶的那一格,下一小節第一拍不再踩
+      if (pushAt[b] != null && lanes.kick) lanes.kick = lanes.kick.slice(0, pushAt[b]) + "X" + lanes.kick.slice(pushAt[b] + 1);
+      if (pushAt[b - 1] != null && lanes.kick) lanes.kick = "." + lanes.kick.slice(1);
+      // 第 4 小節的小過門(Jeff Porcaro,ドラム・マガジン〈最強のドラム練習帳 Vol.02〉):最後一拍開 hi-hat,下一下不打讓它響完
+      if (vary && (b + base) % 8 === 3 && rules.smallFill !== false && lanes.hat && !lanes.hat.slice(BAR - 4).includes("r")) {
+        lanes.hat = lanes.hat.slice(0, BAR - 2) + "..";
+        lanes.openhat = (lanes.openhat ?? ".".repeat(BAR)).slice(0, BAR - 2) + "x.";
+      }
       if (vary && (b + base) % 8 !== 7) kickAdds[b] = varyDrums(lanes, b, dens);
       for (const [piece, s] of Object.entries(lanes)) {
         // 資料的強弱只在「同一種符號」之間分(規格的 X / x / o 層級保留,不重複壓)
@@ -547,12 +581,14 @@ export function render(data, styleId, opt = {}) {
 
     // 旋律軌
     for (const track of MELODIC) {
-      const lane = laneOf(T, track, dens);
+      const lane = laneAt(track, dens, b);
       if (!lane) continue;
       if (track === "keys" && LIB) { libBar(b, dens); continue; }
       let s = cells(lane);
       if (track === "keys" && pushAt[b] != null) // 搶拍:下一顆和弦提早一個八分音符進來
         s = s.slice(0, pushAt[b]) + "N" + "-".repeat(BAR - pushAt[b] - 1);
+      if (track === "bass" && pushAt[b] != null)  // 全團一起搶拍:貝斯也在同一格提早彈下一顆的根音,延過小節線
+        s = s.slice(0, pushAt[b]) + "Q" + "-".repeat(BAR - pushAt[b] - 1);
       if (track === "bass" && kickAdds[b]?.length) { // 鼓手多踩的大鼓,貝斯跟著彈根音
         const arr = [...s];
         for (const c of kickAdds[b]) if (arr[c] === ".") arr[c] = "R";
@@ -570,7 +606,10 @@ export function render(data, styleId, opt = {}) {
           const emit = (cell, n, idx) => {
             const R = bassR[idx], chd = slots[idx].chord;
             let p;
-            if (ch === "R") p = R;
+            if (ch === "R" || ch === "g") p = R;
+            else if (ch === "Q") p = bassR[slotAt(b + 1, 0)] ?? R;           // 全團一起搶拍:下一顆和弦的根音提早進來
+            else if (ch === "M") p = R + 11;                                  // 大七度(經過音 7→M7→8 用)
+            else if (ch === "9") p = R + 14;                                  // 九度(跟八度交替用;foldBass 收回音域)
             else if (ch === "8") p = R + 12;
             else if (ch === "A") {
               const nr = bassR[idx + 1] ?? R, from = lastBass ?? R;
@@ -581,16 +620,18 @@ export function render(data, styleId, opt = {}) {
             }
             p = foldBass(p);
             lastBass = p;
-            note("bass", b, cell, n, [p]);
+            if (ch === "g") note("bass", b, cell, 0.5, [p], { vel: Math.round(TRACK_VEL.bass * 0.35), dead: true }); // 死音:很短、很輕(ベース・マガジン第 15 回)
+            else if (ch === "Q") { note("bass", b, cell, BAR - cell + 2, [p]); carry.bass = b + 1; }
+            else note("bass", b, cell, n, [p]);
           };
-          if (ch === "A") emit(c, len, si);
+          if (ch === "A" || ch === "Q") emit(c, len, si);
           else splitBySlot(b, c, len, emit);
           continue;
         }
 
         if (ch === "N") {
           let n = BAR - c;
-          const nx = b + 1 < o.bars ? laneOf(T, track, densityAt(o, b + 1)) : null;
+          const nx = b + 1 < o.bars ? laneAt(track, densityAt(o, b + 1), b + 1) : null;
           if (nx && !"-.".includes(cells(nx)[0])) {
             let k = 1;
             while (k < BAR && cells(nx)[k] === "-") k++;

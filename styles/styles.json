@@ -72,7 +72,8 @@
       "progressions": [
         { "id": "mando_canon", "roman": "I | V/7 | vi | vi/5 | IV | I/3 | ii7 | V7sus4 V7", "example": "C | G/B | Am | Am/G | F | C/E | Dm7 | G7sus4 G7", "mode": "major" },
         { "id": "mando_15634145", "roman": "I | V | vi | iii | IV | I | IV | V", "example": "C | G | Am | Em | F | C | F | G", "mode": "major" },
-        { "id": "mando_4536251", "roman": "IVmaj7 | V | iii7 | vi7 | ii7 | Vsus4 V | I | I", "example": "Fmaj7 | G | Em7 | Am7 | Dm7 | Gsus4 G | C | C", "mode": "major" }
+        { "id": "mando_4536251", "roman": "IVmaj7 | V | iii7 | vi7 | ii7 | Vsus4 V | I | I", "example": "Fmaj7 | G | Em7 | Am7 | Dm7 | Gsus4 G | C | C", "mode": "major" },
+        { "id": "mando_6451", "roman": "vi | IV | V | I", "example": "Am | F | G | C", "mode": "major" }
       ],
       "tracks": {
         "drums": {
@@ -110,7 +111,9 @@
       "progressions": [
         { "id": "jpop_royal", "roman": "IVmaj7 | V7 | iii7 | vi", "example": "Fmaj7 | G7 | Em7 | Am", "mode": "major" },
         { "id": "jpop_royal_ext", "roman": "IVmaj7 | V | iii7 | vi | ii7 | V | I | I", "example": "Fmaj7 | G | Em7 | Am | Dm7 | G | C | C", "mode": "major" },
-        { "id": "jpop_komuro", "roman": "vi | IV | V | I", "example": "Am | F | G | C", "mode": "major" }
+        { "id": "jpop_komuro", "roman": "vi | IV | V | I", "example": "Am | F | G | C", "mode": "major" },
+        { "id": "jpop_marusa", "roman": "IVmaj7 | III7 | vi7 | vm7 I7", "example": "Fmaj7 | E7 | Am7 | Gm7 C7", "mode": "major" },
+        { "id": "jpop_canon", "roman": "I | V/7 | vi | iii/5 | IV | I/3 | IV | V", "example": "C | G/B | Am | Em/G | F | C/E | F | G", "mode": "major" }
       ],
       "tracks": {
         "drums": {
@@ -146,7 +149,10 @@
       "progressions": [
         { "id": "city_marusa", "roman": "IVmaj7 | III7 | vim7 | vm7 I7", "example": "Fmaj7 | E7 | Am7 | Gm7 C7", "mode": "major" },
         { "id": "city_2516", "roman": "ii7 | V7 | Imaj7 | vi7", "example": "Dm7 | G7 | Cmaj7 | Am7", "mode": "major" },
-        { "id": "city_desc", "roman": "Imaj7 | viiø7 III7 | vi7 | vm7 I7", "example": "Cmaj7 | Bm7♭5 E7 | Am7 | Gm7 C7", "mode": "major" },
+        { "id": "city_desc", "roman": "Imaj7 | iii7 VI7 | vi7 | vm7 I7", "example": "Cmaj7 | Em7 A7 | Am7 | Gm7 C7", "mode": "major" },
+        { "id": "city_sparkle", "roman": "IVmaj7 | iii7 | IVmaj7 | iii7", "example": "Fmaj7 | Em7 | Fmaj7 | Em7", "mode": "major" },
+        { "id": "city_plastic", "roman": "ii7 | V7 | iii7 | vi7", "example": "Dm7 | G7 | Em7 | Am7", "mode": "major" },
+        { "id": "city_stepdown", "roman": "IVmaj7 | iii7 | ii7 | Imaj7", "example": "Fmaj7 | Em7 | Dm7 | Cmaj7", "mode": "major" },
         { "id": "city_long", "roman": "IVmaj7 | iv7 ♭VII7 | iii7 | VI7 | ii7 | V7sus4 V7 | Imaj7 | Imaj7", "example": "Fmaj7 | Fm7 B♭7 | Em7 | A7 | Dm7 | G7sus4 G7 | Cmaj7 | Cmaj7", "mode": "major" }
       ],
       "tracks": {
@@ -184,7 +190,8 @@
       "progressions": [
         { "id": "kpop_minor_loop", "roman": "i | VI | III | VII", "example": "Am | F | C | G", "mode": "minor" },
         { "id": "kpop_harmonic", "roman": "i | VI | iv | V7", "example": "Am | F | Dm | E7", "mode": "minor" },
-        { "id": "kpop_rise", "roman": "VI | VII | i | i", "example": "F | G | Am | Am", "mode": "minor" }
+        { "id": "kpop_rise", "roman": "VI | VII | i | i", "example": "F | G | Am | Am", "mode": "minor" },
+        { "id": "kpop_iv", "roman": "i | iv | VI | iv", "example": "Am | Dm | F | Dm", "mode": "minor" }
       ],
       "tracks": {
         "drums": {
@@ -316,7 +323,8 @@
       "effects": [],
       "progressions": [
         { "id": "reg_loop", "roman": "i | VI | III | VII", "example": "Am | F | C | G", "mode": "minor" },
-        { "id": "reg_andalusian", "roman": "i | VII | VI | V7", "example": "Am | G | F | E7", "mode": "minor" },
+        { "id": "reg_phrygian", "roman": "i | ♭II | i | ♭II", "example": "Am | B♭ | Am | B♭", "mode": "minor" },
+        { "id": "reg_aeolian", "roman": "i | VI | VII | VII", "example": "Am | F | G | G", "mode": "minor" },
         { "id": "reg_two", "roman": "i | iv", "example": "Am | Dm", "mode": "minor" }
       ],
       "tracks": {

@@ -78,6 +78,10 @@ GTR = {"spreadMs": f["strumSpreadMs"], "downShare": f["downShare"], "durCells": 
 for s in out["styles"].values():
     s["keys"] = KEYS
     s["guitar"] = GTR
+# 抒情鋼琴的真人伴奏庫(POP909,tools/feel/pop909_patterns.py):華語抒情、K-pop 抒情
+LIB = json.load(open(os.path.join(DS, "pop909_lib.json")))
+for st in ("mandopop_ballad", "kpop_ballad"):
+    if st in out["styles"]: out["styles"][st]["keys"] = {**KEYS, "lib": LIB}
 dst = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "styles", "feel.json")
 json.dump(out, open(dst, "w"), ensure_ascii=False, separators=(",", ":"))
 print("wrote", dst, os.path.getsize(dst))

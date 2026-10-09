@@ -456,6 +456,51 @@ export function render(data, styleId, opt = {}) {
   const vary = o.vary !== false && F;
   const vrng = mulberry32((o.seed ^ 0x5bd1e995) >>> 0);
   const progScale = Math.min(1, (hz.timingSigmaMs ?? 6) / 6); // 程式打的曲風(K-pop 舞曲)變化少
+  /*
+   * 真人鋼琴伴奏庫(feel.json 的 keys.lib,tools/feel/pop909_patterns.py 從 POP909 878 首、68838 小節萃取;
+   * Steven 2026-10-09:「鋼琴節奏型態太單調」「不要只是換個和弦複製貼上一樣的節奏型態」):
+   * 真人下一小節整個一樣只有 2.4%、節奏(哪幾格有音)一樣 28%。所以每小節:
+   *   節奏:28% 沿用上一小節的節奏,否則照資料的權重重抽;樂句第 4 小節照句尾的統計抽
+   *   內容:同一個節奏底下真人彈過的組合裡抽(左手 L 低音 / l5 五度 / l8 八度 / l3 十度、右手 B 柱式 / r1–r4 第幾個音)
+   *   音高:左手照 arp_inv 的低音,右手照 Viterbi 挑好的最近轉位;一律踩踏板(PEDAL)
+   * 只用在 4/4、聲位是 arp_inv 的曲風(POP909 是華語流行,只有 4/4)
+   */
+  const LIB = kType === "arp_inv" && meterKey === "4/4" && F?.keys?.lib ? F.keys.lib : null;
+  const libRng = mulberry32(((o.seed ?? 1) * 2654435761 + base * 97) >>> 0);
+  let libPrev = null;
+  const pickW = (arr, w) => { let t = arr.reduce((a, x) => a + w(x), 0) * libRng(); for (const x of arr) { t -= w(x); if (t <= 0) return x; } return arr[arr.length - 1]; };
+  function libBar(b, dens) {
+    const D = LIB.dens[dens] ?? LIB.dens.standard;
+    const phraseEnd = (b + base) % 4 === 3;
+    let mask;
+    if (phraseEnd && D.end?.length && libRng() < 0.6) mask = pickW(D.end, x => x[1])[0];
+    else if (libPrev && libPrev.dens === dens && libRng() < LIB.repeatRhythm) mask = libPrev.mask;
+    else mask = pickW(D.masks, x => x.w).m;
+    const M = D.masks.find(x => x.m === mask) ?? D.masks[0];
+    const pat = pickW(M.pats, x => x[1])[0].split(" ");
+    libPrev = { dens, mask: M.m };
+    for (let c = 0; c < BAR; c++) {
+      const idx = slotAt(b, c);
+      if (idx < 0) continue;
+      const pl = plans.keys[idx], sl = slots[idx];
+      const lh = pl.notes[0], rh = pl.rh ?? pl.notes.slice(1, 4);
+      const rhs = [...rh].sort((x, y) => x - y);
+      const third = (() => { const t3 = sl.chord.iv[3]; if (t3 == null) return lh + 12; let p = lh + 12; while (mod12(p) !== mod12(sl.chord.root + t3)) p++; return p; })();
+      const toks = pat[c] === "." ? [] : pat[c].split("+");
+      if (c === sl.from && !toks.includes("L")) toks.push("L");       // 換和弦那一格一定有左手低音
+      const notes = new Set();
+      for (const tk of toks) {
+        if (tk === "L") notes.add(lh);
+        else if (tk === "l5") notes.add(lh + 7);
+        else if (tk === "l8" || tk === "lx") notes.add(lh + 12);
+        else if (tk === "l3") notes.add(third);
+        else if (tk === "B") rhs.forEach(p => notes.add(p));
+        else if (tk[0] === "r") { const k = +tk.slice(1); notes.add(k <= rhs.length ? rhs[k - 1] : rhs[0] + 12 <= 69 ? rhs[0] + 12 : rhs[rhs.length - 1]); }
+      }
+      for (const p of notes) note("keys", b, c, sl.to - c, [p], { symbol: "lib", pedal: true });
+    }
+  }
+
   const kickAdds = {};
   const pushAt = {};
   if (vary && F.keys?.anticipation && !st.voicing.keys.startsWith("arp")) {
@@ -504,6 +549,7 @@ export function render(data, styleId, opt = {}) {
     for (const track of MELODIC) {
       const lane = laneOf(T, track, dens);
       if (!lane) continue;
+      if (track === "keys" && LIB) { libBar(b, dens); continue; }
       let s = cells(lane);
       if (track === "keys" && pushAt[b] != null) // 搶拍:下一顆和弦提早一個八分音符進來
         s = s.slice(0, pushAt[b]) + "N" + "-".repeat(BAR - pushAt[b] - 1);
@@ -715,6 +761,10 @@ export function render(data, styleId, opt = {}) {
     const gk = e.gridTime.toFixed(4);
     if (e.track === "drums" && e.piece === "kick") kickAt.set(gk, j);
     else if (e.track === "bass" && kickAt.has(gk)) j = kickAt.get(gk); // 貝斯跟大鼓同一格:同一個時間
+    else if (e.pedal) {                     // 踏板音是一個音一個事件:同一格的(同一下按下去的)共用一個時間
+      const pk = "p" + gk;
+      if (kickAt.has(pk)) j = kickAt.get(pk); else kickAt.set(pk, j);
+    }
     e.time = Math.max(0, e.gridTime + j / 1000);
     e.vel = Math.max(1, Math.min(127, Math.round(e.vel * acc + clampMs(gauss() * vr / 2, vr))));
     // 和弦裡各音的先後與頂音

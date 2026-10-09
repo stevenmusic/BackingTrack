@@ -534,6 +534,13 @@ main{
   touch-action:pan-y;user-select:none;-webkit-user-select:none;
 }
 .be-block.drag{background:var(--gold);color:var(--bg)}
+/* 一顆和弦往左滑時「剩下的拍子」:虛線框,放開才變成真的一顆 */
+.be-block.be-ghost{background:transparent;color:var(--muted);border:1px dashed var(--gold);cursor:default}
+/* 看得出「可以左右滑」:選到的那一顆兩邊各一個小箭頭(滑的時候拿掉) */
+.be-block.sel:not(.drag)::before,.be-block.sel:not(.drag)::after{
+  position:absolute;top:50%;transform:translateY(-50%);font-size:14px;font-weight:400;opacity:.7;pointer-events:none}
+.be-block.sel:not(.drag)::before{content:"‹";left:4px}
+.be-block.sel:not(.drag)::after{content:"›";right:4px}
 .be-block + .be-block{border-left:1px solid var(--line)}
 .be-block.sel{background:var(--gold);color:var(--bg)}
 .be-block.bad{color:var(--danger)}
@@ -1387,7 +1394,7 @@ const I18N = {
     secToggleOpen: "收起段落庫",
     beNumLabel: "正在改第 {n} 小節",
     lenBeats: "{n} 拍",
-    beBlockLabel: "選這一顆({chord},{len}):點下面的鍵盤改它;左右滑動改長度,滑到幾格就是幾拍",
+    beBlockLabel: "選這一顆({chord},{len}):點下面的鍵盤改它;左右滑動改長度,滑到幾格就是幾拍(只有一顆時往左滑 = 切出新的一顆)",
     beGripLabel: "拖曳:改和弦換在哪裡,一次半拍(拖得到拍子中間,例如一拍半)",
     beGripFixed: "這裡動不了:除了一小節的最後一顆,每一顆至少一拍",
     beAddLabel: "把選到的那一顆切成兩半(一小節最多 {n} 顆)",
@@ -1522,7 +1529,7 @@ const I18N = {
     secToggleOpen: "Hide sections",
     beNumLabel: "Editing bar {n}",
     lenBeats: "{n}",
-    beBlockLabel: "Select {chord} ({len} beats) — change it with the keys below; swipe left/right to set its length, one beat per cell",
+    beBlockLabel: "Select {chord} ({len} beats) — change it with the keys below; swipe left/right to set its length, one beat per cell (a lone chord: swipe left to split off a new one)",
     beGripLabel: "Drag to move where the chord changes, half a beat at a time",
     beGripFixed: "Can't move: every chord but the last in a bar needs a full beat",
     beAddLabel: "Split the selected chord in half (up to {n} per bar)",
@@ -8219,24 +8226,11 @@ function beGrip(ev, i, sp, p){
 }
 
 /* ── 觸覺回饋:滑到一拍「喀」一下 ───────────────────────────────
-   Android 用 `navigator.vibrate`;iPhone 的 Safari 沒有這個 API,
-   但 iOS 18 起點一下系統開關(`<input type="checkbox" switch>`)會有觸覺,
-   所以點一顆看不見的開關代替。桌機兩個都沒有,就安靜 */
-let beHapticLabel = null;
+   只有 Android(`navigator.vibrate`)做得到。**iPhone 的網頁在滑動中沒辦法震動**:Safari 沒有 vibrate,
+   以前「用程式點一顆隱藏的系統開關」的做法 Apple 已經擋掉(開關要手指真的點到才有觸覺,
+   程式送的 click 不算;WebKit bug 285120、ios-haptics 3.x 的說明),所以 iPhone 靠拍線發亮 */
 function beHaptic(){
-  try {
-    if (navigator.vibrate) { navigator.vibrate(8); return; }
-    if (!beHapticLabel) {
-      beHapticLabel = document.createElement("label");
-      beHapticLabel.setAttribute("aria-hidden", "true");
-      beHapticLabel.style.display = "none";
-      const sw = document.createElement("input");
-      sw.type = "checkbox"; sw.setAttribute("switch", "");
-      beHapticLabel.appendChild(sw);
-      document.head.appendChild(beHapticLabel);
-    }
-    beHapticLabel.click();
-  } catch (e) { /* 沒有就算了:觸覺只是加分 */ }
+  try { if (navigator.vibrate) navigator.vibrate(8); } catch (e) { /* 沒有就算了:觸覺只是加分 */ }
 }
 /* 邊緣在第幾格(單位 = chordDiv 的一格):剛好在拍線上就把那條線點亮;
    不在拍線上(把手拖到半拍)或在小節頭尾就全部熄掉 */
@@ -8257,25 +8251,37 @@ function beLight(lane, units){
      不是最後一顆 → 動右邊緣(後面那顆讓出 / 拿回)
      最後一顆     → 動左邊緣(最後一顆永遠補到小節尾,只有左邊能動)
    橫向移動 8px 以上、而且比直的多才算滑;先往上下動就是捲頁面,不搶。
-   沒滑就是點(選它),跟以前一樣。半拍要用方塊之間的把手(一次半拍) */
+   沒滑就是點(選它),跟以前一樣。半拍要用方塊之間的把手(一次半拍)。
+   **一小節只有一顆和弦也能滑**(Steven 2026-10-08:「滑動功能我沒有看到」——一格一顆是最常見的情況):
+   往左滑到第幾格,這顆就撐幾拍,剩下的拍子先放同一個和弦(跟 ＋ 一樣),放開後選到新的那一顆,直接用鍵盤改 */
 function beSwipe(ev, i, sp, p){
   const lane = $("beLane");
-  if (!lane || ev.button > 0 || sp.length < 2) return;
-  const N = chordUnits(), cd = chordDiv(), n = sp.length, beats = beatsInBar();
-  const lens = sp.map(x => x.w), starts = [];
+  if (!lane || ev.button > 0 || !sp.length) return;
+  const N = chordUnits(), cd = chordDiv(), beats = beatsInBar();
+  const solo = sp.length === 1;                // 只有一顆:滑的時候多出一塊「剩下的拍子」
+  if (solo && beats < 2) return;
+  const spx = solo ? [sp[0], { ...sp[0], w: 0 }] : sp;
+  const n = spx.length;
+  const lens = solo ? [N, 0] : sp.map(x => x.w), starts = [];
   let acc = 0;
   for (const L of lens) { starts.push(acc); acc += L; }
-  const last = i === n - 1;
+  const last = !solo && i === n - 1;
   const j = last ? i - 1 : i;                 // 動的是 j 與 j+1 之間的那條邊
   const lo = starts[j] + minUnits(j, n);
   const end = starts[j + 1] + lens[j + 1];
-  const hi = end - minUnits(j + 1, n);
+  const hi = solo ? N : end - minUnits(j + 1, n);   // 一顆的時候滑回最右邊 = 不切
   const snapLo = Math.ceil(lo / cd) * cd, snapHi = Math.floor(hi / cd) * cd;
   if (snapHi < snapLo) return;                 // 兩邊都已經在下限上:這一顆滑不動
   const x0 = ev.clientX, y0 = ev.clientY, id = ev.pointerId, btn = ev.currentTarget;
-  const blocks = lane.querySelectorAll(".be-block");
+  let blocks = lane.querySelectorAll(".be-block");
   const grip = lane.querySelectorAll(".be-grip")[j];
   const pct = u => (u / N * 100) + "%";
+  const addGhost = () => {                     // 一顆的時候:剩下的拍子那一塊(放開才真的寫進去)
+    const g = document.createElement("div");
+    g.className = "be-block be-ghost";
+    lane.appendChild(g);
+    blocks = [blocks[0], g];
+  };
   let rect = null, at = starts[j + 1], dragging = false, done = false;
   const show = () => {
     blocks[j].style.width = pct(at - starts[j]);
@@ -8283,7 +8289,7 @@ function beSwipe(ev, i, sp, p){
     blocks[j + 1].style.width = pct(end - at);
     if (grip) grip.style.left = pct(at);
     blocks[j].textContent = lenLabel(at - starts[j]);
-    blocks[j + 1].textContent = lenLabel(end - at);
+    blocks[j + 1].textContent = end - at > 0 ? lenLabel(end - at) : "";
     blocks[j].style.fontSize = blocks[j + 1].style.fontSize = "";
   };
   const finish = commit => {
@@ -8298,7 +8304,7 @@ function beSwipe(ev, i, sp, p){
     if (!commit || at === starts[j + 1]) { renderBarEdit(); return; }
     lens[j] = at - starts[j];
     lens[j + 1] = end - at;
-    writeSpans(p, lens, sp.map(x => x.text), i);
+    writeSpans(p, lens, spx.map(x => x.text), solo ? 1 : i);
   };
   const move = e2 => {
     if (e2.pointerId !== id) return;
@@ -8310,12 +8316,13 @@ function beSwipe(ev, i, sp, p){
       rect = lane.getBoundingClientRect();
       try { btn.setPointerCapture(id); } catch (e) {}
       btn.classList.add("drag");
+      if (solo) addGhost();
       show();
       beLight(lane, at);
     }
     /* 手指在第幾格:不是最後一顆 → 撐到「手指那一格」的右邊;最後一顆 → 從手指那一格的左邊開始 */
     const cell = Math.max(0, Math.min(beats - 1, Math.floor((e2.clientX - rect.left) / rect.width * beats)));
-    const want = (last ? cell : cell + 1) * cd;
+    const want = (last ? cell : cell + 1) * cd;   // 一顆的時候 = 撐到手指那一格
     const nxt = Math.max(snapLo, Math.min(snapHi, want));
     if (nxt !== at) {
       at = nxt;

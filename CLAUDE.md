@@ -287,7 +287,8 @@
 - 小節編輯條 `#barEdit` 自己一排:點方塊選、拖把手改位置(半拍一步)、＋ 切、× 併;合法性畫的時候就算好;拖的時候只動 CSS
 - **滑方塊改長度**(Steven 2026-10-08,`beSwipe`):方塊左右滑、一次一拍,手指在第幾格就撐到第幾格(最後一顆動左邊緣);
   橫向 8px 以上且比直的多才算滑,`touch-action:pan-y` 讓直的照樣捲頁面;邊緣落在拍線上那條線亮(`beLight`)+ 觸覺(`beHaptic`:
-  Android `navigator.vibrate`,iPhone 點隱藏的 `<input switch>`)。把手照舊半拍一步(落在拍線上才喀)。驗證 `node tools/samples/swipe_test.mjs`
+  只有 Android `navigator.vibrate`;**iPhone 網頁滑動中做不到觸覺**,Apple 擋掉了程式點系統開關的做法,不要再加回來)。
+  一小節只有一顆也能滑:往左滑切出新的一顆(剩下的拍子先放同一個和弦,選到新的那顆)。把手照舊半拍一步(落在拍線上才喀)。驗證 `node tools/samples/swipe_test.mjs`
 - `writeSpans`:不是平分、但一個延長記號都沒有時(一拍 + 三拍),最後一顆的記號要寫出來(`C G / /`),不然讀回來是平分
 - 小節數是下拉(4 的倍數到 40,`LEN_STEP` / `LEN_MAX`),非 4 倍數要插進選項
 - 和弦鍵盤:字母與升降分開;選中是金框淡金底;`:hover` 包在 `@media (hover:hover)`;性質比音程集合(`qualKey`)
